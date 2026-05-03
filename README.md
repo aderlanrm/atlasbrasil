@@ -15,6 +15,7 @@ O diretório `tools/` é reservado para utilitários locais e não faz parte do 
 ## Dados
 
 - População: IBGE/SIDRA, tabela 4714, Censo Demográfico 2022.
+- PIB territorial: IBGE/SIDRA, tabela 5938, Produto Interno Bruto a preços correntes.
 - Malhas geográficas: API de Malhas Geográficas do IBGE.
 - Localidades: API de Localidades do IBGE.
 - Mapa base: MapLibre GL com OpenFreeMap e Esri World Imagery.

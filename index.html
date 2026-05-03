@@ -900,6 +900,17 @@
 
       <section class="section">
         <div class="section-title">
+          <h2>Dados gerais</h2>
+          <span class="tiny" id="general-caption">Brasil</span>
+        </div>
+        <div class="selected-grid" id="general-grid"></div>
+        <p class="layer-hint" id="general-note">
+          PIB territorial: SIDRA/IBGE 2023. Vereadores municipais: teto constitucional estimado por faixa populacional.
+        </p>
+      </section>
+
+      <section class="section">
+        <div class="section-title">
           <h2 id="chart-title">Estados mais populosos</h2>
           <span class="tiny" id="chart-caption">top 10</span>
         </div>
@@ -916,7 +927,8 @@
     </div>
 
     <footer class="footer">
-      Dados: <a href="https://sidra.ibge.gov.br/tabela/4714" target="_blank" rel="noreferrer">SIDRA tabela 4714</a>,
+      Dados: <a href="https://sidra.ibge.gov.br/tabela/4714" target="_blank" rel="noreferrer">SIDRA 4714</a>,
+      <a href="https://sidra.ibge.gov.br/tabela/5938" target="_blank" rel="noreferrer">SIDRA 5938</a>,
       <a href="https://servicodados.ibge.gov.br/api/docs/localidades" target="_blank" rel="noreferrer">Localidades IBGE</a> e
       <a href="https://servicodados.ibge.gov.br/api/docs/malhas?versao=3" target="_blank" rel="noreferrer">Malhas IBGE</a>.
     </footer>
@@ -930,14 +942,30 @@
   "use strict";
 
   const URLS = {
-    mapStyle: "https://tiles.openfreemap.org/styles/dark",
+    mapStyle: "https://tiles.openfreemap.org/styles/liberty",
     fallbackStyle: "https://demotiles.maplibre.org/style.json",
+    brazilMesh: "https://servicodados.ibge.gov.br/api/v3/malhas/paises/BR?formato=application/vnd.geo%2Bjson&qualidade=minima",
     statesMesh: "https://servicodados.ibge.gov.br/api/v3/malhas/paises/BR?intrarregiao=UF&formato=application/vnd.geo%2Bjson&qualidade=minima",
     stateMesh: (stateId) => `https://servicodados.ibge.gov.br/api/v3/malhas/estados/${stateId}?intrarregiao=municipio&formato=application/vnd.geo%2Bjson&qualidade=minima`,
     statePopulation: "https://apisidra.ibge.gov.br/values/t/4714/n3/all/v/93/p/2022",
     cityPopulation: "https://apisidra.ibge.gov.br/values/t/4714/n6/all/v/93/p/2022",
+    gdpBrazil: "https://apisidra.ibge.gov.br/values/t/5938/n1/all/v/37/p/last",
+    gdpStates: "https://apisidra.ibge.gov.br/values/t/5938/n3/all/v/37/p/last",
+    gdpCities: "https://apisidra.ibge.gov.br/values/t/5938/n6/all/v/37/p/last",
     states: "https://servicodados.ibge.gov.br/api/v1/localidades/estados?orderBy=nome",
     cities: "https://servicodados.ibge.gov.br/api/v1/localidades/municipios?orderBy=nome"
+  };
+
+  const FEDERAL_DEPUTIES_BY_UF = {
+    AC: 8, AL: 9, AM: 8, AP: 8, BA: 39, CE: 22, DF: 8, ES: 10, GO: 17,
+    MA: 18, MG: 53, MS: 8, MT: 8, PA: 17, PB: 12, PE: 25, PI: 10,
+    PR: 30, RJ: 46, RN: 8, RO: 8, RR: 8, RS: 31, SC: 16, SE: 8,
+    SP: 70, TO: 8
+  };
+
+  const NATIONAL_EXECUTIVE = {
+    president: "Luiz Inácio Lula da Silva",
+    vicePresident: "Geraldo Alckmin"
   };
 
   const STATE_FALLBACK = [
@@ -987,9 +1015,14 @@
   let fixedPopup = null;
   let hoverPopup = null;
   let hoveredFeatureKey = null;
+  let isStreetMode = false;
+  let brazilMeshFeature = null;
   let totalPopulation = 0;
+  let brazilGdp = 0;
+  let brazilGdpYear = "";
   let fallbackStyleTried = false;
   let activeBaseMode = "hybrid";
+  let activeView = "brazil";
 
   document.addEventListener("DOMContentLoaded", init);
 
@@ -1013,7 +1046,7 @@
       "metric-br-pop", "metric-city-count", "metric-state", "metric-state-pop", "metric-city", "metric-city-pop",
       "data-state-label", "search", "search-results", "selected-code", "selected-type", "selected-name",
       "selected-pop", "selected-share", "selected-rank", "selected-context", "population-chart", "chart-title",
-      "chart-caption", "ranking", "ranking-title", "ranking-caption"
+      "chart-caption", "ranking", "ranking-title", "ranking-caption", "general-caption", "general-grid", "general-note"
     ].forEach((id) => {
       elements[id] = document.getElementById(id);
     });
@@ -1065,12 +1098,19 @@
     const requests = await Promise.allSettled([
       fetchJson(URLS.statePopulation),
       fetchJson(URLS.cityPopulation),
+      fetchJson(URLS.gdpBrazil),
+      fetchJson(URLS.gdpStates),
+      fetchJson(URLS.gdpCities),
       fetchJson(URLS.states),
       fetchJson(URLS.cities),
+      fetchJson(URLS.brazilMesh).catch((error) => {
+        console.warn("Falha ao carregar malha nacional do Brasil.", error);
+        return null;
+      }),
       fetchJson(URLS.statesMesh)
     ]);
 
-    const [stateRows, cityRows, states, cities, statesMesh] = requests.map((result) => (
+    const [stateRows, cityRows, gdpBrazilRows, gdpStateRows, gdpCityRows, states, cities, brazilMesh, statesMesh] = requests.map((result) => (
       result.status === "fulfilled" ? result.value : null
     ));
 
@@ -1078,7 +1118,11 @@
     mergePopulation(stateRows, stateById);
     mergeCities(cities);
     mergeCityPopulation(cityRows);
+    mergeBrazilGdp(gdpBrazilRows);
+    mergeGdp(gdpStateRows, stateById);
+    mergeGdp(gdpCityRows, cityById);
     totalPopulation = sumPopulation(Array.from(stateById.values()));
+    hydrateBrazilMesh(brazilMesh);
     hydrateStatesMesh(statesMesh);
 
     const failedRequests = requests.filter((result) => result.status === "rejected");
@@ -1093,10 +1137,7 @@
 
     updateStateSources();
     renderBrazilMetrics();
-    renderSelectedBrazil();
-    renderStateChart();
-    renderEmptyRanking();
-    fitBrazil();
+    enterBrazilOverviewMode();
     hideStatus();
   }
 
@@ -1125,6 +1166,7 @@
       elements["hud-layer"].textContent = "Municípios";
 
       const selectedFeature = collection.features.find((feature) => feature.properties.id === String(requestedCityId));
+      enterCityAnalysisMode();
       if (selectedFeature) {
         selectCity(selectedFeature.properties.id, selectedFeature);
       } else {
@@ -1198,6 +1240,58 @@
     });
   }
 
+  function mergeBrazilGdp(rows) {
+    parseSidraRows(rows).forEach((row) => {
+      if (String(row.D2C) !== "37") return;
+      const value = parseNumber(row.V);
+      if (!Number.isFinite(value)) return;
+      brazilGdp = value * 1000;
+      brazilGdpYear = row.D3N || row.D3C || "";
+    });
+  }
+
+  function mergeGdp(rows, targetMap) {
+    parseSidraRows(rows).forEach((row) => {
+      if (String(row.D2C) !== "37") return;
+      const id = normalizeCode(row.D1C || row.id);
+      const value = parseNumber(row.V);
+      if (!id || !Number.isFinite(value)) return;
+      const existing = targetMap.get(id);
+      if (existing) {
+        targetMap.set(id, {
+          ...existing,
+          gdp: value * 1000,
+          gdpYear: row.D3N || row.D3C || ""
+        });
+      }
+    });
+  }
+
+  function hydrateBrazilMesh(mesh) {
+    const collection = normalizeFeatureCollection(mesh);
+    const feature = collection.features[0];
+    if (!feature || !feature.geometry) {
+      brazilMeshFeature = null;
+      return;
+    }
+
+    const center = representativePoint(feature.geometry) || BR_CENTER;
+    brazilMeshFeature = {
+      type: "Feature",
+      geometry: feature.geometry,
+      properties: {
+        ...feature.properties,
+        id: "BR",
+        name: "Brasil",
+        pop: totalPopulation,
+        gdp: brazilGdp,
+        gdpYear: brazilGdpYear,
+        lng: center[0],
+        lat: center[1]
+      }
+    };
+  }
+
   function hydrateStatesMesh(mesh) {
     const collection = normalizeFeatureCollection(mesh);
     collection.features.forEach((feature) => {
@@ -1213,6 +1307,8 @@
         uf: state.sigla,
         region: state.regiao,
         pop: state.pop || 0,
+        gdp: state.gdp || 0,
+        gdpYear: state.gdpYear || "",
         lng: center[0],
         lat: center[1]
       };
@@ -1238,6 +1334,8 @@
         uf: state ? state.sigla : "",
         stateName: state ? state.nome : "",
         pop,
+        gdp: city.gdp || 0,
+        gdpYear: city.gdpYear || "",
         lng: point ? point[0] : state.lng,
         lat: point ? point[1] : state.lat
       };
@@ -1258,10 +1356,13 @@
       uf: state.sigla,
       region: state.regiao,
       pop: state.pop || 0,
+      gdp: state.gdp || 0,
+      gdpYear: state.gdpYear || "",
       lng: state.lng,
       lat: state.lat
     }));
 
+    setSourceData("brazil-fill-source", brazilFeatureCollection(polygonFeatures));
     setSourceData("states-fill-source", {
       type: "FeatureCollection",
       features: polygonFeatures
@@ -1292,14 +1393,88 @@
     });
   }
 
+  function brazilFeatureCollection(features) {
+    if (brazilMeshFeature) {
+      return {
+        type: "FeatureCollection",
+        features: [{
+          ...brazilMeshFeature,
+          properties: {
+            ...brazilMeshFeature.properties,
+            id: "BR",
+            name: "Brasil",
+            pop: totalPopulation,
+            gdp: brazilGdp,
+            gdpYear: brazilGdpYear
+          }
+        }]
+      };
+    }
+
+    const coordinates = [];
+    features.forEach((feature) => {
+      const geometry = feature && feature.geometry;
+      if (!geometry) return;
+      if (geometry.type === "Polygon") {
+        coordinates.push(geometry.coordinates);
+      } else if (geometry.type === "MultiPolygon") {
+        coordinates.push(...geometry.coordinates);
+      }
+    });
+
+    if (!coordinates.length) return emptyFeatureCollection();
+
+    return {
+      type: "FeatureCollection",
+      features: [{
+        type: "Feature",
+        geometry: { type: "MultiPolygon", coordinates },
+        properties: {
+          id: "BR",
+          name: "Brasil",
+          pop: totalPopulation,
+          gdp: brazilGdp,
+          gdpYear: brazilGdpYear,
+          lng: BR_CENTER[0],
+          lat: BR_CENTER[1]
+        }
+      }]
+    };
+  }
+
   function ensureAtlasLayers() {
     if (!map.getSource("states-fill-source")) {
+      map.addSource("brazil-fill-source", { type: "geojson", data: emptyFeatureCollection() });
       map.addSource("states-fill-source", { type: "geojson", data: emptyFeatureCollection() });
       map.addSource("states-points-source", { type: "geojson", data: emptyFeatureCollection() });
       map.addSource("selected-state-source", { type: "geojson", data: emptyFeatureCollection() });
       map.addSource("municipality-fill-source", { type: "geojson", data: emptyFeatureCollection() });
       map.addSource("municipality-points-source", { type: "geojson", data: emptyFeatureCollection() });
     }
+
+    addLayerOnce({
+      id: "brazil-fill",
+      type: "fill",
+      source: "brazil-fill-source",
+      layout: { visibility: "none" },
+      paint: {
+        "fill-color": "#18b978",
+        "fill-opacity": 0.84,
+        "fill-antialias": false
+      }
+    });
+
+    addLayerOnce({
+      id: "brazil-outline",
+      type: "line",
+      source: "brazil-fill-source",
+      layout: { visibility: "none" },
+      paint: {
+        "line-color": "#f2c14e",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 2.5, 1.1, 6, 2.4],
+        "line-opacity": 0.9
+      }
+    });
 
     addLayerOnce({
       id: "states-fill",
@@ -1439,9 +1614,28 @@
     if (selectedStateId) updateSelectedStateSource();
     const cached = selectedStateId ? stateCitiesCache.get(selectedStateId) : null;
     if (cached) updateMunicipalitySources(cached);
+    syncAtlasLayersForActiveView();
   }
 
   function bindMapLayerEvents() {
+    if (map.getLayer("brazil-fill") && !map.__boundBrazilLayer) {
+      map.__boundBrazilLayer = true;
+      map.on("click", "brazil-fill", (event) => {
+        clearHoverPopup();
+        renderSelectedBrazil();
+        showBrazilPopup(event.lngLat);
+      });
+      map.on("mousemove", "brazil-fill", (event) => {
+        if (!event.features.length || activeView !== "brazil") return;
+        map.getCanvas().style.cursor = "pointer";
+        showBrazilHover(event.lngLat);
+      });
+      map.on("mouseleave", "brazil-fill", () => {
+        map.getCanvas().style.cursor = "";
+        clearHoverPopup();
+      });
+    }
+
     ["states-fill", "states-bubbles"].forEach((layerId) => {
       if (!map.getLayer(layerId) || map.__boundStateLayers?.has(layerId)) return;
       map.__boundStateLayers = map.__boundStateLayers || new Set();
@@ -1462,6 +1656,11 @@
       });
       map.on("mousemove", layerId, (event) => {
         if (!event.features.length) return;
+        if (isStreetMode) {
+          map.getCanvas().style.cursor = "";
+          clearHoverPopup();
+          return;
+        }
         map.getCanvas().style.cursor = "pointer";
         showStateHover(event.lngLat, event.features[0].properties);
       });
@@ -1492,6 +1691,11 @@
       });
       map.on("mousemove", layerId, (event) => {
         if (!event.features.length) return;
+        if (isStreetMode) {
+          map.getCanvas().style.cursor = "";
+          clearHoverPopup();
+          return;
+        }
         map.getCanvas().style.cursor = "pointer";
         showMunicipalityHover(event.lngLat, event.features[0].properties);
       });
@@ -1539,10 +1743,71 @@
       }
       try { map.setLayoutProperty(layer.id, "visibility", visible ? "visible" : "none"); } catch (error) {}
     });
+    tuneBaseMapPaint(mode);
+    setBaseAdministrativeBoundariesVisible(activeView !== "brazil");
+  }
+
+  function tuneBaseMapPaint(mode) {
+    (map.getStyle().layers || []).forEach((layer) => {
+      if (layer.id === "satellite-layer" || isAtlasLayer(layer.id)) return;
+
+      if (mode === "map") {
+        tuneLightMapLayer(layer);
+      } else if (mode === "hybrid") {
+        tuneHybridLabelLayer(layer);
+      }
+    });
+  }
+
+  function tuneLightMapLayer(layer) {
+    try {
+      if (layer.type === "background") {
+        map.setPaintProperty(layer.id, "background-color", "#eef3ee");
+      }
+      if (layer.type === "fill") {
+        map.setPaintProperty(layer.id, "fill-opacity", 0.92);
+      }
+      if (layer.type === "line") {
+        map.setPaintProperty(layer.id, "line-opacity", 0.86);
+      }
+      if (layer.type === "symbol") {
+        if (hasPaintProperty(layer, "text-color")) map.setPaintProperty(layer.id, "text-color", "#23313a");
+        if (hasPaintProperty(layer, "text-halo-color")) map.setPaintProperty(layer.id, "text-halo-color", "#ffffff");
+        if (hasPaintProperty(layer, "text-halo-width")) map.setPaintProperty(layer.id, "text-halo-width", 1.4);
+      }
+    } catch (error) {}
+  }
+
+  function tuneHybridLabelLayer(layer) {
+    if (layer.type !== "symbol") return;
+    try {
+      if (hasPaintProperty(layer, "text-color")) map.setPaintProperty(layer.id, "text-color", "#ffffff");
+      if (hasPaintProperty(layer, "text-halo-color")) map.setPaintProperty(layer.id, "text-halo-color", "#07121b");
+      if (hasPaintProperty(layer, "text-halo-width")) map.setPaintProperty(layer.id, "text-halo-width", 2.2);
+      if (hasPaintProperty(layer, "text-opacity")) map.setPaintProperty(layer.id, "text-opacity", 1);
+    } catch (error) {}
+  }
+
+  function hasPaintProperty(layer, property) {
+    return layer.paint && Object.prototype.hasOwnProperty.call(layer.paint, property);
+  }
+
+  function setBaseAdministrativeBoundariesVisible(visible) {
+    const shouldShow = visible && activeBaseMode !== "earth";
+    (map.getStyle().layers || []).forEach((layer) => {
+      if (!isBaseAdministrativeBoundaryLayer(layer)) return;
+      try { map.setLayoutProperty(layer.id, "visibility", shouldShow ? "visible" : "none"); } catch (error) {}
+    });
+  }
+
+  function isBaseAdministrativeBoundaryLayer(layer) {
+    if (!layer || layer.type !== "line") return false;
+    if (layer.id === "satellite-layer" || isAtlasLayer(layer.id)) return false;
+    return /admin|boundary|border|country|province|state|subdivision/i.test(layer.id);
   }
 
   function isAtlasLayer(id) {
-    return id.startsWith("states-") || id.startsWith("selected-state") || id.startsWith("municipality-");
+    return id.startsWith("brazil-") || id.startsWith("states-") || id.startsWith("selected-state") || id.startsWith("municipality-");
   }
 
   function setLayerVisibility(group, visible) {
@@ -1554,21 +1819,118 @@
     });
   }
 
+  function setLayersVisibility(layerIds, visible) {
+    layerIds.forEach((layerId) => {
+      if (map.getLayer(layerId)) {
+        map.setLayoutProperty(layerId, "visibility", visible ? "visible" : "none");
+      }
+    });
+  }
+
+  function hideAtlasAnalysisLayers() {
+    setLayersVisibility([
+      "states-fill",
+      "states-outline",
+      "states-bubbles",
+      "states-labels",
+      "selected-state-outline",
+      "municipality-fill",
+      "municipality-outline",
+      "municipality-bubbles",
+      "municipality-labels"
+    ], false);
+  }
+
+  function setBrazilLayerVisibility(visible) {
+    setLayersVisibility(["brazil-fill"], visible);
+    setLayersVisibility(["brazil-outline"], visible && Boolean(brazilMeshFeature));
+    setBaseAdministrativeBoundariesVisible(!visible);
+  }
+
+  function hideAtlasLayersForStreet() {
+    hideAtlasAnalysisLayers();
+    setBrazilLayerVisibility(false);
+  }
+
+  function syncAtlasLayersForActiveView() {
+    if (activeView === "brazil") {
+      setBrazilLayerVisibility(true);
+      hideAtlasAnalysisLayers();
+      return;
+    }
+
+    if (activeView === "states") {
+      setBrazilLayerVisibility(false);
+      setLayerVisibility("states", true);
+      setLayersVisibility(["selected-state-outline"], true);
+      setLayerVisibility("municipality", false);
+      return;
+    }
+
+    if (activeView === "cities") {
+      setBrazilLayerVisibility(false);
+      setLayerVisibility("states", true);
+      setLayersVisibility(["selected-state-outline"], true);
+      setLayerVisibility("municipality", Boolean(selectedStateId));
+      return;
+    }
+
+    if (activeView === "street") {
+      hideAtlasLayersForStreet();
+      return;
+    }
+
+    setBrazilLayerVisibility(false);
+    hideAtlasAnalysisLayers();
+  }
+
+  function restoreBaseLabels() {
+    (map.getStyle().layers || []).forEach((layer) => {
+      if (layer.id === "satellite-layer" || isAtlasLayer(layer.id)) return;
+      if (layer.type === "line" || layer.type === "symbol") {
+        try { map.setLayoutProperty(layer.id, "visibility", "visible"); } catch (error) {}
+      }
+    });
+    tuneBaseMapPaint("hybrid");
+  }
+
   function bindControls() {
     document.querySelectorAll("[data-view]").forEach((button) => {
       button.addEventListener("click", () => {
         const view = button.dataset.view;
         setActiveView(view);
-        if (view === "world") map.flyTo({ center: [-30, 0], zoom: 1.55, speed: 0.8, curve: 1.35, essential: true });
+        if (view === "world") {
+          clearHoverPopup();
+          if (fixedPopup) fixedPopup.remove();
+          fixedPopup = null;
+          syncAtlasLayersForActiveView();
+          map.flyTo({ center: [-30, 0], zoom: 1.55, speed: 0.8, curve: 1.35, essential: true });
+        }
         if (view === "brazil") {
-          enterStateAnalysisMode({ selectBrazil: true });
+          enterBrazilOverviewMode();
         }
         if (view === "states") {
           enterStateAnalysisMode({ selectBrazil: true });
         }
         if (view === "cities") {
-          if (selectedStateId) flyToState(stateById.get(selectedStateId), 6.1);
-          else fitBrazil();
+          if (selectedStateId) {
+            enterCityAnalysisMode();
+            flyToState(stateById.get(selectedStateId), 6.1);
+          } else {
+            setBrazilLayerVisibility(false);
+            setLayerVisibility("states", true);
+            setLayersVisibility(["selected-state-outline"], true);
+            setLayerVisibility("municipality", false);
+            elements["hud-layer"].textContent = "Cidades";
+            elements["metric-state"].textContent = "Brasil";
+            elements["metric-state-pop"].textContent = "duplo clique em uma UF";
+            elements["metric-city"].textContent = "nenhum";
+            elements["metric-city-pop"].textContent = "escolha um estado";
+            renderSelectedBrazil();
+            renderStateChart();
+            renderEmptyRanking("Dê duplo clique em uma UF para carregar os municípios antes de entrar no detalhe das cidades.");
+            fitBrazil();
+          }
         }
         if (view === "street") {
           flyToStreet();
@@ -1600,11 +1962,13 @@
   }
 
   function setActiveView(view) {
+    activeView = view;
     const button = document.querySelector(`[data-view="${view}"]`);
     if (button) setActiveButton("[data-view]", button);
   }
 
-  function enterStateAnalysisMode(options = {}) {
+  function enterBrazilOverviewMode() {
+    isStreetMode = false;
     clearHoverPopup();
     if (fixedPopup) fixedPopup.remove();
     fixedPopup = null;
@@ -1612,7 +1976,31 @@
     selectedCityId = null;
     selectedCityFeature = null;
     updateSelectedStateSource();
+    setBrazilLayerVisibility(true);
+    hideAtlasAnalysisLayers();
+    elements["hud-layer"].textContent = "Brasil";
+    elements["metric-state"].textContent = "Brasil";
+    elements["metric-state-pop"].textContent = formatNumber(totalPopulation);
+    elements["metric-city"].textContent = "visão nacional";
+    elements["metric-city-pop"].textContent = "dados gerais do país";
+    renderSelectedBrazil();
+    renderStateChart();
+    renderEmptyRanking("A visão Brasil mostra o país como um território único. Use Estados para comparar UFs ou Cidades para detalhar municípios.");
+    fitBrazil();
+  }
+
+  function enterStateAnalysisMode(options = {}) {
+    isStreetMode = false;
+    clearHoverPopup();
+    if (fixedPopup) fixedPopup.remove();
+    fixedPopup = null;
+    selectedStateId = null;
+    selectedCityId = null;
+    selectedCityFeature = null;
+    updateSelectedStateSource();
+    setBrazilLayerVisibility(false);
     setLayerVisibility("states", true);
+    setLayersVisibility(["selected-state-outline"], true);
     setLayerVisibility("municipality", false);
     elements["hud-layer"].textContent = "Estados";
     elements["metric-state"].textContent = "Brasil";
@@ -1623,6 +2011,16 @@
     renderStateChart();
     renderEmptyRanking("Passe o mouse sobre um estado para ler os dados. Dê duplo clique em uma UF para explorar seus municípios.");
     fitBrazil();
+  }
+
+  function enterCityAnalysisMode() {
+    isStreetMode = false;
+    setBrazilLayerVisibility(false);
+    setLayerVisibility("states", true);
+    setLayersVisibility(["selected-state-outline"], true);
+    setLayerVisibility("municipality", true);
+    updateSelectedStateSource();
+    elements["hud-layer"].textContent = "Municípios";
   }
 
   function renderSearch() {
@@ -1702,6 +2100,7 @@
     elements["selected-share"].textContent = "100%";
     elements["selected-rank"].textContent = "-";
     elements["selected-context"].textContent = "27 UF";
+    renderGeneralPanel("brazil");
   }
 
   function selectStateUi(state) {
@@ -1716,6 +2115,7 @@
     elements["selected-share"].textContent = percent((state.pop || 0) / totalPopulation);
     elements["selected-rank"].textContent = rankText(Array.from(stateById.values()), state.id);
     elements["selected-context"].textContent = state.regiao || "Brasil";
+    renderGeneralPanel("state", state);
     updateSelectedStateSource();
   }
 
@@ -1733,10 +2133,90 @@
     elements["selected-share"].textContent = state ? percent((props.pop || 0) / (state.pop || 1)) : "-";
     elements["selected-rank"].textContent = props.rank ? `${props.rank}º na UF` : "-";
     elements["selected-context"].textContent = props.stateName || props.uf;
+    renderGeneralPanel("city", props);
     updateRankingActive();
     if (options.fly !== false) {
       map.flyTo({ center: [props.lng, props.lat], zoom: Math.max(map.getZoom(), 7.4), pitch: 0, speed: 0.8, curve: 1.3, essential: true });
     }
+  }
+
+  function renderGeneralPanel(scope, data) {
+    if (scope === "state") {
+      renderGeneralCards(`${data.nome} | ${data.sigla}`, stateGeneralCards(data));
+      elements["general-note"].textContent = "PIB territorial: SIDRA/IBGE 2023. Vereadores municipais: teto constitucional estimado por faixa populacional.";
+      return;
+    }
+
+    if (scope === "city") {
+      renderGeneralCards(`${data.name} | ${data.uf}`, cityGeneralCards(data));
+      elements["general-note"].textContent = "PIB territorial: SIDRA/IBGE 2023. Vereadores: teto constitucional estimado por faixa populacional.";
+      return;
+    }
+
+    renderGeneralCards("Brasil", brazilGeneralCards());
+    elements["general-note"].textContent = "PIB territorial: SIDRA/IBGE 2023. Vereadores municipais: soma estimada dos tetos constitucionais por população.";
+  }
+
+  function renderGeneralCards(caption, cards) {
+    elements["general-caption"].textContent = caption;
+    elements["general-grid"].innerHTML = cards.map((card) => `
+      <div>
+        <span>${escapeHtml(card.label)}</span>
+        <strong>${escapeHtml(card.value)}</strong>
+      </div>
+    `).join("");
+  }
+
+  function brazilGeneralCards() {
+    const politics = brazilPoliticalSummary();
+    const gdpPerCapita = perCapita(brazilGdp, totalPopulation);
+    return [
+      { label: "População", value: formatNumber(totalPopulation) },
+      { label: `PIB ${brazilGdpYear || ""}`, value: formatCurrencyShort(brazilGdp) },
+      { label: "PIB por habitante", value: formatCurrency(gdpPerCapita) },
+      { label: "Presidente", value: NATIONAL_EXECUTIVE.president },
+      { label: "Vice-presidente", value: NATIONAL_EXECUTIVE.vicePresident },
+      { label: "Congresso", value: `${formatNumber(politics.federalDeputies)} dep. fed. | ${formatNumber(politics.senators)} sen.` },
+      { label: "Governos estaduais", value: `${formatNumber(politics.governors)} gov. | ${formatNumber(politics.stateDeputies)} dep. est./dist.` },
+      { label: "Executivos municipais", value: `${formatNumber(politics.mayors)} prefeitos | ${formatNumber(politics.viceMayors)} vices` },
+      { label: "Vereadores", value: formatNumber(politics.councilorsMax) },
+      { label: "Total político estim.", value: formatNumber(politics.total) }
+    ];
+  }
+
+  function stateGeneralCards(state) {
+    const politics = statePoliticalSummary(state);
+    const gdpPerCapita = perCapita(state.gdp, state.pop);
+    const brazilPerCapita = perCapita(brazilGdp, totalPopulation);
+    return [
+      { label: "População", value: formatNumber(state.pop || 0) },
+      { label: `PIB ${state.gdpYear || brazilGdpYear || ""}`, value: formatCurrencyShort(state.gdp) },
+      { label: "PIB por habitante", value: formatCurrency(gdpPerCapita) },
+      { label: "Relativo ao Brasil", value: formatRatio(gdpPerCapita, brazilPerCapita) },
+      { label: "Executivo estadual", value: state.id === "53" ? "1 governador | 1 vice" : "1 governador | 1 vice" },
+      { label: "Congresso por UF", value: `${politics.federalDeputies} dep. fed. | 3 sen.` },
+      { label: state.id === "53" ? "Deputados distritais" : "Deputados estaduais", value: formatStateDeputies(state, politics) },
+      { label: "Prefeitos", value: politics.mayors ? formatNumber(politics.mayors) : "não se aplica" },
+      { label: "Vereadores", value: politics.councilorsMax ? formatNumber(politics.councilorsMax) : "não se aplica" },
+      { label: "Total político estim.", value: formatNumber(politics.total) }
+    ];
+  }
+
+  function cityGeneralCards(props) {
+    const state = stateById.get(String(props.stateId));
+    const cityPerCapita = perCapita(props.gdp, props.pop);
+    const statePerCapita = state ? perCapita(state.gdp, state.pop) : 0;
+    const politics = cityPoliticalSummary(props);
+    return [
+      { label: "População", value: formatNumber(props.pop || 0) },
+      { label: `PIB ${props.gdpYear || ""}`, value: formatCurrencyShort(props.gdp) },
+      { label: "PIB por habitante", value: formatCurrency(cityPerCapita) },
+      { label: "Relativo à UF", value: formatRatio(cityPerCapita, statePerCapita) },
+      { label: "Executivo municipal", value: politics.mayor ? "1 prefeito | 1 vice" : "não se aplica" },
+      { label: "Vereadores", value: politics.councilorsMax ? formatNumber(politics.councilorsMax) : "não se aplica" },
+      { label: "Total político estim.", value: politics.total ? formatNumber(politics.total) : "não se aplica" },
+      { label: "UF", value: `${props.stateName || ""} (${props.uf || ""})` }
+    ];
   }
 
   function renderStateChart() {
@@ -1827,6 +2307,36 @@
       .addTo(map);
   }
 
+  function showBrazilPopup(lngLat) {
+    if (fixedPopup) fixedPopup.remove();
+    fixedPopup = new maplibregl.Popup({ offset: 14 })
+      .setLngLat(lngLat)
+      .setHTML(popupHtml("País", "Brasil", brazilPopupRows()))
+      .addTo(map);
+  }
+
+  function showBrazilHover(lngLat) {
+    const key = "country:BR";
+    const html = popupHtml("País", "Brasil", brazilPopupRows());
+
+    if (!hoverPopup) {
+      hoverPopup = new maplibregl.Popup({
+        closeButton: false,
+        closeOnClick: false,
+        offset: 14,
+        className: "hover-popup"
+      }).setLngLat(lngLat).setHTML(html).addTo(map);
+      hoveredFeatureKey = key;
+      return;
+    }
+
+    hoverPopup.setLngLat(lngLat);
+    if (hoveredFeatureKey !== key) {
+      hoverPopup.setHTML(html);
+      hoveredFeatureKey = key;
+    }
+  }
+
   function showStatePopup(lngLat, props) {
     if (fixedPopup) fixedPopup.remove();
     fixedPopup = new maplibregl.Popup({ offset: 14 })
@@ -1836,6 +2346,7 @@
   }
 
   function showStateHover(lngLat, props) {
+    if (isStreetMode) return;
     const key = `state:${props.id || ""}`;
     const html = popupHtml("Unidade da Federação", `${props.name} (${props.uf})`, statePopupRows(props));
 
@@ -1867,6 +2378,7 @@
   }
 
   function showMunicipalityHover(lngLat, props) {
+    if (isStreetMode) return;
     const key = `${props.stateId || ""}:${props.id || ""}`;
     const html = popupHtml("Município", props.name, municipalityPopupRows(props));
 
@@ -1894,10 +2406,33 @@
     hoveredFeatureKey = null;
   }
 
+  function brazilPopupRows() {
+    const politics = brazilPoliticalSummary();
+    const gdpPerCapita = perCapita(brazilGdp, totalPopulation);
+    return [
+      { label: "População total", value: formatNumber(totalPopulation) },
+      { label: `PIB ${brazilGdpYear || ""}`, value: formatCurrencyShort(brazilGdp) },
+      { label: "PIB por habitante", value: formatCurrency(gdpPerCapita) },
+      { label: "Congresso", value: `${formatNumber(politics.federalDeputies)} dep. fed. | ${formatNumber(politics.senators)} sen.` },
+      { label: "Governos estaduais", value: `${formatNumber(politics.governors)} gov. | ${formatNumber(politics.stateDeputies)} dep. est./dist.` },
+      { label: "Executivos municipais", value: `${formatNumber(politics.mayors)} prefeitos | ${formatNumber(politics.viceMayors)} vices` },
+      { label: "Vereadores", value: formatNumber(politics.councilorsMax) },
+      { label: "Políticos estimados", value: formatNumber(politics.total) }
+    ];
+  }
+
   function statePopupRows(props) {
     const pop = Number(props.pop || 0);
+    const gdpPerCapita = perCapita(props.gdp, pop);
+    const state = stateById.get(String(props.id || "")) || { id: String(props.id || ""), sigla: props.uf || "" };
+    const politics = statePoliticalSummary(state);
     return [
       { label: "População total", value: formatNumber(pop) },
+      { label: `PIB ${props.gdpYear || ""}`, value: formatCurrencyShort(props.gdp) },
+      { label: "PIB por habitante", value: formatCurrency(gdpPerCapita) },
+      { label: state.id === "53" ? "Deputados distritais" : "Deputados estaduais", value: formatStateDeputies(state, politics) },
+      { label: "Prefeitos", value: politics.mayors ? formatNumber(politics.mayors) : "não se aplica" },
+      { label: "Vereadores", value: politics.councilorsMax ? formatNumber(politics.councilorsMax) : "não se aplica" },
       { label: "Participação no Brasil", value: totalPopulation ? percent(pop / totalPopulation) : "-" },
       { label: "Ranking nacional", value: rankText(Array.from(stateById.values()), props.id) },
       { label: "Região", value: props.region || "-" }
@@ -1907,8 +2442,13 @@
   function municipalityPopupRows(props) {
     const pop = Number(props.pop || 0);
     const state = stateById.get(String(props.stateId || ""));
+    const gdpPerCapita = perCapita(props.gdp, pop);
+    const politics = cityPoliticalSummary(props);
     return [
       { label: "População", value: formatNumber(pop) },
+      { label: `PIB ${props.gdpYear || ""}`, value: formatCurrencyShort(props.gdp) },
+      { label: "PIB por habitante", value: formatCurrency(gdpPerCapita) },
+      { label: "Vereadores", value: politics.councilorsMax ? formatNumber(politics.councilorsMax) : "não se aplica" },
       { label: `${props.uf || "UF"} | ranking`, value: props.rank ? `${props.rank}º` : "-" },
       { label: "Participação na UF", value: state && state.pop ? percent(pop / state.pop) : "-" }
     ];
@@ -1926,6 +2466,86 @@
     `;
   }
 
+  function brazilPoliticalSummary() {
+    const stateRows = Array.from(stateById.values());
+    const mayors = municipalCityCount();
+    const viceMayors = mayors;
+    const councilorsMax = municipalCouncilorsMaxTotal();
+    const stateDeputies = stateRows.reduce((sum, state) => sum + stateDeputyCount(state.sigla), 0);
+    const total = 1 + 1 + 27 + 27 + 81 + 513 + stateDeputies + mayors + viceMayors + councilorsMax;
+    return {
+      federalDeputies: 513,
+      senators: 81,
+      governors: 27,
+      stateDeputies,
+      mayors,
+      viceMayors,
+      councilorsMax,
+      total
+    };
+  }
+
+  function statePoliticalSummary(state) {
+    const federalDeputies = FEDERAL_DEPUTIES_BY_UF[state.sigla] || 0;
+    const stateDeputies = stateDeputyCount(state.sigla);
+    const cities = citiesForState(state.id);
+    const hasMunicipalElection = state.id !== "53";
+    const mayors = hasMunicipalElection ? cities.length : 0;
+    const viceMayors = mayors;
+    const councilorsMax = hasMunicipalElection
+      ? cities.reduce((sum, city) => sum + councilorMaxByPopulation(city.pop || 0), 0)
+      : 0;
+    const total = 1 + 1 + 3 + federalDeputies + stateDeputies + mayors + viceMayors + councilorsMax;
+    return { federalDeputies, stateDeputies, mayors, viceMayors, councilorsMax, total };
+  }
+
+  function formatStateDeputies(state, politics) {
+    const suffix = state.id === "53" ? "dep. distritais" : "dep. estaduais";
+    return `${formatNumber(politics.stateDeputies)} ${suffix}`;
+  }
+
+  function cityPoliticalSummary(props) {
+    if (String(props.stateId) === "53") {
+      return { mayor: 0, viceMayor: 0, councilorsMax: 0, total: 0 };
+    }
+    const councilorsMax = councilorMaxByPopulation(props.pop || 0);
+    return { mayor: 1, viceMayor: 1, councilorsMax, total: 2 + councilorsMax };
+  }
+
+  function citiesForState(stateId) {
+    return Array.from(cityById.values()).filter((city) => String(city.stateId) === String(stateId));
+  }
+
+  function municipalCityCount() {
+    return Array.from(cityById.values()).filter((city) => String(city.stateId) !== "53").length;
+  }
+
+  function municipalCouncilorsMaxTotal() {
+    return Array.from(cityById.values())
+      .filter((city) => String(city.stateId) !== "53")
+      .reduce((sum, city) => sum + councilorMaxByPopulation(city.pop || 0), 0);
+  }
+
+  function stateDeputyCount(uf) {
+    const federal = FEDERAL_DEPUTIES_BY_UF[uf] || 0;
+    if (!federal) return 0;
+    return federal <= 12 ? federal * 3 : 36 + (federal - 12);
+  }
+
+  function councilorMaxByPopulation(population) {
+    const pop = Number(population || 0);
+    const bands = [
+      [15000, 9], [30000, 11], [50000, 13], [80000, 15],
+      [120000, 17], [160000, 19], [300000, 21], [450000, 23],
+      [600000, 25], [750000, 27], [900000, 29], [1050000, 31],
+      [1200000, 33], [1350000, 35], [1500000, 37], [1800000, 39],
+      [2400000, 41], [3000000, 43], [4000000, 45], [5000000, 47],
+      [6000000, 49], [7000000, 51], [8000000, 53]
+    ];
+    const band = bands.find(([limit]) => pop <= limit);
+    return band ? band[1] : 55;
+  }
+
   function fitBrazil() {
     map.fitBounds(BR_BOUNDS, { padding: { top: 64, right: 64, bottom: 52, left: 64 }, duration: 1200, essential: true });
   }
@@ -1936,7 +2556,14 @@
   }
 
   function flyToStreet() {
+    isStreetMode = true;
     setHybridBaseActive();
+    clearHoverPopup();
+    if (fixedPopup) fixedPopup.remove();
+    fixedPopup = null;
+    hideAtlasLayersForStreet();
+    restoreBaseLabels();
+    elements["hud-layer"].textContent = "Rua";
 
     let target = selectedCityFeature && selectedCityFeature.properties;
     if (!target && selectedStateId && stateCitiesCache.has(selectedStateId)) {
@@ -1950,9 +2577,9 @@
     const center = target ? [target.lng, target.lat] : BRASILIA_STREET_CENTER;
     map.flyTo({
       center,
-      zoom: 15.4,
-      pitch: 56,
-      bearing: -12,
+      zoom: 16.1,
+      pitch: 28,
+      bearing: 0,
       speed: 0.65,
       curve: 1.15,
       essential: true
@@ -2089,6 +2716,38 @@
 
   function formatNumber(value) {
     return Number(value || 0).toLocaleString("pt-BR");
+  }
+
+  function formatCurrency(value) {
+    const number = Number(value || 0);
+    if (!number) return "-";
+    return number.toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+      maximumFractionDigits: 0
+    });
+  }
+
+  function formatCurrencyShort(value) {
+    const number = Number(value || 0);
+    if (!number) return "-";
+    const abs = Math.abs(number);
+    if (abs >= 1000000000000) return `R$ ${(number / 1000000000000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} tri`;
+    if (abs >= 1000000000) return `R$ ${(number / 1000000000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} bi`;
+    if (abs >= 1000000) return `R$ ${(number / 1000000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mi`;
+    return formatCurrency(number);
+  }
+
+  function perCapita(total, population) {
+    const value = Number(total || 0);
+    const pop = Number(population || 0);
+    return value && pop ? value / pop : 0;
+  }
+
+  function formatRatio(value, base) {
+    const ratio = Number(base || 0) ? Number(value || 0) / Number(base || 0) : 0;
+    if (!ratio) return "-";
+    return `${ratio.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}x`;
   }
 
   function formatShort(value) {
