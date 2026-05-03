@@ -1,0 +1,2130 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Atlas Brasil | População no Globo</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,700&display=swap" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.5.0/dist/maplibre-gl.css" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0b1014;
+    --panel: #111820;
+    --panel-2: #17212b;
+    --panel-3: #1d2934;
+    --line: rgba(227, 236, 230, 0.12);
+    --line-strong: rgba(227, 236, 230, 0.22);
+    --text: #edf3ee;
+    --muted: #a9b7b3;
+    --quiet: #74847f;
+    --cyan: #51d1c2;
+    --lime: #a9d65c;
+    --gold: #f2c14e;
+    --coral: #ef7d60;
+    --violet: #b799ff;
+    --danger: #ff6b73;
+    --body: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --serif: "Source Serif 4", Georgia, serif;
+    --shadow: 0 18px 45px rgba(0, 0, 0, 0.34);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    letter-spacing: 0;
+    overflow: hidden;
+  }
+
+  button, input {
+    font: inherit;
+  }
+
+  button {
+    color: inherit;
+  }
+
+  .app {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 420px;
+    height: 100vh;
+    min-height: 640px;
+  }
+
+  .map-stage {
+    position: relative;
+    min-width: 0;
+    background: #07121b;
+  }
+
+  #map {
+    width: 100%;
+    height: 100%;
+  }
+
+  .maplibregl-ctrl-group {
+    background: rgba(17, 24, 32, 0.92) !important;
+    border: 1px solid var(--line-strong) !important;
+    border-radius: 8px !important;
+    box-shadow: var(--shadow) !important;
+    overflow: hidden;
+  }
+
+  .maplibregl-ctrl-group button {
+    background: transparent !important;
+    border-bottom: 1px solid var(--line) !important;
+  }
+
+  .maplibregl-ctrl-group button:hover {
+    background: var(--panel-3) !important;
+  }
+
+  .maplibregl-ctrl-group button span {
+    filter: invert(1) opacity(0.8);
+  }
+
+  .maplibregl-ctrl-attrib {
+    background: rgba(11, 16, 20, 0.72) !important;
+    color: var(--muted) !important;
+    font-size: 10px !important;
+  }
+
+  .maplibregl-popup-content {
+    background: var(--panel) !important;
+    border: 1px solid var(--line-strong) !important;
+    border-radius: 8px !important;
+    color: var(--text) !important;
+    padding: 0 !important;
+    box-shadow: var(--shadow) !important;
+    min-width: 220px;
+  }
+
+  .maplibregl-popup-tip {
+    border-top-color: var(--panel) !important;
+    border-bottom-color: var(--panel) !important;
+  }
+
+  .maplibregl-popup-close-button {
+    color: var(--muted) !important;
+    font-size: 18px !important;
+    padding: 6px 8px !important;
+  }
+
+  .hover-popup {
+    pointer-events: none;
+  }
+
+  .hover-popup .maplibregl-popup-content {
+    border-color: rgba(242, 193, 78, 0.82) !important;
+  }
+
+  .map-hud {
+    position: absolute;
+    z-index: 5;
+    left: 20px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    pointer-events: none;
+  }
+
+  .hud-top {
+    top: 18px;
+  }
+
+  .hud-bottom {
+    bottom: 18px;
+  }
+
+  .chip {
+    min-height: 32px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: rgba(11, 16, 20, 0.72);
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+    backdrop-filter: blur(10px);
+    white-space: nowrap;
+  }
+
+  .chip strong {
+    color: var(--text);
+    font-weight: 700;
+  }
+
+  .chip .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--cyan);
+    box-shadow: 0 0 12px rgba(81, 209, 194, 0.7);
+  }
+
+  .status {
+    position: absolute;
+    z-index: 20;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: min(420px, calc(100% - 36px));
+    background: rgba(17, 24, 32, 0.94);
+    border: 1px solid var(--line-strong);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    padding: 18px;
+    display: none;
+  }
+
+  .status.visible {
+    display: block;
+  }
+
+  .status-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 8px;
+    font-weight: 800;
+  }
+
+  .spinner {
+    width: 14px;
+    height: 14px;
+    border-radius: 999px;
+    border: 2px solid rgba(81, 209, 194, 0.28);
+    border-top-color: var(--cyan);
+    animation: spin 0.75s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .status p {
+    margin: 0;
+    color: var(--muted);
+    line-height: 1.45;
+    font-size: 14px;
+  }
+
+  .panel {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+    border-left: 1px solid var(--line-strong);
+    background: var(--panel);
+  }
+
+  .panel-scroll {
+    overflow-y: auto;
+    padding-bottom: 18px;
+  }
+
+  .panel-scroll::-webkit-scrollbar { width: 10px; }
+  .panel-scroll::-webkit-scrollbar-track { background: var(--panel); }
+  .panel-scroll::-webkit-scrollbar-thumb {
+    background: var(--panel-3);
+    border: 3px solid var(--panel);
+    border-radius: 999px;
+  }
+
+  .brand {
+    padding: 24px 24px 20px;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel-2);
+  }
+
+  .kicker {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    color: var(--cyan);
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 12px;
+  }
+
+  .live-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 8px;
+    border: 1px solid rgba(169, 214, 92, 0.35);
+    border-radius: 999px;
+    color: var(--lime);
+    font-size: 11px;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  .live-pill span {
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: currentColor;
+  }
+
+  h1 {
+    margin: 0;
+    font-family: var(--serif);
+    font-size: 38px;
+    line-height: 1;
+    letter-spacing: 0;
+  }
+
+  .subtitle {
+    margin: 12px 0 0;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.55;
+  }
+
+  .section {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .section-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 0 0 14px;
+  }
+
+  .section-title h2 {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .section-title .tiny {
+    color: var(--quiet);
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .metrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .metric {
+    min-height: 84px;
+    padding: 13px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel-2);
+  }
+
+  .metric span {
+    display: block;
+    color: var(--quiet);
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin-bottom: 8px;
+  }
+
+  .metric strong {
+    display: block;
+    font-size: 22px;
+    line-height: 1.05;
+    color: var(--text);
+  }
+
+  .metric small {
+    display: block;
+    color: var(--muted);
+    margin-top: 6px;
+    font-size: 12px;
+  }
+
+  .toolbar {
+    display: grid;
+    gap: 8px;
+  }
+
+  .segmented {
+    display: grid;
+    grid-template-columns: repeat(var(--cols), 1fr);
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .segmented button {
+    min-height: 42px;
+    border: 0;
+    background: var(--panel-2);
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+  }
+
+  .segmented button:hover {
+    background: var(--panel-3);
+    color: var(--text);
+  }
+
+  .segmented button.active {
+    background: var(--cyan);
+    color: #06201d;
+  }
+
+  .segmented svg {
+    width: 16px;
+    height: 16px;
+    stroke-width: 2.4;
+  }
+
+  .search-box {
+    position: relative;
+  }
+
+  .search-box svg {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 17px;
+    height: 17px;
+    color: var(--quiet);
+    pointer-events: none;
+  }
+
+  .search-box input {
+    width: 100%;
+    height: 44px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel-2);
+    color: var(--text);
+    outline: 0;
+    padding: 0 12px 0 38px;
+  }
+
+  .search-box input:focus {
+    border-color: rgba(81, 209, 194, 0.75);
+    box-shadow: 0 0 0 3px rgba(81, 209, 194, 0.12);
+  }
+
+  .results {
+    margin-top: 8px;
+    display: none;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .results.visible {
+    display: block;
+  }
+
+  .result-btn {
+    width: 100%;
+    min-height: 48px;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel-2);
+    color: var(--text);
+    cursor: pointer;
+    padding: 9px 12px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    align-items: center;
+    text-align: left;
+  }
+
+  .result-btn:last-child {
+    border-bottom: 0;
+  }
+
+  .result-btn:hover {
+    background: var(--panel-3);
+  }
+
+  .result-name {
+    font-weight: 800;
+    min-width: 0;
+  }
+
+  .result-meta {
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 3px;
+  }
+
+  .result-pop {
+    color: var(--gold);
+    font-size: 12px;
+    font-weight: 900;
+    white-space: nowrap;
+  }
+
+  .selected {
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel-2);
+  }
+
+  .selected-type {
+    color: var(--cyan);
+    font-size: 12px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 9px;
+  }
+
+  .selected h3 {
+    margin: 0;
+    font-family: var(--serif);
+    font-size: 30px;
+    line-height: 1.05;
+    letter-spacing: 0;
+  }
+
+  .selected-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 14px;
+  }
+
+  .selected-grid div {
+    min-height: 58px;
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: rgba(11, 16, 20, 0.38);
+  }
+
+  .selected-grid span {
+    display: block;
+    color: var(--quiet);
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin-bottom: 5px;
+  }
+
+  .selected-grid strong {
+    display: block;
+    font-size: 17px;
+  }
+
+  .chart {
+    display: grid;
+    gap: 7px;
+  }
+
+  .bar-row {
+    display: grid;
+    grid-template-columns: minmax(92px, 1fr) 74px;
+    align-items: center;
+    gap: 10px;
+    min-height: 30px;
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  .bar-track {
+    position: relative;
+    height: 30px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: rgba(11, 16, 20, 0.36);
+    overflow: hidden;
+  }
+
+  .bar-fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    min-width: 3px;
+    border-radius: 8px;
+    background: linear-gradient(90deg, rgba(81, 209, 194, 0.38), rgba(169, 214, 92, 0.78));
+  }
+
+  .bar-name {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    color: var(--text);
+    font-weight: 800;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .bar-value {
+    text-align: right;
+    color: var(--gold);
+    font-weight: 900;
+    white-space: nowrap;
+  }
+
+  .ranking {
+    display: grid;
+    gap: 6px;
+  }
+
+  .rank-btn {
+    width: 100%;
+    min-height: 52px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel-2);
+    color: var(--text);
+    cursor: pointer;
+    padding: 10px;
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+    gap: 9px;
+    align-items: center;
+    text-align: left;
+  }
+
+  .rank-btn:hover,
+  .rank-btn.active {
+    border-color: rgba(81, 209, 194, 0.62);
+    background: var(--panel-3);
+  }
+
+  .rank-no {
+    color: var(--cyan);
+    font-size: 12px;
+    font-weight: 900;
+  }
+
+  .rank-main {
+    min-width: 0;
+  }
+
+  .rank-name {
+    display: block;
+    font-size: 14px;
+    font-weight: 900;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .rank-meta {
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 3px;
+  }
+
+  .rank-pop {
+    color: var(--gold);
+    font-size: 12px;
+    font-weight: 900;
+    white-space: nowrap;
+  }
+
+  .empty {
+    border: 1px dashed var(--line-strong);
+    border-radius: 8px;
+    color: var(--muted);
+    padding: 14px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .footer {
+    margin-top: auto;
+    padding: 14px 24px;
+    border-top: 1px solid var(--line);
+    color: var(--quiet);
+    font-size: 11px;
+    line-height: 1.45;
+    background: var(--panel);
+  }
+
+  .footer a {
+    color: var(--cyan);
+    text-decoration: none;
+  }
+
+  .footer a:hover {
+    text-decoration: underline;
+  }
+
+  .popup {
+    padding: 13px 14px 14px;
+  }
+
+  .popup-kind {
+    color: var(--cyan);
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 7px;
+  }
+
+  .popup-title {
+    font-family: var(--serif);
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.05;
+    margin: 0 22px 9px 0;
+  }
+
+  .popup-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    color: var(--muted);
+    border-top: 1px solid var(--line);
+    padding-top: 8px;
+    font-size: 12px;
+  }
+
+  .popup-row strong {
+    color: var(--gold);
+    white-space: nowrap;
+  }
+
+  @media (max-width: 1040px) {
+    body {
+      overflow: auto;
+    }
+
+    .app {
+      grid-template-columns: 1fr;
+      grid-template-rows: 58vh auto;
+      height: auto;
+      min-height: 100vh;
+    }
+
+    .panel {
+      border-left: 0;
+      border-top: 1px solid var(--line-strong);
+      overflow: visible;
+    }
+
+    .panel-scroll {
+      overflow: visible;
+    }
+  }
+
+  @media (max-width: 620px) {
+    .app {
+      grid-template-rows: 54vh auto;
+    }
+
+    .brand,
+    .section,
+    .footer {
+      padding-left: 16px;
+      padding-right: 16px;
+    }
+
+    h1 {
+      font-size: 31px;
+    }
+
+    .metrics,
+    .selected-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .segmented {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .hud-bottom {
+      display: none;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <main class="map-stage" aria-label="Mapa mundial com foco no Brasil">
+    <div id="map"></div>
+
+    <div class="map-hud hud-top">
+      <div class="chip"><span class="dot"></span><strong>Atlas Brasil</strong></div>
+      <div class="chip">Camada <strong id="hud-layer">Estados</strong></div>
+      <div class="chip">Zoom <strong id="hud-zoom">1.7</strong></div>
+    </div>
+
+    <div class="map-hud hud-bottom">
+      <div class="chip">Fonte <strong>IBGE/SIDRA 2022</strong></div>
+      <div class="chip">Coordenadas <strong id="hud-coords">0.000, 0.000</strong></div>
+    </div>
+
+    <div class="status visible" id="status">
+      <div class="status-title"><span class="spinner" id="status-spinner"></span><span id="status-title">Carregando atlas</span></div>
+      <p id="status-text">Preparando mapa, malhas geográficas e população do Censo 2022.</p>
+    </div>
+  </main>
+
+  <aside class="panel" aria-label="Painel de análise">
+    <div class="panel-scroll">
+      <header class="brand">
+        <div class="kicker">
+          <span>Saúde do planeta | Brasil v1</span>
+          <span class="live-pill"><span></span>dados oficiais</span>
+        </div>
+        <h1>População brasileira no globo</h1>
+        <p class="subtitle">Uma primeira base para entender estados e municípios brasileiros no território, comparando tamanho populacional, concentração e ranking local.</p>
+      </header>
+
+      <section class="section">
+        <div class="metrics">
+          <div class="metric">
+            <span>Brasil</span>
+            <strong id="metric-br-pop">...</strong>
+            <small>Censo Demográfico 2022</small>
+          </div>
+          <div class="metric">
+            <span>Unidades</span>
+            <strong id="metric-units">27 UF</strong>
+            <small id="metric-city-count">5.570 municípios</small>
+          </div>
+          <div class="metric">
+            <span>UF em foco</span>
+            <strong id="metric-state">Brasil</strong>
+            <small id="metric-state-pop">selecione no mapa</small>
+          </div>
+          <div class="metric">
+            <span>Município</span>
+            <strong id="metric-city">nenhum</strong>
+            <small id="metric-city-pop">clique em uma bolha</small>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-title">
+          <h2>Navegação</h2>
+          <span class="tiny" id="data-state-label">iniciando</span>
+        </div>
+        <div class="toolbar">
+          <div class="segmented" style="--cols: 5">
+            <button type="button" data-view="world" title="Ver o globo"><i data-lucide="globe-2"></i>Globo</button>
+            <button type="button" data-view="brazil" class="active" title="Centralizar no Brasil"><i data-lucide="map"></i>Brasil</button>
+            <button type="button" data-view="states" title="Ver população por estado"><i data-lucide="layers-3"></i>Estados</button>
+            <button type="button" data-view="cities" title="Aproximar dos municípios"><i data-lucide="circle-dot"></i>Cidades</button>
+            <button type="button" data-view="street" title="Aproximar ao nível de rua"><i data-lucide="map-pin"></i>Rua</button>
+          </div>
+          <div class="segmented" style="--cols: 3">
+            <button type="button" data-base="map" title="Mapa vetorial"><i data-lucide="route"></i>Mapa</button>
+            <button type="button" data-base="earth" title="Imagem de satélite"><i data-lucide="satellite"></i>Terra</button>
+            <button type="button" data-base="hybrid" class="active" title="Satélite com ruas e nomes"><i data-lucide="blend"></i>Híbrido</button>
+          </div>
+          <div class="segmented" style="--cols: 2">
+            <button type="button" data-projection="globe" class="active" title="Projeção globo"><i data-lucide="circle"></i>Globo</button>
+            <button type="button" data-projection="mercator" title="Projeção plana"><i data-lucide="panel-top"></i>Plano</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-title">
+          <h2>Busca territorial</h2>
+          <span class="tiny">UF ou município</span>
+        </div>
+        <div class="search-box">
+          <i data-lucide="search"></i>
+          <input id="search" type="search" autocomplete="off" placeholder="Ex.: São Paulo, Manaus, Recife" />
+        </div>
+        <div class="results" id="search-results"></div>
+      </section>
+
+      <section class="section">
+        <div class="section-title">
+          <h2>Leitura atual</h2>
+          <span class="tiny" id="selected-code">BR</span>
+        </div>
+        <div class="selected">
+          <div class="selected-type" id="selected-type">Brasil</div>
+          <h3 id="selected-name">Brasil</h3>
+          <div class="selected-grid">
+            <div>
+              <span>População</span>
+              <strong id="selected-pop">...</strong>
+            </div>
+            <div>
+              <span>Participação</span>
+              <strong id="selected-share">100%</strong>
+            </div>
+            <div>
+              <span>Ranking</span>
+              <strong id="selected-rank">-</strong>
+            </div>
+            <div>
+              <span>Contexto</span>
+              <strong id="selected-context">Brasil</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-title">
+          <h2 id="chart-title">Estados mais populosos</h2>
+          <span class="tiny" id="chart-caption">top 10</span>
+        </div>
+        <div class="chart" id="population-chart"></div>
+      </section>
+
+      <section class="section">
+        <div class="section-title">
+          <h2 id="ranking-title">Municípios em foco</h2>
+          <span class="tiny" id="ranking-caption">selecione uma UF</span>
+        </div>
+        <div class="ranking" id="ranking"></div>
+      </section>
+    </div>
+
+    <footer class="footer">
+      Dados: <a href="https://sidra.ibge.gov.br/tabela/4714" target="_blank" rel="noreferrer">SIDRA tabela 4714</a>,
+      <a href="https://servicodados.ibge.gov.br/api/docs/localidades" target="_blank" rel="noreferrer">Localidades IBGE</a> e
+      <a href="https://servicodados.ibge.gov.br/api/docs/malhas?versao=3" target="_blank" rel="noreferrer">Malhas IBGE</a>.
+    </footer>
+  </aside>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.5.0/dist/maplibre-gl.js"></script>
+<script src="https://unpkg.com/lucide@0.559.0/dist/umd/lucide.min.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  const URLS = {
+    mapStyle: "https://tiles.openfreemap.org/styles/dark",
+    fallbackStyle: "https://demotiles.maplibre.org/style.json",
+    statesMesh: "https://servicodados.ibge.gov.br/api/v3/malhas/paises/BR?intrarregiao=UF&formato=application/vnd.geo%2Bjson&qualidade=minima",
+    stateMesh: (stateId) => `https://servicodados.ibge.gov.br/api/v3/malhas/estados/${stateId}?intrarregiao=municipio&formato=application/vnd.geo%2Bjson&qualidade=minima`,
+    statePopulation: "https://apisidra.ibge.gov.br/values/t/4714/n3/all/v/93/p/2022",
+    cityPopulation: "https://apisidra.ibge.gov.br/values/t/4714/n6/all/v/93/p/2022",
+    states: "https://servicodados.ibge.gov.br/api/v1/localidades/estados?orderBy=nome",
+    cities: "https://servicodados.ibge.gov.br/api/v1/localidades/municipios?orderBy=nome"
+  };
+
+  const STATE_FALLBACK = [
+    { id: "12", sigla: "AC", nome: "Acre", regiao: "Norte", pop: 830018, lng: -70.55, lat: -8.77 },
+    { id: "27", sigla: "AL", nome: "Alagoas", regiao: "Nordeste", pop: 3127511, lng: -36.65, lat: -9.62 },
+    { id: "16", sigla: "AP", nome: "Amapá", regiao: "Norte", pop: 733759, lng: -51.8, lat: 1.41 },
+    { id: "13", sigla: "AM", nome: "Amazonas", regiao: "Norte", pop: 3941613, lng: -63, lat: -4 },
+    { id: "29", sigla: "BA", nome: "Bahia", regiao: "Nordeste", pop: 14141626, lng: -41.7, lat: -12.5 },
+    { id: "23", sigla: "CE", nome: "Ceará", regiao: "Nordeste", pop: 8794957, lng: -39.3, lat: -5.2 },
+    { id: "53", sigla: "DF", nome: "Distrito Federal", regiao: "Centro-Oeste", pop: 2817068, lng: -47.86, lat: -15.79 },
+    { id: "32", sigla: "ES", nome: "Espírito Santo", regiao: "Sudeste", pop: 3833486, lng: -40.3, lat: -19.6 },
+    { id: "52", sigla: "GO", nome: "Goiás", regiao: "Centro-Oeste", pop: 7055228, lng: -49.8, lat: -16 },
+    { id: "21", sigla: "MA", nome: "Maranhão", regiao: "Nordeste", pop: 6775152, lng: -45.2, lat: -5 },
+    { id: "51", sigla: "MT", nome: "Mato Grosso", regiao: "Centro-Oeste", pop: 3658649, lng: -55.9, lat: -12.6 },
+    { id: "50", sigla: "MS", nome: "Mato Grosso do Sul", regiao: "Centro-Oeste", pop: 2757013, lng: -54.8, lat: -20.5 },
+    { id: "31", sigla: "MG", nome: "Minas Gerais", regiao: "Sudeste", pop: 20539989, lng: -44.5, lat: -18.5 },
+    { id: "15", sigla: "PA", nome: "Pará", regiao: "Norte", pop: 8121025, lng: -52, lat: -5.5 },
+    { id: "25", sigla: "PB", nome: "Paraíba", regiao: "Nordeste", pop: 3974495, lng: -36.7, lat: -7.1 },
+    { id: "41", sigla: "PR", nome: "Paraná", regiao: "Sul", pop: 11444380, lng: -51.5, lat: -24.7 },
+    { id: "26", sigla: "PE", nome: "Pernambuco", regiao: "Nordeste", pop: 9058155, lng: -37.9, lat: -8.3 },
+    { id: "22", sigla: "PI", nome: "Piauí", regiao: "Nordeste", pop: 3269200, lng: -42.8, lat: -7.7 },
+    { id: "33", sigla: "RJ", nome: "Rio de Janeiro", regiao: "Sudeste", pop: 16055174, lng: -42.7, lat: -22.2 },
+    { id: "24", sigla: "RN", nome: "Rio Grande do Norte", regiao: "Nordeste", pop: 3302406, lng: -36.5, lat: -5.8 },
+    { id: "43", sigla: "RS", nome: "Rio Grande do Sul", regiao: "Sul", pop: 10882965, lng: -53.2, lat: -30 },
+    { id: "11", sigla: "RO", nome: "Rondônia", regiao: "Norte", pop: 1581196, lng: -63.4, lat: -10.9 },
+    { id: "14", sigla: "RR", nome: "Roraima", regiao: "Norte", pop: 636303, lng: -61.3, lat: 2 },
+    { id: "42", sigla: "SC", nome: "Santa Catarina", regiao: "Sul", pop: 7610361, lng: -50, lat: -27.2 },
+    { id: "35", sigla: "SP", nome: "São Paulo", regiao: "Sudeste", pop: 44411238, lng: -48.4, lat: -22.2 },
+    { id: "28", sigla: "SE", nome: "Sergipe", regiao: "Nordeste", pop: 2209558, lng: -37.4, lat: -10.6 },
+    { id: "17", sigla: "TO", nome: "Tocantins", regiao: "Norte", pop: 1511459, lng: -48.3, lat: -10.2 }
+  ];
+
+  const BR_CENTER = [-53.2, -10.8];
+  const BR_BOUNDS = [[-74.4, -34.2], [-33.7, 5.5]];
+  const stateById = new Map();
+  const stateFeatureById = new Map();
+  const cityById = new Map();
+  const cityPopById = new Map();
+  const stateCitiesCache = new Map();
+  const elements = {};
+  const BRASILIA_STREET_CENTER = [-47.8825, -15.7942];
+
+  let map;
+  let selectedStateId = null;
+  let selectedCityId = null;
+  let selectedCityFeature = null;
+  let fixedPopup = null;
+  let hoverPopup = null;
+  let hoveredFeatureKey = null;
+  let totalPopulation = 0;
+  let fallbackStyleTried = false;
+  let activeBaseMode = "hybrid";
+
+  document.addEventListener("DOMContentLoaded", init);
+
+  function init() {
+    cacheElements();
+    if (window.lucide) window.lucide.createIcons();
+
+    if (typeof maplibregl === "undefined") {
+      showStatus("MapLibre não carregou", "Verifique a conexão com cdn.jsdelivr.net para abrir o mapa.", true);
+      return;
+    }
+
+    initMap();
+    bindControls();
+    loadAtlas();
+  }
+
+  function cacheElements() {
+    [
+      "status", "status-spinner", "status-title", "status-text", "hud-layer", "hud-zoom", "hud-coords",
+      "metric-br-pop", "metric-city-count", "metric-state", "metric-state-pop", "metric-city", "metric-city-pop",
+      "data-state-label", "search", "search-results", "selected-code", "selected-type", "selected-name",
+      "selected-pop", "selected-share", "selected-rank", "selected-context", "population-chart", "chart-title",
+      "chart-caption", "ranking", "ranking-title", "ranking-caption"
+    ].forEach((id) => {
+      elements[id] = document.getElementById(id);
+    });
+  }
+
+  function initMap() {
+    map = new maplibregl.Map({
+      container: "map",
+      style: URLS.mapStyle,
+      center: [-30, 0],
+      zoom: 1.7,
+      attributionControl: { compact: true },
+      canvasContextAttributes: { antialias: true }
+    });
+
+    map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
+    if (map.doubleClickZoom) map.doubleClickZoom.disable();
+
+    map.on("error", (event) => {
+      const message = String(event.error && event.error.message ? event.error.message : "");
+      if (!fallbackStyleTried && /style|tile|network|fetch/i.test(message)) {
+        fallbackStyleTried = true;
+        map.setStyle(URLS.fallbackStyle);
+      }
+    });
+
+    map.on("styleimagemissing", (event) => {
+      if (!map.hasImage(event.id)) {
+        map.addImage(event.id, { width: 1, height: 1, data: new Uint8Array(4) });
+      }
+    });
+
+    map.on("style.load", () => {
+      try { map.setProjection({ type: "globe" }); } catch (error) { console.warn(error); }
+      addBaseLayers();
+      ensureAtlasLayers();
+      setBaseMode(activeBaseMode);
+    });
+
+    map.on("move", updateHud);
+    map.on("zoom", updateHud);
+    updateHud();
+  }
+
+  async function loadAtlas() {
+    showStatus("Carregando dados oficiais", "Buscando estados, municípios, malhas e população no IBGE/SIDRA.");
+    seedFallbackStates();
+
+    const requests = await Promise.allSettled([
+      fetchJson(URLS.statePopulation),
+      fetchJson(URLS.cityPopulation),
+      fetchJson(URLS.states),
+      fetchJson(URLS.cities),
+      fetchJson(URLS.statesMesh)
+    ]);
+
+    const [stateRows, cityRows, states, cities, statesMesh] = requests.map((result) => (
+      result.status === "fulfilled" ? result.value : null
+    ));
+
+    mergeStates(states);
+    mergePopulation(stateRows, stateById);
+    mergeCities(cities);
+    mergeCityPopulation(cityRows);
+    totalPopulation = sumPopulation(Array.from(stateById.values()));
+    hydrateStatesMesh(statesMesh);
+
+    const failedRequests = requests.filter((result) => result.status === "rejected");
+    if (failedRequests.length) {
+      console.warn("Algumas consultas falharam.", failedRequests.map((result) => result.reason));
+      elements["data-state-label"].textContent = "dados parciais";
+      showStatus("Dados parciais", "Não foi possível completar todas as consultas. A camada estadual de referência continua disponível.", true);
+      setTimeout(hideStatus, 4200);
+    } else {
+      elements["data-state-label"].textContent = "dados carregados";
+    }
+
+    updateStateSources();
+    renderBrazilMetrics();
+    renderSelectedBrazil();
+    renderStateChart();
+    renderEmptyRanking();
+    fitBrazil();
+    hideStatus();
+  }
+
+  async function loadStateCities(stateId, requestedCityId) {
+    selectedStateId = String(stateId);
+    selectedCityId = null;
+    selectedCityFeature = null;
+    const state = stateById.get(selectedStateId);
+    if (!state) return;
+
+    selectStateUi(state);
+    showStatus(`Carregando ${state.sigla}`, "Montando malha municipal e bolhas proporcionais de população.");
+
+    try {
+      if (!stateCitiesCache.has(selectedStateId)) {
+        const mesh = await fetchJson(URLS.stateMesh(selectedStateId));
+        const collection = hydrateCityMesh(mesh, selectedStateId);
+        stateCitiesCache.set(selectedStateId, collection);
+      }
+
+      const collection = stateCitiesCache.get(selectedStateId);
+      updateMunicipalitySources(collection);
+      renderMunicipalityRanking(collection);
+      renderMunicipalityChart(collection);
+      setLayerVisibility("municipality", true);
+      elements["hud-layer"].textContent = "Municípios";
+
+      const selectedFeature = collection.features.find((feature) => feature.properties.id === String(requestedCityId));
+      if (selectedFeature) {
+        selectCity(selectedFeature.properties.id, selectedFeature);
+      } else {
+        flyToState(state);
+      }
+    } catch (error) {
+      console.warn("Falha ao carregar municípios", error);
+      updateMunicipalitySources(emptyFeatureCollection());
+      renderEmptyRanking("Não foi possível carregar a malha municipal dessa UF agora.");
+      flyToState(state);
+    } finally {
+      hideStatus();
+    }
+  }
+
+  function seedFallbackStates() {
+    STATE_FALLBACK.forEach((state) => {
+      stateById.set(state.id, { ...state, source: "fallback" });
+    });
+  }
+
+  function mergeStates(rows) {
+    if (!Array.isArray(rows)) return;
+    rows.forEach((row) => {
+      const id = String(row.id);
+      const fallback = stateById.get(id) || {};
+      stateById.set(id, {
+        ...fallback,
+        id,
+        sigla: row.sigla || fallback.sigla,
+        nome: row.nome || fallback.nome,
+        regiao: row.regiao ? row.regiao.nome : fallback.regiao,
+        source: "ibge"
+      });
+    });
+  }
+
+  function mergeCities(rows) {
+    if (!Array.isArray(rows)) return;
+    rows.forEach((row) => {
+      const stateId = String(row.microrregiao?.mesorregiao?.UF?.id || "").padStart(2, "0");
+      const state = stateById.get(stateId);
+      cityById.set(String(row.id), {
+        id: String(row.id),
+        nome: row.nome,
+        stateId,
+        uf: state ? state.sigla : stateId,
+        stateName: state ? state.nome : ""
+      });
+    });
+  }
+
+  function mergePopulation(rows, targetMap) {
+    parseSidraRows(rows).forEach((row) => {
+      const id = normalizeCode(row.D1C || row["Unidade da Federação (Código)"] || row.id);
+      const pop = parseNumber(row.V || row.Valor || row.valor);
+      if (!id || !Number.isFinite(pop)) return;
+      const existing = targetMap.get(id) || { id };
+      targetMap.set(id, { ...existing, pop });
+    });
+  }
+
+  function mergeCityPopulation(rows) {
+    parseSidraRows(rows).forEach((row) => {
+      const id = normalizeCode(row.D1C || row["Município (Código)"] || row.id);
+      const pop = parseNumber(row.V || row.Valor || row.valor);
+      if (!id || !Number.isFinite(pop)) return;
+      cityPopById.set(id, pop);
+      const existing = cityById.get(id);
+      if (existing) cityById.set(id, { ...existing, pop });
+    });
+  }
+
+  function hydrateStatesMesh(mesh) {
+    const collection = normalizeFeatureCollection(mesh);
+    collection.features.forEach((feature) => {
+      const id = normalizeCode(readGeoProperty(feature.properties, ["codarea", "CD_GEOCUF", "id", "codigo"]));
+      if (!id) return;
+      const state = stateById.get(id);
+      if (!state) return;
+      const center = representativePoint(feature.geometry) || [state.lng, state.lat];
+      const props = {
+        ...feature.properties,
+        id,
+        name: state.nome,
+        uf: state.sigla,
+        region: state.regiao,
+        pop: state.pop || 0,
+        lng: center[0],
+        lat: center[1]
+      };
+      feature.properties = props;
+      stateFeatureById.set(id, feature);
+      stateById.set(id, { ...state, lng: center[0], lat: center[1] });
+    });
+  }
+
+  function hydrateCityMesh(mesh, stateId) {
+    const state = stateById.get(String(stateId));
+    const collection = normalizeFeatureCollection(mesh);
+    collection.features.forEach((feature) => {
+      const id = normalizeCode(readGeoProperty(feature.properties, ["codarea", "CD_GEOCMU", "id", "codigo"]));
+      const city = cityById.get(id) || {};
+      const point = representativePoint(feature.geometry);
+      const pop = cityPopById.get(id) || city.pop || 0;
+      feature.properties = {
+        ...feature.properties,
+        id,
+        name: city.nome || readGeoProperty(feature.properties, ["nomarea", "NM_MUN", "nome"]) || `Município ${id}`,
+        stateId: String(stateId),
+        uf: state ? state.sigla : "",
+        stateName: state ? state.nome : "",
+        pop,
+        lng: point ? point[0] : state.lng,
+        lat: point ? point[1] : state.lat
+      };
+    });
+
+    collection.features.sort((a, b) => b.properties.pop - a.properties.pop);
+    collection.features.forEach((feature, index) => {
+      feature.properties.rank = index + 1;
+    });
+    return collection;
+  }
+
+  function updateStateSources() {
+    const polygonFeatures = Array.from(stateFeatureById.values());
+    const fallbackPointFeatures = Array.from(stateById.values()).map((state) => pointFeature([state.lng, state.lat], {
+      id: state.id,
+      name: state.nome,
+      uf: state.sigla,
+      region: state.regiao,
+      pop: state.pop || 0,
+      lng: state.lng,
+      lat: state.lat
+    }));
+
+    setSourceData("states-fill-source", {
+      type: "FeatureCollection",
+      features: polygonFeatures
+    });
+    setSourceData("states-points-source", {
+      type: "FeatureCollection",
+      features: fallbackPointFeatures
+    });
+    updateSelectedStateSource();
+  }
+
+  function updateSelectedStateSource() {
+    const feature = selectedStateId ? stateFeatureById.get(selectedStateId) : null;
+    setSourceData("selected-state-source", {
+      type: "FeatureCollection",
+      features: feature ? [feature] : []
+    });
+  }
+
+  function updateMunicipalitySources(collection) {
+    setSourceData("municipality-fill-source", collection);
+    setSourceData("municipality-points-source", {
+      type: "FeatureCollection",
+      features: collection.features.map((feature) => pointFeature(
+        [feature.properties.lng, feature.properties.lat],
+        feature.properties
+      ))
+    });
+  }
+
+  function ensureAtlasLayers() {
+    if (!map.getSource("states-fill-source")) {
+      map.addSource("states-fill-source", { type: "geojson", data: emptyFeatureCollection() });
+      map.addSource("states-points-source", { type: "geojson", data: emptyFeatureCollection() });
+      map.addSource("selected-state-source", { type: "geojson", data: emptyFeatureCollection() });
+      map.addSource("municipality-fill-source", { type: "geojson", data: emptyFeatureCollection() });
+      map.addSource("municipality-points-source", { type: "geojson", data: emptyFeatureCollection() });
+    }
+
+    addLayerOnce({
+      id: "states-fill",
+      type: "fill",
+      source: "states-fill-source",
+      paint: {
+        "fill-color": [
+          "interpolate", ["linear"], ["get", "pop"],
+          600000, "#17212b",
+          3000000, "#25534e",
+          8000000, "#5b8e54",
+          16000000, "#c59b3f",
+          44000000, "#ef7d60"
+        ],
+        "fill-opacity": 0.58
+      }
+    });
+
+    addLayerOnce({
+      id: "states-outline",
+      type: "line",
+      source: "states-fill-source",
+      paint: {
+        "line-color": "rgba(237, 243, 238, 0.55)",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 3, 0.65, 7, 1.6]
+      }
+    });
+
+    addLayerOnce({
+      id: "selected-state-outline",
+      type: "line",
+      source: "selected-state-source",
+      paint: {
+        "line-color": "#51d1c2",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 3, 2.2, 8, 4.2]
+      }
+    });
+
+    addLayerOnce({
+      id: "states-bubbles",
+      type: "circle",
+      source: "states-points-source",
+      paint: {
+        "circle-radius": ["interpolate", ["sqrt"], ["get", "pop"], 600000, 5, 3000000, 9, 9000000, 15, 44000000, 28],
+        "circle-color": "#51d1c2",
+        "circle-opacity": 0.74,
+        "circle-stroke-color": "#edf3ee",
+        "circle-stroke-width": 1.2
+      }
+    });
+
+    addLayerOnce({
+      id: "states-labels",
+      type: "symbol",
+      source: "states-points-source",
+      minzoom: 3.1,
+      layout: {
+        "text-field": ["get", "uf"],
+        "text-size": ["interpolate", ["linear"], ["zoom"], 3, 11, 7, 14],
+        "text-font": ["Noto Sans Bold"],
+        "text-offset": [0, 1.2],
+        "text-anchor": "top",
+        "text-allow-overlap": false
+      },
+      paint: {
+        "text-color": "#edf3ee",
+        "text-halo-color": "#07121b",
+        "text-halo-width": 1.6
+      }
+    });
+
+    addLayerOnce({
+      id: "municipality-fill",
+      type: "fill",
+      source: "municipality-fill-source",
+      layout: { visibility: "none" },
+      paint: {
+        "fill-color": [
+          "interpolate", ["linear"], ["get", "pop"],
+          0, "#111820",
+          10000, "#17342f",
+          100000, "#396f51",
+          500000, "#a88b3a",
+          2000000, "#ef7d60",
+          11000000, "#b799ff"
+        ],
+        "fill-opacity": 0.5
+      }
+    });
+
+    addLayerOnce({
+      id: "municipality-outline",
+      type: "line",
+      source: "municipality-fill-source",
+      layout: { visibility: "none" },
+      paint: {
+        "line-color": "rgba(237, 243, 238, 0.36)",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 4, 0.35, 9, 0.9]
+      }
+    });
+
+    addLayerOnce({
+      id: "municipality-bubbles",
+      type: "circle",
+      source: "municipality-points-source",
+      layout: { visibility: "none" },
+      paint: {
+        "circle-radius": ["interpolate", ["sqrt"], ["get", "pop"], 1000, 3, 10000, 5, 100000, 8, 500000, 13, 2000000, 22, 11000000, 36],
+        "circle-color": "#f2c14e",
+        "circle-opacity": 0.72,
+        "circle-stroke-color": "#0b1014",
+        "circle-stroke-width": 1.4
+      }
+    });
+
+    addLayerOnce({
+      id: "municipality-labels",
+      type: "symbol",
+      source: "municipality-points-source",
+      minzoom: 6.2,
+      layout: {
+        "text-field": ["case", ["<=", ["get", "rank"], 18], ["get", "name"], ""],
+        "text-size": ["interpolate", ["linear"], ["zoom"], 6, 10, 10, 13],
+        "text-font": ["Noto Sans Regular"],
+        "text-offset": [0, 1.25],
+        "text-anchor": "top"
+      },
+      paint: {
+        "text-color": "#edf3ee",
+        "text-halo-color": "#07121b",
+        "text-halo-width": 1.8
+      }
+    });
+
+    bindMapLayerEvents();
+    updateStateSources();
+    if (selectedStateId) updateSelectedStateSource();
+    const cached = selectedStateId ? stateCitiesCache.get(selectedStateId) : null;
+    if (cached) updateMunicipalitySources(cached);
+  }
+
+  function bindMapLayerEvents() {
+    ["states-fill", "states-bubbles"].forEach((layerId) => {
+      if (!map.getLayer(layerId) || map.__boundStateLayers?.has(layerId)) return;
+      map.__boundStateLayers = map.__boundStateLayers || new Set();
+      map.__boundStateLayers.add(layerId);
+      map.on("click", layerId, (event) => {
+        const props = event.features[0].properties;
+        clearHoverPopup();
+        const state = stateById.get(String(props.id));
+        if (state) selectStateUi(state);
+        showStatePopup(event.lngLat, props);
+      });
+      map.on("dblclick", layerId, (event) => {
+        if (event.preventDefault) event.preventDefault();
+        const props = event.features[0].properties;
+        clearHoverPopup();
+        setActiveView("cities");
+        loadStateCities(props.id);
+      });
+      map.on("mousemove", layerId, (event) => {
+        if (!event.features.length) return;
+        map.getCanvas().style.cursor = "pointer";
+        showStateHover(event.lngLat, event.features[0].properties);
+      });
+      map.on("mouseleave", layerId, () => {
+        map.getCanvas().style.cursor = "";
+        clearHoverPopup();
+      });
+    });
+
+    ["municipality-fill", "municipality-bubbles"].forEach((layerId) => {
+      if (!map.getLayer(layerId) || map.__boundCityLayers?.has(layerId)) return;
+      map.__boundCityLayers = map.__boundCityLayers || new Set();
+      map.__boundCityLayers.add(layerId);
+      map.on("click", layerId, (event) => {
+        const props = event.features[0].properties;
+        clearHoverPopup();
+        selectCity(props.id, event.features[0]);
+        showMunicipalityPopup(event.lngLat, props);
+      });
+      map.on("dblclick", layerId, (event) => {
+        if (event.preventDefault) event.preventDefault();
+        const props = event.features[0].properties;
+        clearHoverPopup();
+        selectCity(props.id, event.features[0], { fly: false });
+        showMunicipalityPopup(event.lngLat, props);
+        setActiveView("street");
+        flyToStreet();
+      });
+      map.on("mousemove", layerId, (event) => {
+        if (!event.features.length) return;
+        map.getCanvas().style.cursor = "pointer";
+        showMunicipalityHover(event.lngLat, event.features[0].properties);
+      });
+      map.on("mouseleave", layerId, () => {
+        map.getCanvas().style.cursor = "";
+        clearHoverPopup();
+      });
+    });
+  }
+
+  function addBaseLayers() {
+    if (!map.getSource("satellite-source")) {
+      map.addSource("satellite-source", {
+        type: "raster",
+        tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],
+        tileSize: 256,
+        maxzoom: 19,
+        attribution: "Tiles © Esri"
+      });
+    }
+    addLayerOnce({
+      id: "satellite-layer",
+      type: "raster",
+      source: "satellite-source",
+      layout: { visibility: "none" },
+      paint: { "raster-opacity": 1 }
+    }, firstLineOrSymbolLayerId());
+  }
+
+  function setBaseMode(mode) {
+    activeBaseMode = mode;
+    const showSatellite = mode === "earth" || mode === "hybrid";
+    if (map.getLayer("satellite-layer")) {
+      map.setLayoutProperty("satellite-layer", "visibility", showSatellite ? "visible" : "none");
+    }
+
+    const layers = map.getStyle().layers || [];
+    layers.forEach((layer) => {
+      if (layer.id === "satellite-layer" || isAtlasLayer(layer.id)) return;
+      let visible = true;
+      if (mode === "earth") {
+        visible = false;
+      } else if (mode === "hybrid") {
+        visible = !["background", "fill", "fill-extrusion", "hillshade", "raster"].includes(layer.type);
+      }
+      try { map.setLayoutProperty(layer.id, "visibility", visible ? "visible" : "none"); } catch (error) {}
+    });
+  }
+
+  function isAtlasLayer(id) {
+    return id.startsWith("states-") || id.startsWith("selected-state") || id.startsWith("municipality-");
+  }
+
+  function setLayerVisibility(group, visible) {
+    const prefix = group === "municipality" ? "municipality-" : "states-";
+    (map.getStyle().layers || []).forEach((layer) => {
+      if (layer.id.startsWith(prefix)) {
+        map.setLayoutProperty(layer.id, "visibility", visible ? "visible" : "none");
+      }
+    });
+  }
+
+  function bindControls() {
+    document.querySelectorAll("[data-view]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const view = button.dataset.view;
+        setActiveView(view);
+        if (view === "world") map.flyTo({ center: [-30, 0], zoom: 1.55, speed: 0.8, curve: 1.35, essential: true });
+        if (view === "brazil") {
+          enterStateAnalysisMode({ selectBrazil: true });
+        }
+        if (view === "states") {
+          enterStateAnalysisMode({ selectBrazil: true });
+        }
+        if (view === "cities") {
+          if (selectedStateId) flyToState(stateById.get(selectedStateId), 6.1);
+          else fitBrazil();
+        }
+        if (view === "street") {
+          flyToStreet();
+        }
+      });
+    });
+
+    document.querySelectorAll("[data-base]").forEach((button) => {
+      button.addEventListener("click", () => {
+        setActiveButton("[data-base]", button);
+        setBaseMode(button.dataset.base);
+      });
+    });
+
+    document.querySelectorAll("[data-projection]").forEach((button) => {
+      button.addEventListener("click", () => {
+        setActiveButton("[data-projection]", button);
+        try { map.setProjection({ type: button.dataset.projection }); } catch (error) { console.warn(error); }
+      });
+    });
+
+    elements.search.addEventListener("input", renderSearch);
+    elements.search.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        elements.search.value = "";
+        renderSearch();
+      }
+    });
+  }
+
+  function setActiveView(view) {
+    const button = document.querySelector(`[data-view="${view}"]`);
+    if (button) setActiveButton("[data-view]", button);
+  }
+
+  function enterStateAnalysisMode(options = {}) {
+    clearHoverPopup();
+    if (fixedPopup) fixedPopup.remove();
+    fixedPopup = null;
+    selectedStateId = null;
+    selectedCityId = null;
+    selectedCityFeature = null;
+    updateSelectedStateSource();
+    setLayerVisibility("states", true);
+    setLayerVisibility("municipality", false);
+    elements["hud-layer"].textContent = "Estados";
+    elements["metric-state"].textContent = "Brasil";
+    elements["metric-state-pop"].textContent = "passe o mouse nos estados";
+    elements["metric-city"].textContent = "nenhum";
+    elements["metric-city-pop"].textContent = "duplo clique em uma UF";
+    if (options.selectBrazil) renderSelectedBrazil();
+    renderStateChart();
+    renderEmptyRanking("Passe o mouse sobre um estado para ler os dados. Dê duplo clique em uma UF para explorar seus municípios.");
+    fitBrazil();
+  }
+
+  function renderSearch() {
+    const query = normalizeText(elements.search.value);
+    const box = elements["search-results"];
+    if (query.length < 2) {
+      box.classList.remove("visible");
+      box.innerHTML = "";
+      return;
+    }
+
+    const stateMatches = Array.from(stateById.values())
+      .filter((state) => normalizeText(`${state.nome} ${state.sigla}`).includes(query))
+      .slice(0, 4)
+      .map((state) => ({
+        type: "state",
+        id: state.id,
+        title: `${state.nome} (${state.sigla})`,
+        meta: state.regiao,
+        pop: state.pop
+      }));
+
+    const cityMatches = Array.from(cityById.values())
+      .filter((city) => normalizeText(`${city.nome} ${city.uf} ${city.stateName}`).includes(query))
+      .sort((a, b) => (b.pop || 0) - (a.pop || 0))
+      .slice(0, 7)
+      .map((city) => ({
+        type: "city",
+        id: city.id,
+        stateId: city.stateId,
+        title: `${city.nome} (${city.uf})`,
+        meta: city.stateName,
+        pop: city.pop
+      }));
+
+    const matches = [...stateMatches, ...cityMatches].slice(0, 9);
+    if (!matches.length) {
+      box.classList.add("visible");
+      box.innerHTML = `<div class="empty">Nenhum território encontrado para essa busca.</div>`;
+      return;
+    }
+
+    box.classList.add("visible");
+    box.innerHTML = matches.map((item) => `
+      <button type="button" class="result-btn" data-type="${item.type}" data-id="${item.id}" data-state-id="${item.stateId || item.id}">
+        <span>
+          <span class="result-name">${escapeHtml(item.title)}</span>
+          <span class="result-meta">${escapeHtml(item.type === "state" ? "Unidade da Federação" : item.meta || "Município")}</span>
+        </span>
+        <span class="result-pop">${formatShort(item.pop || 0)}</span>
+      </button>
+    `).join("");
+
+    box.querySelectorAll(".result-btn").forEach((button) => {
+      button.addEventListener("click", () => {
+        elements.search.value = "";
+        renderSearch();
+        if (button.dataset.type === "state") {
+          loadStateCities(button.dataset.id);
+        } else {
+          loadStateCities(button.dataset.stateId, button.dataset.id);
+        }
+      });
+    });
+  }
+
+  function renderBrazilMetrics() {
+    elements["metric-br-pop"].textContent = formatNumber(totalPopulation);
+    elements["metric-city-count"].textContent = cityById.size ? `${formatNumber(cityById.size)} municípios` : "municípios ao carregar";
+  }
+
+  function renderSelectedBrazil() {
+    elements["selected-code"].textContent = "BR";
+    elements["selected-type"].textContent = "Brasil";
+    elements["selected-name"].textContent = "Brasil";
+    elements["selected-pop"].textContent = formatNumber(totalPopulation);
+    elements["selected-share"].textContent = "100%";
+    elements["selected-rank"].textContent = "-";
+    elements["selected-context"].textContent = "27 UF";
+  }
+
+  function selectStateUi(state) {
+    elements["metric-state"].textContent = state.sigla;
+    elements["metric-state-pop"].textContent = formatNumber(state.pop || 0);
+    elements["metric-city"].textContent = "nenhum";
+    elements["metric-city-pop"].textContent = "selecione no mapa";
+    elements["selected-code"].textContent = state.id;
+    elements["selected-type"].textContent = "Unidade da Federação";
+    elements["selected-name"].textContent = `${state.nome} (${state.sigla})`;
+    elements["selected-pop"].textContent = formatNumber(state.pop || 0);
+    elements["selected-share"].textContent = percent((state.pop || 0) / totalPopulation);
+    elements["selected-rank"].textContent = rankText(Array.from(stateById.values()), state.id);
+    elements["selected-context"].textContent = state.regiao || "Brasil";
+    updateSelectedStateSource();
+  }
+
+  function selectCity(cityId, feature, options = {}) {
+    const props = feature.properties;
+    selectedCityId = String(cityId);
+    selectedCityFeature = feature;
+    elements["metric-city"].textContent = props.name;
+    elements["metric-city-pop"].textContent = formatNumber(props.pop || 0);
+    elements["selected-code"].textContent = props.id;
+    elements["selected-type"].textContent = "Município";
+    elements["selected-name"].textContent = `${props.name} (${props.uf})`;
+    elements["selected-pop"].textContent = formatNumber(props.pop || 0);
+    const state = stateById.get(String(props.stateId));
+    elements["selected-share"].textContent = state ? percent((props.pop || 0) / (state.pop || 1)) : "-";
+    elements["selected-rank"].textContent = props.rank ? `${props.rank}º na UF` : "-";
+    elements["selected-context"].textContent = props.stateName || props.uf;
+    updateRankingActive();
+    if (options.fly !== false) {
+      map.flyTo({ center: [props.lng, props.lat], zoom: Math.max(map.getZoom(), 7.4), pitch: 0, speed: 0.8, curve: 1.3, essential: true });
+    }
+  }
+
+  function renderStateChart() {
+    const rows = Array.from(stateById.values())
+      .sort((a, b) => (b.pop || 0) - (a.pop || 0))
+      .slice(0, 10);
+    elements["chart-title"].textContent = "Estados mais populosos";
+    elements["chart-caption"].textContent = "top 10";
+    renderBarChart(rows, (row) => `${row.sigla} | ${row.nome}`, elements["population-chart"]);
+  }
+
+  function renderMunicipalityChart(collection) {
+    const rows = collection.features
+      .map((feature) => feature.properties)
+      .sort((a, b) => b.pop - a.pop)
+      .slice(0, 10);
+    const state = stateById.get(selectedStateId);
+    elements["chart-title"].textContent = `Maiores municípios de ${state.sigla}`;
+    elements["chart-caption"].textContent = "top 10";
+    renderBarChart(rows, (row) => row.name, elements["population-chart"]);
+  }
+
+  function renderBarChart(rows, nameFactory, target) {
+    const max = Math.max(...rows.map((row) => row.pop || 0), 1);
+    target.innerHTML = rows.map((row) => {
+      const width = Math.max(2, ((row.pop || 0) / max) * 100);
+      return `
+        <div class="bar-row">
+          <div class="bar-track">
+            <div class="bar-fill" style="width: ${width}%"></div>
+            <div class="bar-name">${escapeHtml(nameFactory(row))}</div>
+          </div>
+          <div class="bar-value">${formatShort(row.pop || 0)}</div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  function renderMunicipalityRanking(collection) {
+    const state = stateById.get(selectedStateId);
+    const rows = collection.features
+      .map((feature) => feature.properties)
+      .sort((a, b) => b.pop - a.pop)
+      .slice(0, 14);
+    elements["ranking-title"].textContent = `Municípios de ${state.sigla}`;
+    elements["ranking-caption"].textContent = `${collection.features.length} cidades`;
+    elements.ranking.innerHTML = rows.map((row, index) => `
+      <button type="button" class="rank-btn" data-city-id="${row.id}">
+        <span class="rank-no">${String(index + 1).padStart(2, "0")}</span>
+        <span class="rank-main">
+          <span class="rank-name">${escapeHtml(row.name)}</span>
+          <span class="rank-meta">${escapeHtml(row.uf)} | município</span>
+        </span>
+        <span class="rank-pop">${formatShort(row.pop || 0)}</span>
+      </button>
+    `).join("");
+
+    elements.ranking.querySelectorAll(".rank-btn").forEach((button) => {
+      button.addEventListener("click", () => {
+        const feature = collection.features.find((item) => item.properties.id === button.dataset.cityId);
+        if (feature) selectCity(button.dataset.cityId, feature);
+      });
+    });
+    updateRankingActive();
+  }
+
+  function renderEmptyRanking(message) {
+    elements["ranking-title"].textContent = "Municípios em foco";
+    elements["ranking-caption"].textContent = "selecione uma UF";
+    const text = message || "Clique em um estado no mapa ou use a busca para carregar os municípios da UF.";
+    elements.ranking.innerHTML = `<div class="empty">${escapeHtml(text)}</div>`;
+  }
+
+  function updateRankingActive() {
+    elements.ranking.querySelectorAll(".rank-btn").forEach((button) => {
+      button.classList.toggle("active", button.dataset.cityId === selectedCityId);
+    });
+  }
+
+  function showPopup(lngLat, kind, title, pop, meta, extraRows) {
+    if (fixedPopup) fixedPopup.remove();
+    fixedPopup = new maplibregl.Popup({ offset: 14 })
+      .setLngLat(lngLat)
+      .setHTML(popupHtml(kind, title, [
+        { label: meta, value: formatNumber(pop || 0) },
+        ...(extraRows || [])
+      ]))
+      .addTo(map);
+  }
+
+  function showStatePopup(lngLat, props) {
+    if (fixedPopup) fixedPopup.remove();
+    fixedPopup = new maplibregl.Popup({ offset: 14 })
+      .setLngLat(lngLat)
+      .setHTML(popupHtml("Unidade da Federação", `${props.name} (${props.uf})`, statePopupRows(props)))
+      .addTo(map);
+  }
+
+  function showStateHover(lngLat, props) {
+    const key = `state:${props.id || ""}`;
+    const html = popupHtml("Unidade da Federação", `${props.name} (${props.uf})`, statePopupRows(props));
+
+    if (!hoverPopup) {
+      hoverPopup = new maplibregl.Popup({
+        closeButton: false,
+        closeOnClick: false,
+        offset: 14,
+        className: "hover-popup"
+      }).setLngLat(lngLat).setHTML(html).addTo(map);
+      hoveredFeatureKey = key;
+      return;
+    }
+
+    hoverPopup.setLngLat(lngLat);
+    if (hoveredFeatureKey !== key) {
+      hoverPopup.setHTML(html);
+      hoveredFeatureKey = key;
+    }
+  }
+
+  function showMunicipalityPopup(lngLat, props) {
+    const rows = municipalityPopupRows(props);
+    if (fixedPopup) fixedPopup.remove();
+    fixedPopup = new maplibregl.Popup({ offset: 14 })
+      .setLngLat(lngLat)
+      .setHTML(popupHtml("Município", props.name, rows))
+      .addTo(map);
+  }
+
+  function showMunicipalityHover(lngLat, props) {
+    const key = `${props.stateId || ""}:${props.id || ""}`;
+    const html = popupHtml("Município", props.name, municipalityPopupRows(props));
+
+    if (!hoverPopup) {
+      hoverPopup = new maplibregl.Popup({
+        closeButton: false,
+        closeOnClick: false,
+        offset: 14,
+        className: "hover-popup"
+      }).setLngLat(lngLat).setHTML(html).addTo(map);
+      hoveredFeatureKey = key;
+      return;
+    }
+
+    hoverPopup.setLngLat(lngLat);
+    if (hoveredFeatureKey !== key) {
+      hoverPopup.setHTML(html);
+      hoveredFeatureKey = key;
+    }
+  }
+
+  function clearHoverPopup() {
+    if (hoverPopup) hoverPopup.remove();
+    hoverPopup = null;
+    hoveredFeatureKey = null;
+  }
+
+  function statePopupRows(props) {
+    const pop = Number(props.pop || 0);
+    return [
+      { label: "População total", value: formatNumber(pop) },
+      { label: "Participação no Brasil", value: totalPopulation ? percent(pop / totalPopulation) : "-" },
+      { label: "Ranking nacional", value: rankText(Array.from(stateById.values()), props.id) },
+      { label: "Região", value: props.region || "-" }
+    ];
+  }
+
+  function municipalityPopupRows(props) {
+    const pop = Number(props.pop || 0);
+    const state = stateById.get(String(props.stateId || ""));
+    return [
+      { label: "População", value: formatNumber(pop) },
+      { label: `${props.uf || "UF"} | ranking`, value: props.rank ? `${props.rank}º` : "-" },
+      { label: "Participação na UF", value: state && state.pop ? percent(pop / state.pop) : "-" }
+    ];
+  }
+
+  function popupHtml(kind, title, rows) {
+    return `
+      <div class="popup">
+        <div class="popup-kind">${escapeHtml(kind)}</div>
+        <div class="popup-title">${escapeHtml(title)}</div>
+        ${rows.map((row) => `
+          <div class="popup-row"><span>${escapeHtml(row.label)}</span><strong>${escapeHtml(row.value)}</strong></div>
+        `).join("")}
+      </div>
+    `;
+  }
+
+  function fitBrazil() {
+    map.fitBounds(BR_BOUNDS, { padding: { top: 64, right: 64, bottom: 52, left: 64 }, duration: 1200, essential: true });
+  }
+
+  function flyToState(state, zoom) {
+    if (!state) return;
+    map.flyTo({ center: [state.lng, state.lat], zoom: zoom || 5.2, pitch: 0, speed: 0.8, curve: 1.3, essential: true });
+  }
+
+  function flyToStreet() {
+    setHybridBaseActive();
+
+    let target = selectedCityFeature && selectedCityFeature.properties;
+    if (!target && selectedStateId && stateCitiesCache.has(selectedStateId)) {
+      const largestCity = stateCitiesCache.get(selectedStateId).features[0];
+      if (largestCity) {
+        selectCity(largestCity.properties.id, largestCity, { fly: false });
+        target = largestCity.properties;
+      }
+    }
+
+    const center = target ? [target.lng, target.lat] : BRASILIA_STREET_CENTER;
+    map.flyTo({
+      center,
+      zoom: 15.4,
+      pitch: 56,
+      bearing: -12,
+      speed: 0.65,
+      curve: 1.15,
+      essential: true
+    });
+  }
+
+  function setHybridBaseActive() {
+    const hybridButton = document.querySelector('[data-base="hybrid"]');
+    if (hybridButton) setActiveButton("[data-base]", hybridButton);
+    setBaseMode("hybrid");
+  }
+
+  function updateHud() {
+    if (!map) return;
+    const center = map.getCenter();
+    elements["hud-zoom"].textContent = map.getZoom().toFixed(1);
+    elements["hud-coords"].textContent = `${center.lat.toFixed(3)}, ${center.lng.toFixed(3)}`;
+  }
+
+  function showStatus(title, text, finalState) {
+    elements.status.classList.add("visible");
+    elements["status-title"].textContent = title;
+    elements["status-text"].textContent = text;
+    elements["status-spinner"].style.display = finalState ? "none" : "inline-block";
+  }
+
+  function hideStatus() {
+    elements.status.classList.remove("visible");
+  }
+
+  function setActiveButton(selector, activeButton) {
+    document.querySelectorAll(selector).forEach((button) => button.classList.toggle("active", button === activeButton));
+  }
+
+  function setSourceData(sourceId, data) {
+    const source = map && map.getSource(sourceId);
+    if (source) source.setData(data);
+  }
+
+  function addLayerOnce(layer, beforeId) {
+    if (!map.getLayer(layer.id)) map.addLayer(layer, beforeId);
+  }
+
+  function firstLineOrSymbolLayerId() {
+    const layer = (map.getStyle().layers || []).find((item) => item.type === "line" || item.type === "symbol");
+    return layer ? layer.id : undefined;
+  }
+
+  async function fetchJson(url) {
+    const response = await fetch(url, { headers: { Accept: "application/json, application/vnd.geo+json" } });
+    if (!response.ok) throw new Error(`${response.status} ${response.statusText}: ${url}`);
+    return response.json();
+  }
+
+  function parseSidraRows(data) {
+    if (!Array.isArray(data) || data.length === 0) return [];
+    return data.slice(1);
+  }
+
+  function normalizeFeatureCollection(data) {
+    if (!data) return emptyFeatureCollection();
+    if (data.type === "FeatureCollection") return data;
+    if (data.type === "Feature") return { type: "FeatureCollection", features: [data] };
+    if (Array.isArray(data.features)) return { type: "FeatureCollection", features: data.features };
+    return emptyFeatureCollection();
+  }
+
+  function emptyFeatureCollection() {
+    return { type: "FeatureCollection", features: [] };
+  }
+
+  function pointFeature(coordinates, properties) {
+    return {
+      type: "Feature",
+      geometry: { type: "Point", coordinates },
+      properties: { ...properties }
+    };
+  }
+
+  function representativePoint(geometry) {
+    const coords = flattenCoordinates(geometry);
+    if (!coords.length) return null;
+    let minLng = Infinity;
+    let minLat = Infinity;
+    let maxLng = -Infinity;
+    let maxLat = -Infinity;
+    coords.forEach(([lng, lat]) => {
+      if (!Number.isFinite(lng) || !Number.isFinite(lat)) return;
+      minLng = Math.min(minLng, lng);
+      minLat = Math.min(minLat, lat);
+      maxLng = Math.max(maxLng, lng);
+      maxLat = Math.max(maxLat, lat);
+    });
+    if (!Number.isFinite(minLng)) return null;
+    return [(minLng + maxLng) / 2, (minLat + maxLat) / 2];
+  }
+
+  function flattenCoordinates(geometry) {
+    if (!geometry || !geometry.coordinates) return [];
+    const out = [];
+    const walk = (value) => {
+      if (!Array.isArray(value)) return;
+      if (typeof value[0] === "number" && typeof value[1] === "number") {
+        out.push(value);
+      } else {
+        value.forEach(walk);
+      }
+    };
+    walk(geometry.coordinates);
+    return out;
+  }
+
+  function readGeoProperty(properties, names) {
+    for (const name of names) {
+      if (properties && properties[name] !== undefined && properties[name] !== null) return properties[name];
+    }
+    return "";
+  }
+
+  function normalizeCode(value) {
+    return String(value || "").replace(/\D/g, "");
+  }
+
+  function parseNumber(value) {
+    if (typeof value === "number") return value;
+    const normalized = String(value || "").replace(/\./g, "").replace(",", ".");
+    const number = Number(normalized);
+    return Number.isFinite(number) ? number : 0;
+  }
+
+  function sumPopulation(rows) {
+    return rows.reduce((sum, row) => sum + (Number(row.pop) || 0), 0);
+  }
+
+  function formatNumber(value) {
+    return Number(value || 0).toLocaleString("pt-BR");
+  }
+
+  function formatShort(value) {
+    const number = Number(value || 0);
+    if (number >= 1000000) return `${(number / 1000000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mi`;
+    if (number >= 1000) return `${(number / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 0 })} mil`;
+    return formatNumber(number);
+  }
+
+  function percent(value) {
+    return Number(value || 0).toLocaleString("pt-BR", { style: "percent", minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  }
+
+  function rankText(rows, id) {
+    const sorted = rows.slice().sort((a, b) => (b.pop || 0) - (a.pop || 0));
+    const index = sorted.findIndex((row) => row.id === String(id));
+    return index >= 0 ? `${index + 1}º no Brasil` : "-";
+  }
+
+  function normalizeText(value) {
+    return String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+})();
+</script>
+</body>
+</html>
