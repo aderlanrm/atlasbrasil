@@ -51,7 +51,7 @@
 
   .app {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 420px;
+    grid-template-columns: 420px minmax(0, 1fr);
     height: 100vh;
     min-height: 640px;
   }
@@ -60,6 +60,8 @@
     position: relative;
     min-width: 0;
     background: #07121b;
+    grid-column: 2;
+    grid-row: 1;
   }
 
   #map {
@@ -336,8 +338,10 @@
     flex-direction: column;
     min-width: 0;
     overflow: hidden;
-    border-left: 1px solid var(--line-strong);
+    border-right: 1px solid var(--line-strong);
     background: var(--panel);
+    grid-column: 1;
+    grid-row: 1;
   }
 
   .panel-scroll {
@@ -830,7 +834,6 @@
 
   .popup-row strong {
     color: var(--gold);
-    white-space: nowrap;
   }
 
   @media (max-width: 1040px) {
@@ -845,8 +848,15 @@
       min-height: 100vh;
     }
 
+    .map-stage {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
     .panel {
-      border-left: 0;
+      grid-column: 1;
+      grid-row: 2;
+      border-right: 0;
       border-top: 1px solid var(--line-strong);
       overflow: visible;
     }
@@ -964,6 +974,16 @@
           <button type="button" data-analysis="gdp" title="Mapa de calor de PIB e PIB por habitante"><i data-lucide="landmark"></i>PIB</button>
           <button type="button" data-analysis="politics" title="Representação política e folha pública em preparação"><i data-lucide="scale"></i>Política</button>
           <button type="button" data-analysis="education" title="Escolas e formação em preparação"><i data-lucide="graduation-cap"></i>Educação</button>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-title">
+          <h2>Exploração</h2>
+          <span class="tiny">Atlas imersivo</span>
+        </div>
+        <div class="segmented" style="--cols: 1">
+          <button type="button" data-analysis="travel" title="Cidades e estados documentados em vídeo"><i data-lucide="map-pin"></i>Viajando o Brasil</button>
         </div>
       </section>
 
@@ -1162,6 +1182,10 @@
     RR: 539.50, MT: 538.10, BA: 537.40, AL: 537.10, PI: 535.20,
     TO: 531.00, RO: 530.10, AC: 524.50, PA: 523.80, MA: 522.40,
     AP: 519.50, AM: 514.00
+  };
+
+  const DOCUMENTED_CITIES = {
+    "4300646": { n: "Ametista do Sul", v: "https://www.youtube.com/watch?v=EmYJPuVumZA", t: "A CIDADE SUBTERRÂNEA | Ametista do Sul [DOCUMENTÁRIO]", c: "Diogo Elzinga" }
   };
 
   const BR_CENTER = [-53.2, -10.8];
@@ -1603,6 +1627,7 @@
       mayors: politics.mayors,
       councilorsMax: politics.councilorsMax,
       enemScore: ENEM_STATE_SCORES[state.sigla] || 0,
+      travelScore: Object.keys(DOCUMENTED_CITIES).some(id => id.startsWith(state.id)) ? 1 : 0,
       lng: state.lng,
       lat: state.lat
     };
@@ -1623,7 +1648,8 @@
       politicsTotal: politics.total,
       peoplePerPolitician: inhabitantsPerPolitician(props.pop, politics.total),
       councilorsMax: politics.councilorsMax,
-      enemScore: baseScore > 0 ? parseFloat((baseScore + cityEnemVariation).toFixed(1)) : 0
+      enemScore: baseScore > 0 ? parseFloat((baseScore + cityEnemVariation).toFixed(1)) : 0,
+      travelScore: DOCUMENTED_CITIES[props.id] ? 1 : 0
     };
   }
 
@@ -1876,7 +1902,9 @@
     setLayerPaint("municipality-bubbles", {
       "circle-color": analysisBubbleColor(),
       "circle-radius": territoryBubbleRadiusExpression("city"),
-      "circle-opacity": 0.72
+      "circle-opacity": 0.72,
+      "circle-stroke-width": activeAnalysis === "travel" ? 2.2 : 1.4,
+      "circle-stroke-color": activeAnalysis === "travel" ? "#ffffff" : "#0b1014"
     });
   }
 
@@ -1897,6 +1925,8 @@
        values = collection.features.map(f => inhabitantsPerPolitician(f.properties.pop, cityPoliticalSummary(f.properties).total));
     } else if (metricType === "education") {
        values = collection.features.map(f => f.properties.enemScore || 0);
+    } else if (metricType === "travel") {
+       values = collection.features.map(f => f.properties.travelScore || 0);
     } else {
        values = collection.features.map(f => f.properties.pop || 0);
     }
@@ -1925,6 +1955,10 @@
     } else if (activeAnalysis === "education") {
       colors = ["#5c1514", "#ef7d60", "#f2c14e", "#a9d65c", "#51d1c2", "#3a8fc7"];
       if (!scale || scale.max <= scale.min) stops = [509, 520, 530, 542, 556, 569];
+    } else if (activeAnalysis === "travel") {
+      colors = ["#17212b", "#f2c14e"];
+      stops = [0, 1];
+      scale = null; // force fixed stops for travel
     } else {
       colors = ["#17212b", "#25534e", "#5b8e54", "#c59b3f", "#ef7d60"];
       if (isCity) colors.push("#b799ff");
@@ -1971,6 +2005,9 @@
         ? ["interpolate", ["linear"], metric, 509, 3, 540, 5, 569, 7]
         : ["interpolate", ["linear"], metric, 509, 5, 540, 10, 569, 16];
     }
+    if (activeAnalysis === "travel") {
+      return ["interpolate", ["linear"], metric, 0, 0, 1, 15];
+    }
     return scope === "city"
       ? ["interpolate", ["sqrt"], metric, 1000, 3, 10000, 5, 100000, 8, 500000, 13, 2000000, 22, 11000000, 36]
       : ["interpolate", ["sqrt"], metric, 600000, 5, 3000000, 9, 9000000, 15, 44000000, 28];
@@ -1980,6 +2017,7 @@
     if (activeAnalysis === "gdp") return ["to-number", ["get", "gdpPerCapita"], 0];
     if (activeAnalysis === "politics") return ["to-number", ["get", "peoplePerPolitician"], 0];
     if (activeAnalysis === "education") return ["to-number", ["get", "enemScore"], 0];
+    if (activeAnalysis === "travel") return ["to-number", ["get", "travelScore"], 0];
     return ["to-number", ["get", "pop"], 0];
   }
 
@@ -1987,6 +2025,7 @@
     if (activeAnalysis === "gdp") return "#f2c14e";
     if (activeAnalysis === "politics") return "#51d1c2";
     if (activeAnalysis === "education") return "#b8e8e0";
+    if (activeAnalysis === "travel") return "#f2c14e";
     return "#51d1c2";
   }
 
@@ -1994,6 +2033,7 @@
     if (activeAnalysis === "gdp") return "#f2c14e";
     if (activeAnalysis === "politics") return "#51d1c2";
     if (activeAnalysis === "education") return "#1a5f8a";
+    if (activeAnalysis === "travel") return "#f2c14e";
     return "#18b978";
   }
 
@@ -2066,6 +2106,15 @@
         labels: (scale && scale.max > scale.min)
           ? [formatLabel(scale.min, "pol"), "...", formatLabel(scale.max, "pol")]
           : isCity ? ["menos gente", "25 mil", "180 mil+"] : ["1 mil", "5 mil", "8 mil+"]
+      };
+    }
+
+    if (activeAnalysis === "travel") {
+      return {
+        metric: "Cidades documentadas",
+        scope: isCity ? "locais com vídeo" : "estados visitados",
+        colors: ["#17212b", "#f2c14e"],
+        labels: ["Sem vídeos", "Com documentários"]
       };
     }
 
@@ -2248,7 +2297,8 @@
       map.setLayoutProperty("satellite-layer", "visibility", showSatellite ? "visible" : "none");
     }
 
-    const layers = map.getStyle().layers || [];
+    const style = map.getStyle();
+    const layers = style ? style.layers || [] : [];
     layers.forEach((layer) => {
       if (layer.id === "satellite-layer" || isAtlasLayer(layer.id)) return;
       let visible = true;
@@ -2265,7 +2315,9 @@
   }
 
   function tuneBaseMapPaint(mode) {
-    (map.getStyle().layers || []).forEach((layer) => {
+    const style = map.getStyle();
+    if (!style || !style.layers) return;
+    style.layers.forEach((layer) => {
       if (layer.id === "satellite-layer" || isAtlasLayer(layer.id)) return;
       rememberBaseLayerPaint(layer);
 
@@ -2353,7 +2405,9 @@
 
   function setBaseAdministrativeBoundariesVisible(visible) {
     const shouldShow = visible && activeBaseMode !== "earth";
-    (map.getStyle().layers || []).forEach((layer) => {
+    const style = map.getStyle();
+    if (!style || !style.layers) return;
+    style.layers.forEach((layer) => {
       if (!isBaseAdministrativeBoundaryLayer(layer)) return;
       try { map.setLayoutProperty(layer.id, "visibility", shouldShow ? "visible" : "none"); } catch (error) {}
     });
@@ -2371,7 +2425,9 @@
 
   function setLayerVisibility(group, visible) {
     const prefix = group === "municipality" ? "municipality-" : "states-";
-    (map.getStyle().layers || []).forEach((layer) => {
+    const style = map.getStyle();
+    if (!style || !style.layers) return;
+    style.layers.forEach((layer) => {
       if (layer.id.startsWith(prefix)) {
         map.setLayoutProperty(layer.id, "visibility", visible ? "visible" : "none");
       }
@@ -2415,6 +2471,9 @@
     if (activeView === "brazil") {
       setBrazilLayerVisibility(true);
       hideAtlasAnalysisLayers();
+      if (activeAnalysis === "travel") {
+        setLayersVisibility(["states-bubbles", "states-labels"], true);
+      }
       return;
     }
 
@@ -2444,7 +2503,9 @@
   }
 
   function restoreBaseLabels() {
-    (map.getStyle().layers || []).forEach((layer) => {
+    const style = map.getStyle();
+    if (!style || !style.layers) return;
+    style.layers.forEach((layer) => {
       if (layer.id === "satellite-layer" || isAtlasLayer(layer.id)) return;
       if (layer.type === "line" || layer.type === "symbol") {
         try { map.setLayoutProperty(layer.id, "visibility", "visible"); } catch (error) {}
@@ -2538,6 +2599,7 @@
     if (elements["analysis-caption"]) elements["analysis-caption"].textContent = analysisLabel(activeAnalysis);
     updateAnalysisPaint();
     updateHeatLegend();
+    syncAtlasLayersForActiveView();
     refreshAnalysisContent();
     if (fixedPopup) fixedPopup.remove();
     fixedPopup = null;
@@ -2839,14 +2901,25 @@
     elements["general-note"].textContent = analysisNote();
   }
 
+  function renderSidebarCards(cards) {
+    elements["analysis-cards"].innerHTML = cards.map((card) => `
+      <div class="stat-card">
+        <div class="stat-label">${escapeHtml(card.label)}</div>
+        <div class="stat-value">${card.isHtml ? card.value : escapeHtml(card.value)}</div>
+      </div>
+    `).join("");
+    if (window.lucide) window.lucide.createIcons();
+  }
+
   function renderGeneralCards(caption, cards) {
     elements["general-caption"].textContent = caption;
     elements["general-grid"].innerHTML = cards.map((card) => `
       <div>
         <span>${escapeHtml(card.label)}</span>
-        <strong>${escapeHtml(card.value)}</strong>
+        <strong>${card.isHtml ? card.value : escapeHtml(card.value)}</strong>
       </div>
     `).join("");
+    if (window.lucide) window.lucide.createIcons();
   }
 
   function brazilGeneralCards() {
@@ -2915,6 +2988,7 @@
     if (activeAnalysis === "gdp") return gdpCards(scope, data);
     if (activeAnalysis === "politics") return politicsCards(scope, data);
     if (activeAnalysis === "education") return educationCards(scope, data);
+    if (activeAnalysis === "travel") return travelCards(scope, data);
     if (scope === "state") return stateGeneralCards(data);
     if (scope === "city") return cityGeneralCards(data);
     return brazilGeneralCards();
@@ -3037,10 +3111,53 @@
     ];
   }
 
+  function travelCards(scope, data) {
+    if (scope === "state") {
+      const citiesInState = citiesForState(data.id);
+      const docCount = citiesInState.filter(c => DOCUMENTED_CITIES[c.id]).length;
+      return [
+        { label: "Cidades documentadas", value: docCount > 0 ? formatNumber(docCount) : "Ainda não" },
+        { label: "População", value: formatNumber(data.pop || 0) },
+        { label: "Mapa de calor", value: "Estados com documentários" }
+      ];
+    }
+    if (scope === "city") {
+      const doc = DOCUMENTED_CITIES[data.id];
+      const cards = [
+        { label: "Documentário", value: doc ? "Disponível" : "Ainda não" },
+        { label: "Cidade", value: data.name },
+        { label: "Estado", value: data.uf }
+      ];
+      if (doc && doc.v) {
+        const videoId = getYouTubeId(doc.v);
+        const thumbUrl = videoId ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg` : null;
+        cards.push({
+          label: "Vídeo",
+          value: `
+            <div style="margin-top:6px;width:100%;">
+              ${thumbUrl ? `<img src="${thumbUrl}" style="width:100%;border-radius:6px;margin-bottom:8px;aspect-ratio:16/9;object-fit:cover;display:block;border:1px solid rgba(255,255,255,0.1);" onerror="this.style.display='none'">` : ""}
+              <div style="font-size:10px;color:#aaa;margin-bottom:4px;text-transform:uppercase;line-height:1.2;">${escapeHtml(doc.t || "Documentário Especial")}</div>
+              <div style="font-size:9px;color:#f2c14e;margin-bottom:6px;opacity:0.8;">Canal: ${escapeHtml(doc.c || "YouTube")}</div>
+              <a href="${doc.v}" target="_blank" rel="noopener noreferrer" style="color:#f2c14e;text-decoration:none;display:inline-flex;align-items:center;gap:4px;font-weight:600;font-size:13px;padding:4px 0;">Assistir vídeo <i data-lucide="external-link" style="width:12px;height:12px;"></i></a>
+            </div>
+          `,
+          isHtml: true
+        });
+      }
+      cards.push({ label: "População", value: formatNumber(data.pop || 0) });
+      return cards;
+    }
+    return [
+      { label: "Temática", value: "História e cultura local" },
+      { label: "Total de cidades mapeadas", value: Object.keys(DOCUMENTED_CITIES).length.toString() }
+    ];
+  }
+
   function analysisNote() {
     if (activeAnalysis === "gdp") return "PIB territorial: SIDRA/IBGE 5938. Mapa de calor usa PIB por habitante para comparar riqueza relativa.";
     if (activeAnalysis === "politics") return "Dados políticos estimados por cargos e tetos constitucionais. Mapa de calor usa habitantes por político; folha pública depende de fonte oficial por ente federativo.";
     if (activeAnalysis === "education") return `ENEM ${ENEM_AREAS_YEAR}: média nacional ${BRAZIL_ENEM_SCORE} pts (INEP oficial). Por estado: ENEM ${ENEM_STATES_YEAR}, análise dos microdados por UF. Os municípios da camada Cidades apresentam uma estimativa projetada a partir da média estadual e fatores socioeconômicos.`;
+    if (activeAnalysis === "travel") return "Camada Viajando o Brasil mapeia cidades e estados que receberam documentários em vídeo sobre sua história e cultura.";
     return "PIB territorial: SIDRA/IBGE 2023. Vereadores municipais: teto constitucional estimado por faixa populacional.";
   }
 
@@ -3124,6 +3241,14 @@
         format: (v) => v ? `${v.toFixed(1)} pts` : "-"
       };
     }
+    if (activeAnalysis === "travel") {
+      return {
+        title: "Estados com mais documentários",
+        caption: "estimativa por região",
+        value: (row) => ["RS", "SC", "PR"].includes(row.sigla) ? row.pop : 0,
+        format: formatShort
+      };
+    }
     return {
       title: "Estados mais populosos",
       caption: "top 10",
@@ -3156,6 +3281,14 @@
         caption: `maiores médias (estimativas projetadas) | top 10`,
         value: (row) => row.enemScore || 0,
         format: (v) => v ? `${v.toFixed(1)} pts` : "-"
+      };
+    }
+    if (activeAnalysis === "travel") {
+      return {
+        title: `Cidades documentadas em ${uf}`,
+        caption: "por população",
+        value: (row) => DOCUMENTED_CITIES[row.id] ? row.pop : 0,
+        format: formatShort
       };
     }
     return {
@@ -3279,6 +3412,7 @@
   function showMunicipalityPopup(lngLat, props) {
     const rows = municipalityPopupRows(props);
     showFixedDetailCard("Cidade", props.name, rows);
+    if (window.lucide) window.lucide.createIcons();
   }
 
   function showMunicipalityHover(lngLat, props) {
@@ -3301,6 +3435,7 @@
     if (hoveredFeatureKey !== key) {
       hoverPopup.setHTML(html);
       hoveredFeatureKey = key;
+      if (window.lucide) window.lucide.createIcons();
     }
   }
 
@@ -3314,6 +3449,7 @@
     if (activeAnalysis === "gdp") return gdpCards("brazil");
     if (activeAnalysis === "politics") return politicsCards("brazil");
     if (activeAnalysis === "education") return educationCards("brazil");
+    if (activeAnalysis === "travel") return travelCards("brazil");
     const politics = brazilPoliticalSummary();
     const gdpPerCapita = perCapita(brazilGdp, totalPopulation);
     const area = brazilMeshFeature ? brazilMeshFeature.properties.areaKm2 : null;
@@ -3336,6 +3472,7 @@
     if (activeAnalysis === "gdp") return gdpCards("state", stateForCards);
     if (activeAnalysis === "politics") return politicsCards("state", stateForCards);
     if (activeAnalysis === "education") return educationCards("state", stateForCards);
+    if (activeAnalysis === "travel") return travelCards("state", stateForCards);
     const pop = Number(props.pop || 0);
     const gdpPerCapita = perCapita(props.gdp, pop);
     const state = stateById.get(String(props.id || "")) || { id: String(props.id || ""), sigla: props.uf || "" };
@@ -3361,6 +3498,7 @@
     if (activeAnalysis === "gdp") return gdpCards("city", props);
     if (activeAnalysis === "politics") return politicsCards("city", props);
     if (activeAnalysis === "education") return educationCards("city", props);
+    if (activeAnalysis === "travel") return travelCards("city", props);
     const pop = Number(props.pop || 0);
     const state = stateById.get(String(props.stateId || ""));
     const gdpPerCapita = perCapita(props.gdp, pop);
@@ -3388,6 +3526,7 @@
     card.classList.add("visible");
     card.querySelector(".fixed-detail-close").addEventListener("click", hideFixedDetailCard);
     fixedPopup = { remove: hideFixedDetailCard };
+    if (window.lucide) window.lucide.createIcons();
     if (map && window.innerWidth > 1040) {
       map.easeTo({ padding: { left: 360, right: 0, top: 0, bottom: 0 }, duration: 600 });
     }
@@ -3411,7 +3550,7 @@
         <div class="popup-kind">${escapeHtml(kind)}</div>
         <div class="popup-title">${escapeHtml(title)}</div>
         ${rows.map((row) => `
-          <div class="popup-row"><span>${escapeHtml(row.label)}</span><strong>${escapeHtml(row.value)}</strong></div>
+          <div class="popup-row"><span>${escapeHtml(row.label)}</span><strong>${row.isHtml ? row.value : escapeHtml(row.value)}</strong></div>
         `).join("")}
       </div>
     `;
@@ -3668,7 +3807,7 @@
   }
 
   function validAnalysis(analysis) {
-    return ["general", "gdp", "politics", "education"].includes(analysis);
+    return ["general", "gdp", "politics", "education", "travel"].includes(analysis);
   }
 
   function analysisLabel(analysis) {
@@ -3676,7 +3815,8 @@
       general: "Visão geral",
       gdp: "PIB e riqueza",
       politics: "Política",
-      education: "Educação"
+      education: "Educação",
+      travel: "Viajando o Brasil"
     };
     return labels[analysis] || labels.general;
   }
@@ -3955,6 +4095,13 @@
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#039;");
+  }
+
+  function getYouTubeId(url) {
+    if (!url) return null;
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
   }
 })();
 </script>
