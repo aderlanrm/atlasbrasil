@@ -167,6 +167,75 @@
     color: var(--text);
   }
 
+  .heat-legend {
+    position: absolute;
+    z-index: 6;
+    right: 20px;
+    bottom: 46px;
+    width: min(320px, calc(100% - 40px));
+    padding: 13px;
+    border: 1px solid var(--line-strong);
+    border-radius: 8px;
+    background: rgba(17, 24, 32, 0.88);
+    color: var(--text);
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(12px);
+    pointer-events: none;
+    display: none;
+  }
+
+  .heat-legend.visible {
+    display: block;
+  }
+
+  .legend-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+    margin-bottom: 10px;
+  }
+
+  .legend-head span {
+    color: var(--quiet);
+    font-size: 10px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .legend-head strong {
+    color: var(--text);
+    font-size: 12px;
+    font-weight: 900;
+    text-align: right;
+  }
+
+  .legend-scale {
+    height: 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(237, 243, 238, 0.22);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.16);
+  }
+
+  .legend-labels {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 800;
+  }
+
+  .legend-labels span:nth-child(2) {
+    text-align: center;
+  }
+
+  .legend-labels span:last-child {
+    text-align: right;
+  }
+
   .map-hud {
     position: absolute;
     z-index: 5;
@@ -815,6 +884,12 @@
     .hud-bottom {
       display: none;
     }
+
+    .heat-legend {
+      right: 12px;
+      bottom: 42px;
+      width: min(280px, calc(100% - 24px));
+    }
   }
 </style>
 </head>
@@ -833,6 +908,8 @@
       <div class="chip">Fonte <strong>IBGE/SIDRA 2022</strong></div>
       <div class="chip">Coordenadas <strong id="hud-coords">0.000, 0.000</strong></div>
     </div>
+
+    <div class="heat-legend" id="heat-legend" aria-live="polite"></div>
 
     <div class="status visible" id="status">
       <div class="status-title"><span class="spinner" id="status-spinner"></span><span id="status-title">Carregando atlas</span></div>
@@ -875,6 +952,19 @@
             <strong id="metric-city">nenhum</strong>
             <small id="metric-city-pop">clique em uma bolha</small>
           </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-title">
+          <h2>Análise</h2>
+          <span class="tiny" id="analysis-caption">Visão geral</span>
+        </div>
+        <div class="segmented" style="--cols: 4">
+          <button type="button" data-analysis="general" class="active" title="População e leitura territorial geral"><i data-lucide="layout-dashboard"></i>Geral</button>
+          <button type="button" data-analysis="gdp" title="Mapa de calor de PIB e PIB por habitante"><i data-lucide="landmark"></i>PIB</button>
+          <button type="button" data-analysis="politics" title="Representação política e folha pública em preparação"><i data-lucide="scale"></i>Política</button>
+          <button type="button" data-analysis="education" title="Escolas e formação em preparação"><i data-lucide="graduation-cap"></i>Educação</button>
         </div>
       </section>
 
@@ -1081,6 +1171,7 @@
   let activeBaseMode = validBaseMode(savedPreferences.base) ? savedPreferences.base : "hybrid";
   let activeProjection = validProjection(savedPreferences.projection) ? savedPreferences.projection : "globe";
   let activeView = validView(savedPreferences.view) ? savedPreferences.view : "brazil";
+  let activeAnalysis = validAnalysis(savedPreferences.analysis) ? savedPreferences.analysis : "general";
   let dataCacheStats = createDataCacheStats();
   let basePaintByLayer = new Map();
 
@@ -1104,8 +1195,9 @@
   function cacheElements() {
     [
       "status", "status-spinner", "status-title", "status-text", "fixed-detail-card", "hud-layer", "hud-zoom", "hud-coords",
+      "heat-legend",
       "metric-br-pop", "metric-city-count", "metric-state", "metric-state-pop", "metric-city", "metric-city-pop",
-      "data-state-label", "search", "search-results", "selected-code", "selected-type", "selected-name",
+      "analysis-caption", "data-state-label", "search", "search-results", "selected-code", "selected-type", "selected-name",
       "selected-pop", "selected-share", "selected-rank", "selected-context", "hover-cards-toggle", "population-chart", "chart-title",
       "chart-caption", "ranking", "ranking-title", "ranking-caption", "general-caption", "general-grid", "general-note"
     ].forEach((id) => {
@@ -1406,6 +1498,7 @@
         lng: point ? point[0] : state.lng,
         lat: point ? point[1] : state.lat
       };
+      feature.properties = { ...feature.properties, ...cityMapProperties(feature.properties) };
     });
 
     collection.features.sort((a, b) => b.properties.pop - a.properties.pop);
@@ -1416,18 +1509,12 @@
   }
 
   function updateStateSources() {
-    const polygonFeatures = Array.from(stateFeatureById.values());
-    const fallbackPointFeatures = Array.from(stateById.values()).map((state) => pointFeature([state.lng, state.lat], {
-      id: state.id,
-      name: state.nome,
-      uf: state.sigla,
-      region: state.regiao,
-      pop: state.pop || 0,
-      gdp: state.gdp || 0,
-      gdpYear: state.gdpYear || "",
-      lng: state.lng,
-      lat: state.lat
-    }));
+    const polygonFeatures = Array.from(stateFeatureById.values()).map((feature) => {
+      const state = stateById.get(String(feature.properties.id));
+      if (state) feature.properties = { ...feature.properties, ...stateMapProperties(state) };
+      return feature;
+    });
+    const fallbackPointFeatures = Array.from(stateById.values()).map((state) => pointFeature([state.lng, state.lat], stateMapProperties(state)));
 
     setSourceData("brazil-fill-source", brazilFeatureCollection(polygonFeatures));
     setSourceData("states-fill-source", {
@@ -1458,6 +1545,39 @@
         feature.properties
       ))
     });
+    updateAnalysisPaint();
+  }
+
+  function stateMapProperties(state) {
+    const politics = statePoliticalSummary(state);
+    return {
+      id: state.id,
+      name: state.nome,
+      uf: state.sigla,
+      region: state.regiao,
+      pop: state.pop || 0,
+      gdp: state.gdp || 0,
+      gdpYear: state.gdpYear || "",
+      gdpPerCapita: perCapita(state.gdp, state.pop),
+      politicsTotal: politics.total,
+      peoplePerPolitician: inhabitantsPerPolitician(state.pop, politics.total),
+      stateDeputies: politics.stateDeputies,
+      federalDeputies: politics.federalDeputies,
+      mayors: politics.mayors,
+      councilorsMax: politics.councilorsMax,
+      lng: state.lng,
+      lat: state.lat
+    };
+  }
+
+  function cityMapProperties(props) {
+    const politics = cityPoliticalSummary(props);
+    return {
+      gdpPerCapita: perCapita(props.gdp, props.pop),
+      politicsTotal: politics.total,
+      peoplePerPolitician: inhabitantsPerPolitician(props.pop, politics.total),
+      councilorsMax: politics.councilorsMax
+    };
   }
 
   function brazilFeatureCollection(features) {
@@ -1683,7 +1803,172 @@
     if (selectedStateId) updateSelectedStateSource();
     const cached = selectedStateId ? stateCitiesCache.get(selectedStateId) : null;
     if (cached) updateMunicipalitySources(cached);
+    updateAnalysisPaint();
     syncAtlasLayersForActiveView();
+  }
+
+  function updateAnalysisPaint() {
+    if (!map) return;
+    setLayerPaint("brazil-fill", {
+      "fill-color": brazilAnalysisColor(),
+      "fill-opacity": activeAnalysis === "education" ? 0.5 : 0.84
+    });
+    setLayerPaint("states-fill", {
+      "fill-color": territoryHeatColorExpression("state"),
+      "fill-opacity": activeAnalysis === "education" ? 0.46 : 0.58
+    });
+    setLayerPaint("states-bubbles", {
+      "circle-color": analysisBubbleColor(),
+      "circle-radius": territoryBubbleRadiusExpression("state"),
+      "circle-opacity": activeAnalysis === "education" ? 0.48 : 0.74
+    });
+    setLayerPaint("municipality-fill", {
+      "fill-color": territoryHeatColorExpression("city"),
+      "fill-opacity": activeAnalysis === "education" ? 0.42 : 0.5
+    });
+    setLayerPaint("municipality-bubbles", {
+      "circle-color": analysisBubbleColor(),
+      "circle-radius": territoryBubbleRadiusExpression("city"),
+      "circle-opacity": activeAnalysis === "education" ? 0.46 : 0.72
+    });
+  }
+
+  function setLayerPaint(layerId, paint) {
+    if (!map.getLayer(layerId)) return;
+    Object.entries(paint).forEach(([property, value]) => {
+      try { map.setPaintProperty(layerId, property, value); } catch (error) {}
+    });
+  }
+
+  function territoryHeatColorExpression(scope) {
+    const metric = analysisMetricExpression();
+    if (activeAnalysis === "gdp") {
+      return [
+        "interpolate", ["linear"], metric,
+        0, "#17212b",
+        18000, "#23534d",
+        42000, "#79a95d",
+        80000, "#f2c14e",
+        scope === "city" ? 180000 : 120000, "#ef7d60"
+      ];
+    }
+    if (activeAnalysis === "politics") {
+      return [
+        "interpolate", ["linear"], metric,
+        0, "#16212b",
+        scope === "city" ? 1500 : 1500, "#29515d",
+        scope === "city" ? 6000 : 3000, "#51d1c2",
+        scope === "city" ? 25000 : 5000, "#f2c14e",
+        scope === "city" ? 180000 : 8000, "#ef7d60"
+      ];
+    }
+    if (activeAnalysis === "education") {
+      return "#4b5965";
+    }
+    return [
+      "interpolate", ["linear"], metric,
+      scope === "city" ? 0 : 600000, "#17212b",
+      scope === "city" ? 10000 : 3000000, "#25534e",
+      scope === "city" ? 100000 : 8000000, "#5b8e54",
+      scope === "city" ? 500000 : 16000000, "#c59b3f",
+      scope === "city" ? 2000000 : 44000000, "#ef7d60",
+      scope === "city" ? 11000000 : 45000000, scope === "city" ? "#b799ff" : "#ef7d60"
+    ];
+  }
+
+  function territoryBubbleRadiusExpression(scope) {
+    const metric = analysisMetricExpression();
+    if (activeAnalysis === "gdp") {
+      return ["interpolate", ["sqrt"], metric, 0, 3, 20000, 6, 50000, 11, 100000, 18, 180000, 28];
+    }
+    if (activeAnalysis === "politics") {
+      return scope === "city"
+        ? ["interpolate", ["sqrt"], metric, 100, 3, 2000, 7, 8000, 12, 30000, 20, 200000, 34]
+        : ["interpolate", ["sqrt"], metric, 1000, 5, 3000, 10, 5000, 15, 8000, 22, 12000, 30];
+    }
+    if (activeAnalysis === "education") {
+      return scope === "city" ? 4 : 8;
+    }
+    return scope === "city"
+      ? ["interpolate", ["sqrt"], metric, 1000, 3, 10000, 5, 100000, 8, 500000, 13, 2000000, 22, 11000000, 36]
+      : ["interpolate", ["sqrt"], metric, 600000, 5, 3000000, 9, 9000000, 15, 44000000, 28];
+  }
+
+  function analysisMetricExpression() {
+    if (activeAnalysis === "gdp") return ["to-number", ["get", "gdpPerCapita"], 0];
+    if (activeAnalysis === "politics") return ["to-number", ["get", "peoplePerPolitician"], 0];
+    return ["to-number", ["get", "pop"], 0];
+  }
+
+  function analysisBubbleColor() {
+    if (activeAnalysis === "gdp") return "#f2c14e";
+    if (activeAnalysis === "politics") return "#51d1c2";
+    if (activeAnalysis === "education") return "#8aa4bd";
+    return "#51d1c2";
+  }
+
+  function brazilAnalysisColor() {
+    if (activeAnalysis === "gdp") return "#f2c14e";
+    if (activeAnalysis === "politics") return "#51d1c2";
+    if (activeAnalysis === "education") return "#4b5965";
+    return "#18b978";
+  }
+
+  function updateHeatLegend() {
+    const legend = elements["heat-legend"];
+    if (!legend) return;
+
+    const config = heatLegendConfig();
+    if (!config) {
+      legend.classList.remove("visible");
+      legend.innerHTML = "";
+      return;
+    }
+
+    legend.innerHTML = `
+      <div class="legend-head">
+        <span>Mapa de calor | ${escapeHtml(config.scope)}</span>
+        <strong>${escapeHtml(config.metric)}</strong>
+      </div>
+      <div class="legend-scale" style="background: linear-gradient(90deg, ${config.colors.join(", ")});"></div>
+      <div class="legend-labels">
+        ${config.labels.map((label) => `<span>${escapeHtml(label)}</span>`).join("")}
+      </div>
+    `;
+    legend.classList.add("visible");
+  }
+
+  function heatLegendConfig() {
+    if (activeAnalysis === "education") return null;
+    if (!["states", "cities"].includes(activeView)) return null;
+
+    const scope = activeView === "cities" && selectedStateId ? "city" : "state";
+    if (activeAnalysis === "gdp") {
+      return {
+        metric: "PIB por habitante",
+        scope: scope === "city" ? "cidades da UF" : "estados",
+        colors: ["#17212b", "#23534d", "#79a95d", "#f2c14e", "#ef7d60"],
+        labels: scope === "city" ? ["menor", "R$ 80 mil/hab.", "R$ 180 mil+"] : ["menor", "R$ 42 mil/hab.", "R$ 120 mil+"]
+      };
+    }
+
+    if (activeAnalysis === "politics") {
+      return {
+        metric: "Habitantes por político",
+        scope: scope === "city" ? "cidades da UF" : "estados",
+        colors: ["#16212b", "#29515d", "#51d1c2", "#f2c14e", "#ef7d60"],
+        labels: scope === "city" ? ["menos gente", "25 mil", "180 mil+"] : ["1 mil", "5 mil", "8 mil+"]
+      };
+    }
+
+    return {
+      metric: "População",
+      scope: scope === "city" ? "cidades da UF" : "estados",
+      colors: scope === "city"
+        ? ["#17212b", "#25534e", "#5b8e54", "#c59b3f", "#ef7d60", "#b799ff"]
+        : ["#17212b", "#25534e", "#5b8e54", "#c59b3f", "#ef7d60"],
+      labels: scope === "city" ? ["menos", "500 mil", "11 mi+"] : ["600 mil", "8 mi", "44 mi+"]
+    };
   }
 
   function bindMapLayerEvents() {
@@ -2106,6 +2391,12 @@
       });
     });
 
+    document.querySelectorAll("[data-analysis]").forEach((button) => {
+      button.addEventListener("click", () => {
+        setActiveAnalysis(button.dataset.analysis);
+      });
+    });
+
     if (elements["hover-cards-toggle"]) {
       elements["hover-cards-toggle"].addEventListener("click", () => {
         setHoverCardsEnabled(!hoverCardsEnabled);
@@ -2126,7 +2417,40 @@
     activeView = view;
     const button = document.querySelector(`[data-view="${view}"]`);
     if (button) setActiveButton("[data-view]", button);
+    updateHeatLegend();
     savePreferences();
+  }
+
+  function setActiveAnalysis(analysis) {
+    activeAnalysis = validAnalysis(analysis) ? analysis : "general";
+    const button = document.querySelector(`[data-analysis="${activeAnalysis}"]`);
+    if (button) setActiveButton("[data-analysis]", button);
+    if (elements["analysis-caption"]) elements["analysis-caption"].textContent = analysisLabel(activeAnalysis);
+    updateAnalysisPaint();
+    updateHeatLegend();
+    refreshAnalysisContent();
+    if (fixedPopup) fixedPopup.remove();
+    fixedPopup = null;
+    savePreferences();
+  }
+
+  function refreshAnalysisContent() {
+    if (selectedCityFeature) {
+      selectCity(selectedCityFeature.properties.id, selectedCityFeature, { fly: false });
+    } else if (selectedStateId && stateById.has(selectedStateId)) {
+      selectStateUi(stateById.get(selectedStateId));
+    } else {
+      renderSelectedBrazil();
+    }
+
+    const collection = selectedStateId ? stateCitiesCache.get(selectedStateId) : null;
+    if (collection) {
+      renderMunicipalityChart(collection);
+      renderMunicipalityRanking(collection);
+    } else {
+      renderStateChart();
+      renderEmptyRanking();
+    }
   }
 
   async function restoreAtlasView() {
@@ -2189,6 +2513,7 @@
     renderStateChart();
     renderEmptyRanking("A visão Brasil mostra o país como um território único. Use Estados para comparar UFs ou Cidades para detalhar cidades.");
     if (!options.preserveCamera) fitBrazil();
+    updateHeatLegend();
     savePreferences();
   }
 
@@ -2214,6 +2539,7 @@
     renderStateChart();
     renderEmptyRanking("Passe o mouse sobre um estado para ler os dados. Dê duplo clique em uma UF para explorar suas cidades.");
     if (!options.preserveCamera) fitBrazil();
+    updateHeatLegend();
     savePreferences();
   }
 
@@ -2239,6 +2565,7 @@
     renderStateChart();
     renderEmptyRanking("Dê duplo clique em uma UF para carregar as cidades antes de entrar no detalhe.");
     if (!options.preserveCamera) fitBrazil();
+    updateHeatLegend();
     savePreferences();
   }
 
@@ -2250,6 +2577,7 @@
     setLayerVisibility("municipality", true);
     updateSelectedStateSource();
     elements["hud-layer"].textContent = "Cidades";
+    updateHeatLegend();
     savePreferences();
   }
 
@@ -2374,19 +2702,19 @@
 
   function renderGeneralPanel(scope, data) {
     if (scope === "state") {
-      renderGeneralCards(`${data.nome} | ${data.sigla}`, stateGeneralCards(data));
-      elements["general-note"].textContent = "PIB territorial: SIDRA/IBGE 2023. Vereadores municipais: teto constitucional estimado por faixa populacional.";
+      renderGeneralCards(`${data.nome} | ${data.sigla}`, analysisCards("state", data));
+      elements["general-note"].textContent = analysisNote();
       return;
     }
 
     if (scope === "city") {
-      renderGeneralCards(`${data.name} | ${data.uf}`, cityGeneralCards(data));
-      elements["general-note"].textContent = "PIB territorial: SIDRA/IBGE 2023. Vereadores: teto constitucional estimado por faixa populacional.";
+      renderGeneralCards(`${data.name} | ${data.uf}`, analysisCards("city", data));
+      elements["general-note"].textContent = analysisNote();
       return;
     }
 
-    renderGeneralCards("Brasil", brazilGeneralCards());
-    elements["general-note"].textContent = "PIB territorial: SIDRA/IBGE 2023. Vereadores municipais: soma estimada dos tetos constitucionais por população.";
+    renderGeneralCards("Brasil", analysisCards("brazil"));
+    elements["general-note"].textContent = analysisNote();
   }
 
   function renderGeneralCards(caption, cards) {
@@ -2451,49 +2779,253 @@
     ];
   }
 
+  function analysisCards(scope, data) {
+    if (activeAnalysis === "gdp") return gdpCards(scope, data);
+    if (activeAnalysis === "politics") return politicsCards(scope, data);
+    if (activeAnalysis === "education") return educationCards(scope, data);
+    if (scope === "state") return stateGeneralCards(data);
+    if (scope === "city") return cityGeneralCards(data);
+    return brazilGeneralCards();
+  }
+
+  function gdpCards(scope, data) {
+    if (scope === "state") {
+      const perCapitaValue = perCapita(data.gdp, data.pop);
+      return [
+        { label: `PIB ${data.gdpYear || brazilGdpYear || ""}`, value: formatCurrencyShort(data.gdp) },
+        { label: "PIB por habitante", value: formatCurrency(perCapitaValue) },
+        { label: "Ranking PIB/hab.", value: rankTextByMetric(Array.from(stateById.values()), data.id, (row) => perCapita(row.gdp, row.pop), "no Brasil") },
+        { label: "Participação no PIB BR", value: brazilGdp ? percent((data.gdp || 0) / brazilGdp) : "-" },
+        { label: "População", value: formatNumber(data.pop || 0) },
+        { label: "Mapa de calor", value: "PIB por habitante" }
+      ];
+    }
+
+    if (scope === "city") {
+      const state = stateById.get(String(data.stateId));
+      const cities = citiesForState(data.stateId);
+      const perCapitaValue = perCapita(data.gdp, data.pop);
+      return [
+        { label: `PIB ${data.gdpYear || ""}`, value: formatCurrencyShort(data.gdp) },
+        { label: "PIB por habitante", value: formatCurrency(perCapitaValue) },
+        { label: "Ranking PIB/hab. na UF", value: rankTextByMetric(cities, data.id, (row) => perCapita(row.gdp, row.pop), state ? `em ${state.sigla}` : "na UF") },
+        { label: "Participação no PIB da UF", value: state && state.gdp ? percent((data.gdp || 0) / state.gdp) : "-" },
+        { label: "População", value: formatNumber(data.pop || 0) },
+        { label: "Mapa de calor", value: "PIB por habitante" }
+      ];
+    }
+
+    return [
+      { label: `PIB ${brazilGdpYear || ""}`, value: formatCurrencyShort(brazilGdp) },
+      { label: "PIB por habitante", value: formatCurrency(perCapita(brazilGdp, totalPopulation)) },
+      { label: "População", value: formatNumber(totalPopulation) },
+      { label: "Mapa de calor", value: "PIB por habitante" },
+      { label: "Comparação", value: "Estados e cidades" },
+      { label: "Fonte", value: "SIDRA/IBGE 5938" }
+    ];
+  }
+
+  function politicsCards(scope, data) {
+    if (scope === "state") {
+      const politics = statePoliticalSummary(data);
+      return [
+        { label: "População", value: formatNumber(data.pop || 0) },
+        { label: "Total político estim.", value: formatNumber(politics.total) },
+        { label: "Habitantes por político", value: formatPeoplePerPolitician(inhabitantsPerPolitician(data.pop, politics.total)) },
+        { label: data.id === "53" ? "Deputados distritais" : "Deputados estaduais", value: formatStateDeputies(data, politics) },
+        { label: "Congresso por UF", value: `${politics.federalDeputies} dep. fed. | 3 sen.` },
+        { label: "Prefeitos", value: politics.mayors ? formatNumber(politics.mayors) : "não se aplica" },
+        { label: "Vereadores", value: politics.councilorsMax ? formatNumber(politics.councilorsMax) : "não se aplica" },
+        { label: "Folha pública", value: "fonte oficial pendente" }
+      ];
+    }
+
+    if (scope === "city") {
+      const politics = cityPoliticalSummary(data);
+      return [
+        { label: "População", value: formatNumber(data.pop || 0) },
+        { label: "Executivo municipal", value: politics.mayor ? "1 prefeito | 1 vice" : "não se aplica" },
+        { label: "Vereadores", value: politics.councilorsMax ? formatNumber(politics.councilorsMax) : "não se aplica" },
+        { label: "Total político estim.", value: politics.total ? formatNumber(politics.total) : "não se aplica" },
+        { label: "Habitantes por político", value: formatPeoplePerPolitician(inhabitantsPerPolitician(data.pop, politics.total)) },
+        { label: "Folha pública", value: "fonte oficial pendente" },
+        { label: "Mapa de calor", value: "habitantes por político" }
+      ];
+    }
+
+    const politics = brazilPoliticalSummary();
+    return [
+      { label: "População", value: formatNumber(totalPopulation) },
+      { label: "Presidente", value: NATIONAL_EXECUTIVE.president },
+      { label: "Congresso", value: `${formatNumber(politics.federalDeputies)} dep. fed. | ${formatNumber(politics.senators)} sen.` },
+      { label: "Habitantes por político", value: formatPeoplePerPolitician(inhabitantsPerPolitician(totalPopulation, politics.total)) },
+      { label: "Deputados estaduais", value: formatNumber(politics.stateDeputies) },
+      { label: "Prefeitos", value: formatNumber(politics.mayors) },
+      { label: "Vereadores", value: formatNumber(politics.councilorsMax) },
+      { label: "Folha pública", value: "fonte oficial pendente" }
+    ];
+  }
+
+  function educationCards(scope, data) {
+    const area = scope === "state" ? "UF" : scope === "city" ? "cidade" : "Brasil";
+    return [
+      { label: "Escolas", value: "fonte oficial pendente" },
+      { label: "Formação da população", value: "fonte oficial pendente" },
+      { label: "Recorte", value: area },
+      { label: "Mapa de calor", value: "aguardando dados" },
+      { label: "Próxima fonte", value: "INEP/IBGE" },
+      { label: "Status", value: "estrutura pronta" }
+    ];
+  }
+
+  function analysisNote() {
+    if (activeAnalysis === "gdp") return "PIB territorial: SIDRA/IBGE 5938. Mapa de calor usa PIB por habitante para comparar riqueza relativa.";
+    if (activeAnalysis === "politics") return "Dados políticos estimados por cargos e tetos constitucionais. Mapa de calor usa habitantes por político; folha pública depende de fonte oficial por ente federativo.";
+    if (activeAnalysis === "education") return "Aba preparada para fontes oficiais de escolas e formação. Nenhum dado educacional foi estimado nesta versão.";
+    return "PIB territorial: SIDRA/IBGE 2023. Vereadores municipais: teto constitucional estimado por faixa populacional.";
+  }
+
   function renderStateChart() {
+    const config = stateChartConfig();
+    if (config.pending) {
+      elements["chart-title"].textContent = config.title;
+      elements["chart-caption"].textContent = config.caption;
+      renderChartEmpty(config.empty);
+      return;
+    }
     const rows = Array.from(stateById.values())
-      .sort((a, b) => (b.pop || 0) - (a.pop || 0))
+      .sort((a, b) => config.value(b) - config.value(a))
       .slice(0, 10);
-    elements["chart-title"].textContent = "Estados mais populosos";
-    elements["chart-caption"].textContent = "top 10";
-    renderBarChart(rows, (row) => `${row.sigla} | ${row.nome}`, elements["population-chart"]);
+    elements["chart-title"].textContent = config.title;
+    elements["chart-caption"].textContent = config.caption;
+    renderBarChart(rows, (row) => `${row.sigla} | ${row.nome}`, elements["population-chart"], config.value, config.format);
   }
 
   function renderMunicipalityChart(collection) {
+    const state = stateById.get(selectedStateId);
+    const config = cityChartConfig(state);
+    if (config.pending) {
+      elements["chart-title"].textContent = config.title;
+      elements["chart-caption"].textContent = config.caption;
+      renderChartEmpty(config.empty);
+      return;
+    }
     const rows = collection.features
       .map((feature) => feature.properties)
-      .sort((a, b) => b.pop - a.pop)
+      .sort((a, b) => config.value(b) - config.value(a))
       .slice(0, 10);
-    const state = stateById.get(selectedStateId);
-    elements["chart-title"].textContent = `Maiores cidades de ${state.sigla}`;
-    elements["chart-caption"].textContent = "top 10";
-    renderBarChart(rows, (row) => row.name, elements["population-chart"]);
+    elements["chart-title"].textContent = config.title;
+    elements["chart-caption"].textContent = config.caption;
+    renderBarChart(rows, (row) => row.name, elements["population-chart"], config.value, config.format);
   }
 
-  function renderBarChart(rows, nameFactory, target) {
-    const max = Math.max(...rows.map((row) => row.pop || 0), 1);
+  function renderChartEmpty(message) {
+    elements["population-chart"].innerHTML = `<div class="empty">${escapeHtml(message)}</div>`;
+  }
+
+  function renderBarChart(rows, nameFactory, target, valueFactory = (row) => row.pop || 0, valueFormatter = formatShort) {
+    const max = Math.max(...rows.map((row) => valueFactory(row) || 0), 1);
     target.innerHTML = rows.map((row) => {
-      const width = Math.max(2, ((row.pop || 0) / max) * 100);
+      const value = valueFactory(row) || 0;
+      const width = Math.max(2, (value / max) * 100);
       return `
         <div class="bar-row">
           <div class="bar-track">
             <div class="bar-fill" style="width: ${width}%"></div>
             <div class="bar-name">${escapeHtml(nameFactory(row))}</div>
           </div>
-          <div class="bar-value">${formatShort(row.pop || 0)}</div>
+          <div class="bar-value">${valueFormatter(value)}</div>
         </div>
       `;
     }).join("");
   }
 
+  function stateChartConfig() {
+    if (activeAnalysis === "gdp") {
+      return {
+        title: "Estados por PIB por habitante",
+        caption: "mais ricos | top 10",
+        value: (row) => perCapita(row.gdp, row.pop),
+        format: formatCurrencyShort
+      };
+    }
+    if (activeAnalysis === "politics") {
+      return {
+        title: "Estados por habitantes por político",
+        caption: "maior carga por político | top 10",
+        value: (row) => inhabitantsPerPolitician(row.pop, statePoliticalSummary(row).total),
+        format: formatPeoplePerPoliticianShort
+      };
+    }
+    if (activeAnalysis === "education") {
+      return {
+        title: "Educação por estado",
+        caption: "fonte pendente",
+        pending: true,
+        empty: "A estrutura da aba está pronta. Falta conectar uma fonte oficial para escolas e formação por UF.",
+        value: () => 0,
+        format: () => "-"
+      };
+    }
+    return {
+      title: "Estados mais populosos",
+      caption: "top 10",
+      value: (row) => row.pop || 0,
+      format: formatShort
+    };
+  }
+
+  function cityChartConfig(state) {
+    const uf = state ? state.sigla : "UF";
+    if (activeAnalysis === "gdp") {
+      return {
+        title: `Cidades por PIB por habitante de ${uf}`,
+        caption: "mais ricas | top 10",
+        value: (row) => perCapita(row.gdp, row.pop),
+        format: formatCurrencyShort
+      };
+    }
+    if (activeAnalysis === "politics") {
+      return {
+        title: `Cidades por habitantes por político de ${uf}`,
+        caption: "maior carga por político | top 10",
+        value: (row) => inhabitantsPerPolitician(row.pop, cityPoliticalSummary(row).total),
+        format: formatPeoplePerPoliticianShort
+      };
+    }
+    if (activeAnalysis === "education") {
+      return {
+        title: `Educação nas cidades de ${uf}`,
+        caption: "fonte pendente",
+        pending: true,
+        empty: "A estrutura da aba está pronta. Falta conectar uma fonte oficial para escolas e formação por município.",
+        value: () => 0,
+        format: () => "-"
+      };
+    }
+    return {
+      title: `Maiores cidades de ${uf}`,
+      caption: "top 10",
+      value: (row) => row.pop || 0,
+      format: formatShort
+    };
+  }
+
   function renderMunicipalityRanking(collection) {
     const state = stateById.get(selectedStateId);
+    const uf = state ? state.sigla : "UF";
+    const config = cityChartConfig(state);
+    if (config.pending) {
+      elements["ranking-title"].textContent = config.title;
+      elements["ranking-caption"].textContent = "fonte pendente";
+      elements.ranking.innerHTML = `<div class="empty">${escapeHtml(config.empty)}</div>`;
+      return;
+    }
     const rows = collection.features
       .map((feature) => feature.properties)
-      .sort((a, b) => b.pop - a.pop)
+      .sort((a, b) => config.value(b) - config.value(a))
       .slice(0, 14);
-    elements["ranking-title"].textContent = `Cidades de ${state.sigla}`;
+    elements["ranking-title"].textContent = activeAnalysis === "general" ? `Cidades de ${uf}` : config.title;
     elements["ranking-caption"].textContent = `${collection.features.length} cidades`;
     elements.ranking.innerHTML = rows.map((row, index) => `
       <button type="button" class="rank-btn" data-city-id="${row.id}">
@@ -2502,7 +3034,7 @@
           <span class="rank-name">${escapeHtml(row.name)}</span>
           <span class="rank-meta">${escapeHtml(row.uf)} | cidade</span>
         </span>
-        <span class="rank-pop">${formatShort(row.pop || 0)}</span>
+        <span class="rank-pop">${escapeHtml(config.format(config.value(row) || 0))}</span>
       </button>
     `).join("");
 
@@ -2624,6 +3156,9 @@
   }
 
   function brazilPopupRows() {
+    if (activeAnalysis === "gdp") return gdpCards("brazil");
+    if (activeAnalysis === "politics") return politicsCards("brazil");
+    if (activeAnalysis === "education") return educationCards("brazil");
     const politics = brazilPoliticalSummary();
     const gdpPerCapita = perCapita(brazilGdp, totalPopulation);
     return [
@@ -2639,6 +3174,10 @@
   }
 
   function statePopupRows(props) {
+    const stateForCards = stateById.get(String(props.id || "")) || { id: String(props.id || ""), sigla: props.uf || "", nome: props.name || "", pop: props.pop || 0, gdp: props.gdp || 0, gdpYear: props.gdpYear || "" };
+    if (activeAnalysis === "gdp") return gdpCards("state", stateForCards);
+    if (activeAnalysis === "politics") return politicsCards("state", stateForCards);
+    if (activeAnalysis === "education") return educationCards("state", stateForCards);
     const pop = Number(props.pop || 0);
     const gdpPerCapita = perCapita(props.gdp, pop);
     const state = stateById.get(String(props.id || "")) || { id: String(props.id || ""), sigla: props.uf || "" };
@@ -2657,6 +3196,9 @@
   }
 
   function municipalityPopupRows(props) {
+    if (activeAnalysis === "gdp") return gdpCards("city", props);
+    if (activeAnalysis === "politics") return politicsCards("city", props);
+    if (activeAnalysis === "education") return educationCards("city", props);
     const pop = Number(props.pop || 0);
     const state = stateById.get(String(props.stateId || ""));
     const gdpPerCapita = perCapita(props.gdp, pop);
@@ -2802,6 +3344,7 @@
     hideAtlasLayersForStreet();
     restoreBaseLabels();
     elements["hud-layer"].textContent = "Rua";
+    updateHeatLegend();
 
     let target = selectedCityFeature && selectedCityFeature.properties;
     if (!target && selectedStateId && stateCitiesCache.has(selectedStateId)) {
@@ -2860,7 +3403,12 @@
     const projectionButton = document.querySelector(`[data-projection="${activeProjection}"]`);
     if (projectionButton) setActiveButton("[data-projection]", projectionButton);
 
+    const analysisButton = document.querySelector(`[data-analysis="${activeAnalysis}"]`);
+    if (analysisButton) setActiveButton("[data-analysis]", analysisButton);
+    if (elements["analysis-caption"]) elements["analysis-caption"].textContent = analysisLabel(activeAnalysis);
+
     setHoverCardsEnabled(hoverCardsEnabled);
+    updateHeatLegend();
   }
 
   function setHoverCardsEnabled(enabled) {
@@ -2882,6 +3430,7 @@
         hoverCards: hoverCardsEnabled,
         base: activeBaseMode,
         projection: activeProjection,
+        analysis: activeAnalysis,
         view: activeView,
         selectedStateId,
         selectedCityId,
@@ -2945,6 +3494,20 @@
 
   function validView(view) {
     return ["world", "brazil", "states", "cities", "street"].includes(view);
+  }
+
+  function validAnalysis(analysis) {
+    return ["general", "gdp", "politics", "education"].includes(analysis);
+  }
+
+  function analysisLabel(analysis) {
+    const labels = {
+      general: "Visão geral",
+      gdp: "PIB e riqueza",
+      politics: "Política",
+      education: "Educação"
+    };
+    return labels[analysis] || labels.general;
   }
 
   function clampNumber(value, min, max, fallback) {
@@ -3149,6 +3712,12 @@
     return value && pop ? value / pop : 0;
   }
 
+  function inhabitantsPerPolitician(population, politicians) {
+    const pop = Number(population || 0);
+    const total = Number(politicians || 0);
+    return pop && total ? pop / total : 0;
+  }
+
   function formatRatio(value, base) {
     const ratio = Number(base || 0) ? Number(value || 0) / Number(base || 0) : 0;
     if (!ratio) return "-";
@@ -3162,6 +3731,16 @@
     return formatNumber(number);
   }
 
+  function formatPeoplePerPolitician(value) {
+    const number = Number(value || 0);
+    return number ? `${formatShort(Math.round(number))} hab./político` : "não se aplica";
+  }
+
+  function formatPeoplePerPoliticianShort(value) {
+    const number = Number(value || 0);
+    return number ? `${formatShort(Math.round(number))}/pol.` : "-";
+  }
+
   function percent(value) {
     return Number(value || 0).toLocaleString("pt-BR", { style: "percent", minimumFractionDigits: 1, maximumFractionDigits: 1 });
   }
@@ -3170,6 +3749,14 @@
     const sorted = rows.slice().sort((a, b) => (b.pop || 0) - (a.pop || 0));
     const index = sorted.findIndex((row) => row.id === String(id));
     return index >= 0 ? `${index + 1}º no Brasil` : "-";
+  }
+
+  function rankTextByMetric(rows, id, valueFactory, suffix) {
+    const sorted = rows
+      .filter((row) => Number(valueFactory(row) || 0) > 0)
+      .sort((a, b) => valueFactory(b) - valueFactory(a));
+    const index = sorted.findIndex((row) => String(row.id) === String(id));
+    return index >= 0 ? `${index + 1}º ${suffix}` : "-";
   }
 
   function normalizeText(value) {
