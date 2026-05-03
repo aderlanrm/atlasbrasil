@@ -182,7 +182,7 @@
     color: var(--text);
     box-shadow: var(--shadow);
     backdrop-filter: blur(12px);
-    pointer-events: none;
+    pointer-events: auto;
     display: none;
   }
 
@@ -832,6 +832,27 @@
     font-size: 12px;
   }
 
+  .legend-head select {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--gold);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    font-size: 11px;
+    padding: 2px 4px;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 600;
+    outline: none;
+  }
+  .legend-head select:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--gold);
+  }
+  .legend-head select option {
+    background: #1a242d;
+    color: #fff;
+  }
+
   .popup-row strong {
     color: var(--gold);
   }
@@ -1218,6 +1239,7 @@
   let activeProjection = validProjection(savedPreferences.projection) ? savedPreferences.projection : "globe";
   let activeView = validView(savedPreferences.view) ? savedPreferences.view : "brazil";
   let activeAnalysis = validAnalysis(savedPreferences.analysis) ? savedPreferences.analysis : "general";
+  let activeGdpSubMetric = savedPreferences.gdpSubMetric || "perCapita";
   let dataCacheStats = createDataCacheStats();
   let basePaintByLayer = new Map();
 
@@ -1920,7 +1942,7 @@
     const collection = stateCitiesCache.get(selectedStateId);
     let values = [];
     if (metricType === "gdp") {
-       values = collection.features.map(f => perCapita(f.properties.gdp, f.properties.pop));
+       values = collection.features.map(f => activeGdpSubMetric === "total" ? (f.properties.gdp || 0) : perCapita(f.properties.gdp, f.properties.pop));
     } else if (metricType === "politics") {
        values = collection.features.map(f => inhabitantsPerPolitician(f.properties.pop, cityPoliticalSummary(f.properties).total));
     } else if (metricType === "education") {
@@ -1948,7 +1970,13 @@
 
     if (activeAnalysis === "gdp") {
       colors = ["#17212b", "#23534d", "#79a95d", "#f2c14e", "#ef7d60"];
-      if (!scale || scale.max <= scale.min) stops = isCity ? [0, 18000, 42000, 80000, 180000] : [0, 18000, 42000, 80000, 120000];
+      if (!scale || scale.max <= scale.min) {
+        if (activeGdpSubMetric === "total") {
+          stops = isCity ? [0, 100e6, 500e6, 2e9, 10e9] : [0, 15e9, 50e9, 150e9, 400e9];
+        } else {
+          stops = isCity ? [0, 18000, 42000, 80000, 180000] : [0, 18000, 42000, 80000, 120000];
+        }
+      }
     } else if (activeAnalysis === "politics") {
       colors = ["#16212b", "#29515d", "#51d1c2", "#f2c14e", "#ef7d60"];
       if (!scale || scale.max <= scale.min) stops = isCity ? [0, 1500, 6000, 25000, 180000] : [0, 1500, 3000, 5000, 8000];
@@ -2014,7 +2042,9 @@
   }
 
   function analysisMetricExpression() {
-    if (activeAnalysis === "gdp") return ["to-number", ["get", "gdpPerCapita"], 0];
+    if (activeAnalysis === "gdp") {
+       return activeGdpSubMetric === "total" ? ["to-number", ["get", "gdp"], 0] : ["to-number", ["get", "gdpPerCapita"], 0];
+    }
     if (activeAnalysis === "politics") return ["to-number", ["get", "peoplePerPolitician"], 0];
     if (activeAnalysis === "education") return ["to-number", ["get", "enemScore"], 0];
     if (activeAnalysis === "travel") return ["to-number", ["get", "travelScore"], 0];
@@ -2051,13 +2081,29 @@
     legend.innerHTML = `
       <div class="legend-head">
         <span>Mapa de calor | ${escapeHtml(config.scope)}</span>
-        <strong>${escapeHtml(config.metric)}</strong>
+        ${activeAnalysis === "gdp" ? `
+          <select id="legend-gdp-selector">
+            <option value="perCapita" ${activeGdpSubMetric === "perCapita" ? "selected" : ""}>PIB por Habitante</option>
+            <option value="total" ${activeGdpSubMetric === "total" ? "selected" : ""}>PIB Total</option>
+          </select>
+        ` : `<strong>${escapeHtml(config.metric)}</strong>`}
       </div>
       <div class="legend-scale" style="background: linear-gradient(90deg, ${config.colors.join(", ")});"></div>
       <div class="legend-labels">
         ${config.labels.map((label) => `<span>${escapeHtml(label)}</span>`).join("")}
       </div>
     `;
+
+    const selector = legend.querySelector("#legend-gdp-selector");
+    if (selector) {
+      selector.addEventListener("change", (e) => {
+        activeGdpSubMetric = e.target.value;
+        updateAnalysisPaint();
+        updateHeatLegend();
+        savePreferences();
+      });
+    }
+
     legend.classList.add("visible");
   }
 
@@ -2089,7 +2135,7 @@
     }
     if (activeAnalysis === "gdp") {
       return {
-        metric: "PIB por habitante",
+        metric: activeGdpSubMetric === "total" ? "PIB Total" : "PIB por habitante",
         scope: isCity ? "cidades da UF (relativo)" : "estados",
         colors: ["#17212b", "#23534d", "#79a95d", "#f2c14e", "#ef7d60"],
         labels: (scale && scale.max > scale.min)
@@ -3741,6 +3787,7 @@
         base: activeBaseMode,
         projection: activeProjection,
         analysis: activeAnalysis,
+        gdpSubMetric: activeGdpSubMetric,
         view: activeView,
         selectedStateId,
         selectedCityId,
