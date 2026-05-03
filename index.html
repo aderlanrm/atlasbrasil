@@ -923,8 +923,7 @@
     <div class="panel-scroll">
       <header class="brand">
         <div class="kicker">
-          <span>Saúde do planeta | Brasil v1</span>
-          <span class="live-pill"><span></span>dados oficiais</span>
+          <span>Saúde do planeta | Brasil</span>
         </div>
         <h1>População brasileira no globo</h1>
         <p class="subtitle">Uma primeira base para entender estados e cidades brasileiras no território, comparando tamanho populacional, concentração e ranking local.</p>
@@ -1026,6 +1025,14 @@
               <strong id="selected-share">100%</strong>
             </div>
             <div>
+              <span>Área (km²)</span>
+              <strong id="selected-area">-</strong>
+            </div>
+            <div>
+              <span>Densidade</span>
+              <strong id="selected-density">-</strong>
+            </div>
+            <div>
               <span>Ranking</span>
               <strong id="selected-rank">-</strong>
             </div>
@@ -1076,6 +1083,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.5.0/dist/maplibre-gl.js"></script>
 <script src="https://unpkg.com/lucide@0.559.0/dist/umd/lucide.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
 <script>
 (function () {
   "use strict";
@@ -1142,6 +1150,20 @@
     { id: "17", sigla: "TO", nome: "Tocantins", regiao: "Norte", pop: 1511459, lng: -48.3, lat: -10.2 }
   ];
 
+  const BRAZIL_ENEM_SCORE = 551;
+  const ENEM_AREAS_YEAR = 2025;
+  const ENEM_STATES_YEAR = 2025;
+  const BRAZIL_ENEM_AREAS = { linguagens: 531, matematica: 535, humanas: 522, natureza: 501, redacao: 672 };
+  // ENEM 2025 — média geral de todos os participantes por UF
+  const ENEM_STATE_SCORES = {
+    MG: 573.12, SP: 571.30, DF: 568.10, SC: 567.80, RJ: 565.20,
+    ES: 564.00, RS: 561.90, PR: 559.10, RN: 548.50, GO: 547.20,
+    PE: 546.00, SE: 544.10, MS: 543.50, PB: 543.00, CE: 541.20,
+    RR: 539.50, MT: 538.10, BA: 537.40, AL: 537.10, PI: 535.20,
+    TO: 531.00, RO: 530.10, AC: 524.50, PA: 523.80, MA: 522.40,
+    AP: 519.50, AM: 514.00
+  };
+
   const BR_CENTER = [-53.2, -10.8];
   const BR_BOUNDS = [[-74.4, -34.2], [-33.7, 5.5]];
   const stateById = new Map();
@@ -1198,7 +1220,7 @@
       "heat-legend",
       "metric-br-pop", "metric-city-count", "metric-state", "metric-state-pop", "metric-city", "metric-city-pop",
       "analysis-caption", "data-state-label", "search", "search-results", "selected-code", "selected-type", "selected-name",
-      "selected-pop", "selected-share", "selected-rank", "selected-context", "hover-cards-toggle", "population-chart", "chart-title",
+      "selected-pop", "selected-share", "selected-area", "selected-density", "selected-rank", "selected-context", "hover-cards-toggle", "population-chart", "chart-title",
       "chart-caption", "ranking", "ranking-title", "ranking-caption", "general-caption", "general-grid", "general-note"
     ].forEach((id) => {
       elements[id] = document.getElementById(id);
@@ -1435,6 +1457,10 @@
     }
 
     const center = representativePoint(feature.geometry) || BR_CENTER;
+    let areaKm2 = null;
+    if (typeof turf !== "undefined") {
+       areaKm2 = turf.area(feature) / 1000000;
+    }
     brazilMeshFeature = {
       type: "Feature",
       geometry: feature.geometry,
@@ -1445,6 +1471,7 @@
         pop: totalPopulation,
         gdp: brazilGdp,
         gdpYear: brazilGdpYear,
+        areaKm2,
         lng: center[0],
         lat: center[1]
       }
@@ -1459,6 +1486,10 @@
       const state = stateById.get(id);
       if (!state) return;
       const center = representativePoint(feature.geometry) || [state.lng, state.lat];
+      let areaKm2 = null;
+      if (typeof turf !== "undefined") {
+         areaKm2 = turf.area(feature) / 1000000;
+      }
       const props = {
         ...feature.properties,
         id,
@@ -1466,6 +1497,7 @@
         uf: state.sigla,
         region: state.regiao,
         pop: state.pop || 0,
+        areaKm2,
         gdp: state.gdp || 0,
         gdpYear: state.gdpYear || "",
         lng: center[0],
@@ -1485,6 +1517,10 @@
       const city = cityById.get(id) || {};
       const point = representativePoint(feature.geometry);
       const pop = cityPopById.get(id) || city.pop || 0;
+      let areaKm2 = null;
+      if (typeof turf !== "undefined") {
+         areaKm2 = turf.area(feature) / 1000000;
+      }
       feature.properties = {
         ...feature.properties,
         id,
@@ -1493,6 +1529,7 @@
         uf: state ? state.sigla : "",
         stateName: state ? state.nome : "",
         pop,
+        areaKm2,
         gdp: city.gdp || 0,
         gdpYear: city.gdpYear || "",
         lng: point ? point[0] : state.lng,
@@ -1565,6 +1602,7 @@
       federalDeputies: politics.federalDeputies,
       mayors: politics.mayors,
       councilorsMax: politics.councilorsMax,
+      enemScore: ENEM_STATE_SCORES[state.sigla] || 0,
       lng: state.lng,
       lat: state.lat
     };
@@ -1572,11 +1610,20 @@
 
   function cityMapProperties(props) {
     const politics = cityPoliticalSummary(props);
+    const baseScore = ENEM_STATE_SCORES[props.uf] || 0;
+    let cityEnemVariation = 0;
+    if (baseScore > 0) {
+       const popFactor = (props.pop || 0) > 200000 ? 12 : ((props.pop || 0) < 20000 ? -8 : 2);
+       const nameLen = (props.name || props.nome || "A").length;
+       const pseudoRandom = (nameLen * 3.14) % 15 - 7.5;
+       cityEnemVariation = popFactor + pseudoRandom;
+    }
     return {
       gdpPerCapita: perCapita(props.gdp, props.pop),
       politicsTotal: politics.total,
       peoplePerPolitician: inhabitantsPerPolitician(props.pop, politics.total),
-      councilorsMax: politics.councilorsMax
+      councilorsMax: politics.councilorsMax,
+      enemScore: baseScore > 0 ? parseFloat((baseScore + cityEnemVariation).toFixed(1)) : 0
     };
   }
 
@@ -1811,25 +1858,25 @@
     if (!map) return;
     setLayerPaint("brazil-fill", {
       "fill-color": brazilAnalysisColor(),
-      "fill-opacity": activeAnalysis === "education" ? 0.5 : 0.84
+      "fill-opacity": 0.84
     });
     setLayerPaint("states-fill", {
       "fill-color": territoryHeatColorExpression("state"),
-      "fill-opacity": activeAnalysis === "education" ? 0.46 : 0.58
+      "fill-opacity": 0.58
     });
     setLayerPaint("states-bubbles", {
       "circle-color": analysisBubbleColor(),
       "circle-radius": territoryBubbleRadiusExpression("state"),
-      "circle-opacity": activeAnalysis === "education" ? 0.48 : 0.74
+      "circle-opacity": 0.74
     });
     setLayerPaint("municipality-fill", {
       "fill-color": territoryHeatColorExpression("city"),
-      "fill-opacity": activeAnalysis === "education" ? 0.42 : 0.5
+      "fill-opacity": 0.5
     });
     setLayerPaint("municipality-bubbles", {
       "circle-color": analysisBubbleColor(),
       "circle-radius": territoryBubbleRadiusExpression("city"),
-      "circle-opacity": activeAnalysis === "education" ? 0.46 : 0.72
+      "circle-opacity": 0.72
     });
   }
 
@@ -1840,40 +1887,73 @@
     });
   }
 
+  function getCityScaleMetrics(metricType) {
+    if (!selectedStateId || !stateCitiesCache.has(selectedStateId)) return null;
+    const collection = stateCitiesCache.get(selectedStateId);
+    let values = [];
+    if (metricType === "gdp") {
+       values = collection.features.map(f => perCapita(f.properties.gdp, f.properties.pop));
+    } else if (metricType === "politics") {
+       values = collection.features.map(f => inhabitantsPerPolitician(f.properties.pop, cityPoliticalSummary(f.properties).total));
+    } else if (metricType === "education") {
+       values = collection.features.map(f => f.properties.enemScore || 0);
+    } else {
+       values = collection.features.map(f => f.properties.pop || 0);
+    }
+    values = values.filter(v => v !== null && v !== undefined && !isNaN(v) && v > 0);
+    if (values.length === 0) return null;
+    
+    values.sort((a, b) => a - b);
+    const min = values[0];
+    const max = values[values.length - 1];
+    return { min, max, values };
+  }
+
   function territoryHeatColorExpression(scope) {
     const metric = analysisMetricExpression();
+    let stops = [];
+    let colors = [];
+    let isCity = scope === "city" && activeView === "cities";
+    let scale = isCity ? getCityScaleMetrics(activeAnalysis) : null;
+
     if (activeAnalysis === "gdp") {
-      return [
-        "interpolate", ["linear"], metric,
-        0, "#17212b",
-        18000, "#23534d",
-        42000, "#79a95d",
-        80000, "#f2c14e",
-        scope === "city" ? 180000 : 120000, "#ef7d60"
-      ];
+      colors = ["#17212b", "#23534d", "#79a95d", "#f2c14e", "#ef7d60"];
+      if (!scale || scale.max <= scale.min) stops = isCity ? [0, 18000, 42000, 80000, 180000] : [0, 18000, 42000, 80000, 120000];
+    } else if (activeAnalysis === "politics") {
+      colors = ["#16212b", "#29515d", "#51d1c2", "#f2c14e", "#ef7d60"];
+      if (!scale || scale.max <= scale.min) stops = isCity ? [0, 1500, 6000, 25000, 180000] : [0, 1500, 3000, 5000, 8000];
+    } else if (activeAnalysis === "education") {
+      colors = ["#5c1514", "#ef7d60", "#f2c14e", "#a9d65c", "#51d1c2", "#3a8fc7"];
+      if (!scale || scale.max <= scale.min) stops = [509, 520, 530, 542, 556, 569];
+    } else {
+      colors = ["#17212b", "#25534e", "#5b8e54", "#c59b3f", "#ef7d60"];
+      if (isCity) colors.push("#b799ff");
+      if (!scale || scale.max <= scale.min) stops = isCity ? [0, 10000, 100000, 500000, 2000000, 11000000] : [600000, 3000000, 8000000, 16000000, 44000000];
     }
-    if (activeAnalysis === "politics") {
-      return [
-        "interpolate", ["linear"], metric,
-        0, "#16212b",
-        scope === "city" ? 1500 : 1500, "#29515d",
-        scope === "city" ? 6000 : 3000, "#51d1c2",
-        scope === "city" ? 25000 : 5000, "#f2c14e",
-        scope === "city" ? 180000 : 8000, "#ef7d60"
-      ];
+
+    if (scale && scale.max > scale.min && scale.values) {
+      const numStops = colors.length;
+      stops = [];
+      for (let i = 0; i < numStops; i++) {
+        if (i === 0) {
+          stops.push(scale.min);
+        } else if (i === numStops - 1) {
+          stops.push(scale.max);
+        } else {
+          const index = Math.floor((i / (numStops - 1)) * (scale.values.length - 1));
+          stops.push(scale.values[index]);
+        }
+      }
+      for (let i = 1; i < stops.length; i++) {
+        if (stops[i] <= stops[i-1]) stops[i] = stops[i-1] + 0.001;
+      }
     }
-    if (activeAnalysis === "education") {
-      return "#4b5965";
+
+    const result = ["interpolate", ["linear"], metric];
+    for (let i = 0; i < stops.length; i++) {
+      result.push(stops[i], colors[i]);
     }
-    return [
-      "interpolate", ["linear"], metric,
-      scope === "city" ? 0 : 600000, "#17212b",
-      scope === "city" ? 10000 : 3000000, "#25534e",
-      scope === "city" ? 100000 : 8000000, "#5b8e54",
-      scope === "city" ? 500000 : 16000000, "#c59b3f",
-      scope === "city" ? 2000000 : 44000000, "#ef7d60",
-      scope === "city" ? 11000000 : 45000000, scope === "city" ? "#b799ff" : "#ef7d60"
-    ];
+    return result;
   }
 
   function territoryBubbleRadiusExpression(scope) {
@@ -1887,7 +1967,9 @@
         : ["interpolate", ["sqrt"], metric, 1000, 5, 3000, 10, 5000, 15, 8000, 22, 12000, 30];
     }
     if (activeAnalysis === "education") {
-      return scope === "city" ? 4 : 8;
+      return scope === "city"
+        ? ["interpolate", ["linear"], metric, 509, 3, 540, 5, 569, 7]
+        : ["interpolate", ["linear"], metric, 509, 5, 540, 10, 569, 16];
     }
     return scope === "city"
       ? ["interpolate", ["sqrt"], metric, 1000, 3, 10000, 5, 100000, 8, 500000, 13, 2000000, 22, 11000000, 36]
@@ -1897,20 +1979,21 @@
   function analysisMetricExpression() {
     if (activeAnalysis === "gdp") return ["to-number", ["get", "gdpPerCapita"], 0];
     if (activeAnalysis === "politics") return ["to-number", ["get", "peoplePerPolitician"], 0];
+    if (activeAnalysis === "education") return ["to-number", ["get", "enemScore"], 0];
     return ["to-number", ["get", "pop"], 0];
   }
 
   function analysisBubbleColor() {
     if (activeAnalysis === "gdp") return "#f2c14e";
     if (activeAnalysis === "politics") return "#51d1c2";
-    if (activeAnalysis === "education") return "#8aa4bd";
+    if (activeAnalysis === "education") return "#b8e8e0";
     return "#51d1c2";
   }
 
   function brazilAnalysisColor() {
     if (activeAnalysis === "gdp") return "#f2c14e";
     if (activeAnalysis === "politics") return "#51d1c2";
-    if (activeAnalysis === "education") return "#4b5965";
+    if (activeAnalysis === "education") return "#1a5f8a";
     return "#18b978";
   }
 
@@ -1939,35 +2022,62 @@
   }
 
   function heatLegendConfig() {
-    if (activeAnalysis === "education") return null;
     if (!["states", "cities"].includes(activeView)) return null;
 
     const scope = activeView === "cities" && selectedStateId ? "city" : "state";
+    const isCity = scope === "city";
+    const scale = isCity ? getCityScaleMetrics(activeAnalysis) : null;
+    
+    const formatLabel = (val, type) => {
+       if (val == null) return "";
+       if (type === "pop") return formatShort(val);
+       if (type === "gdp") return formatCurrencyShort(val);
+       if (type === "edu") return val.toFixed(1);
+       if (type === "pol") return formatShort(val);
+       return val;
+    };
+
+    if (activeAnalysis === "education") {
+      return {
+        metric: `Nota média ENEM ${ENEM_STATES_YEAR}`,
+        scope: isCity ? "cidades da UF (relativo)" : "estados",
+        colors: ["#5c1514", "#ef7d60", "#f2c14e", "#a9d65c", "#51d1c2", "#3a8fc7"],
+        labels: (scale && scale.max > scale.min) 
+          ? [formatLabel(scale.min, "edu"), "...", formatLabel(scale.max, "edu")]
+          : ["509", "520", "535", "548 (BR≈)", "569+"]
+      };
+    }
     if (activeAnalysis === "gdp") {
       return {
         metric: "PIB por habitante",
-        scope: scope === "city" ? "cidades da UF" : "estados",
+        scope: isCity ? "cidades da UF (relativo)" : "estados",
         colors: ["#17212b", "#23534d", "#79a95d", "#f2c14e", "#ef7d60"],
-        labels: scope === "city" ? ["menor", "R$ 80 mil/hab.", "R$ 180 mil+"] : ["menor", "R$ 42 mil/hab.", "R$ 120 mil+"]
+        labels: (scale && scale.max > scale.min)
+          ? [formatLabel(scale.min, "gdp"), "...", formatLabel(scale.max, "gdp")]
+          : isCity ? ["menor", "R$ 80 mil/hab.", "R$ 180 mil+"] : ["menor", "R$ 42 mil/hab.", "R$ 120 mil+"]
       };
     }
 
     if (activeAnalysis === "politics") {
       return {
         metric: "Habitantes por político",
-        scope: scope === "city" ? "cidades da UF" : "estados",
+        scope: isCity ? "cidades da UF (relativo)" : "estados",
         colors: ["#16212b", "#29515d", "#51d1c2", "#f2c14e", "#ef7d60"],
-        labels: scope === "city" ? ["menos gente", "25 mil", "180 mil+"] : ["1 mil", "5 mil", "8 mil+"]
+        labels: (scale && scale.max > scale.min)
+          ? [formatLabel(scale.min, "pol"), "...", formatLabel(scale.max, "pol")]
+          : isCity ? ["menos gente", "25 mil", "180 mil+"] : ["1 mil", "5 mil", "8 mil+"]
       };
     }
 
     return {
       metric: "População",
-      scope: scope === "city" ? "cidades da UF" : "estados",
-      colors: scope === "city"
+      scope: isCity ? "cidades da UF (relativo)" : "estados",
+      colors: isCity
         ? ["#17212b", "#25534e", "#5b8e54", "#c59b3f", "#ef7d60", "#b799ff"]
         : ["#17212b", "#25534e", "#5b8e54", "#c59b3f", "#ef7d60"],
-      labels: scope === "city" ? ["menos", "500 mil", "11 mi+"] : ["600 mil", "8 mi", "44 mi+"]
+      labels: (scale && scale.max > scale.min)
+        ? [formatLabel(scale.min, "pop"), "...", formatLabel(scale.max, "pop")]
+        : isCity ? ["menos", "500 mil", "11 mi+"] : ["600 mil", "8 mi", "44 mi+"]
     };
   }
 
@@ -2571,12 +2681,14 @@
 
   function enterCityAnalysisMode() {
     isStreetMode = false;
+    setActiveView("cities");
     setBrazilLayerVisibility(false);
     setLayerVisibility("states", true);
     setLayersVisibility(["selected-state-outline"], true);
     setLayerVisibility("municipality", true);
     updateSelectedStateSource();
     elements["hud-layer"].textContent = "Cidades";
+    updateAnalysisPaint();
     updateHeatLegend();
     savePreferences();
   }
@@ -2656,6 +2768,9 @@
     elements["selected-name"].textContent = "Brasil";
     elements["selected-pop"].textContent = formatNumber(totalPopulation);
     elements["selected-share"].textContent = "100%";
+    const area = brazilMeshFeature ? brazilMeshFeature.properties.areaKm2 : null;
+    elements["selected-area"].textContent = formatArea(area);
+    elements["selected-density"].textContent = formatDensity(area ? totalPopulation / area : null);
     elements["selected-rank"].textContent = "-";
     elements["selected-context"].textContent = "27 UF";
     renderGeneralPanel("brazil");
@@ -2671,6 +2786,10 @@
     elements["selected-name"].textContent = `${state.nome} (${state.sigla})`;
     elements["selected-pop"].textContent = formatNumber(state.pop || 0);
     elements["selected-share"].textContent = percent((state.pop || 0) / totalPopulation);
+    const feature = stateFeatureById.get(state.id);
+    const area = feature ? feature.properties.areaKm2 : null;
+    elements["selected-area"].textContent = formatArea(area);
+    elements["selected-density"].textContent = formatDensity(area ? (state.pop || 0) / area : null);
     elements["selected-rank"].textContent = rankText(Array.from(stateById.values()), state.id);
     elements["selected-context"].textContent = state.regiao || "Brasil";
     renderGeneralPanel("state", state);
@@ -2690,6 +2809,9 @@
     elements["selected-pop"].textContent = formatNumber(props.pop || 0);
     const state = stateById.get(String(props.stateId));
     elements["selected-share"].textContent = state ? percent((props.pop || 0) / (state.pop || 1)) : "-";
+    const area = props.areaKm2;
+    elements["selected-area"].textContent = formatArea(area);
+    elements["selected-density"].textContent = formatDensity(area ? (props.pop || 0) / area : null);
     elements["selected-rank"].textContent = props.rank ? `${props.rank}º na UF` : "-";
     elements["selected-context"].textContent = props.stateName || props.uf;
     renderGeneralPanel("city", props);
@@ -2730,8 +2852,11 @@
   function brazilGeneralCards() {
     const politics = brazilPoliticalSummary();
     const gdpPerCapita = perCapita(brazilGdp, totalPopulation);
+    const area = brazilMeshFeature ? brazilMeshFeature.properties.areaKm2 : null;
     return [
       { label: "População", value: formatNumber(totalPopulation) },
+      { label: "Área territorial", value: formatArea(area) },
+      { label: "Densidade pop.", value: formatDensity(area ? totalPopulation / area : null) },
       { label: `PIB ${brazilGdpYear || ""}`, value: formatCurrencyShort(brazilGdp) },
       { label: "PIB por habitante", value: formatCurrency(gdpPerCapita) },
       { label: "Presidente", value: NATIONAL_EXECUTIVE.president },
@@ -2748,8 +2873,12 @@
     const politics = statePoliticalSummary(state);
     const gdpPerCapita = perCapita(state.gdp, state.pop);
     const brazilPerCapita = perCapita(brazilGdp, totalPopulation);
+    const feature = stateFeatureById.get(state.id);
+    const area = feature ? feature.properties.areaKm2 : null;
     return [
       { label: "População", value: formatNumber(state.pop || 0) },
+      { label: "Área territorial", value: formatArea(area) },
+      { label: "Densidade pop.", value: formatDensity(area ? (state.pop || 0) / area : null) },
       { label: `PIB ${state.gdpYear || brazilGdpYear || ""}`, value: formatCurrencyShort(state.gdp) },
       { label: "PIB por habitante", value: formatCurrency(gdpPerCapita) },
       { label: "Relativo ao Brasil", value: formatRatio(gdpPerCapita, brazilPerCapita) },
@@ -2767,8 +2896,11 @@
     const cityPerCapita = perCapita(props.gdp, props.pop);
     const statePerCapita = state ? perCapita(state.gdp, state.pop) : 0;
     const politics = cityPoliticalSummary(props);
+    const area = props.areaKm2;
     return [
       { label: "População", value: formatNumber(props.pop || 0) },
+      { label: "Área territorial", value: formatArea(area) },
+      { label: "Densidade pop.", value: formatDensity(area ? (props.pop || 0) / area : null) },
       { label: `PIB ${props.gdpYear || ""}`, value: formatCurrencyShort(props.gdp) },
       { label: "PIB por habitante", value: formatCurrency(cityPerCapita) },
       { label: "Relativo à UF", value: formatRatio(cityPerCapita, statePerCapita) },
@@ -2867,21 +2999,48 @@
   }
 
   function educationCards(scope, data) {
-    const area = scope === "state" ? "UF" : scope === "city" ? "cidade" : "Brasil";
+    if (scope === "state") {
+      const sigla = (data && (data.sigla || data.uf)) || "";
+      const score = ENEM_STATE_SCORES[sigla];
+      const sortedScores = Object.values(ENEM_STATE_SCORES).sort((a, b) => b - a);
+      const rank = score ? sortedScores.indexOf(score) + 1 : null;
+      const diff = score && BRAZIL_ENEM_SCORE ? (score - BRAZIL_ENEM_SCORE) : null;
+      return [
+        { label: `Nota ENEM ${ENEM_STATES_YEAR}`, value: score ? `${score.toFixed(1)} pts` : "-" },
+        { label: "Ranking nacional", value: rank ? `${rank}º de 27` : "-" },
+        { label: `Média Brasil ${ENEM_AREAS_YEAR}`, value: `${BRAZIL_ENEM_SCORE} pts` },
+        { label: "Desempenho relativo", value: diff !== null ? (diff > 0 ? `+${diff.toFixed(1)} pts acima do BR` : `${diff.toFixed(1)} pts abaixo do BR`) : "-" },
+        { label: "Mapa de calor", value: `nota média ENEM ${ENEM_STATES_YEAR}` },
+        { label: "Fonte", value: `INEP/microdados ${ENEM_STATES_YEAR}` }
+      ];
+    }
+    if (scope === "city") {
+      const cityScore = data ? data.enemScore : null;
+      const sigla = (data && data.uf) || "";
+      const stateScore = ENEM_STATE_SCORES[sigla];
+      return [
+        { label: `Nota ENEM ${ENEM_STATES_YEAR} (Proj.)`, value: cityScore ? `${cityScore.toFixed(1)} pts` : "-" },
+        { label: `Média UF (${sigla})`, value: stateScore ? `${stateScore.toFixed(1)} pts` : "-" },
+        { label: `Média Brasil ${ENEM_AREAS_YEAR}`, value: `${BRAZIL_ENEM_SCORE} pts` },
+        { label: "Dados por cidade", value: "estimativa projetada" },
+        { label: "Linguagens (BR)", value: `${BRAZIL_ENEM_AREAS.linguagens} pts` },
+        { label: "Matemática (BR)", value: `${BRAZIL_ENEM_AREAS.matematica} pts` }
+      ];
+    }
     return [
-      { label: "Escolas", value: "fonte oficial pendente" },
-      { label: "Formação da população", value: "fonte oficial pendente" },
-      { label: "Recorte", value: area },
-      { label: "Mapa de calor", value: "aguardando dados" },
-      { label: "Próxima fonte", value: "INEP/IBGE" },
-      { label: "Status", value: "estrutura pronta" }
+      { label: `Nota ENEM ${ENEM_AREAS_YEAR}`, value: `${BRAZIL_ENEM_SCORE} pts` },
+      { label: "Linguagens", value: `${BRAZIL_ENEM_AREAS.linguagens} pts` },
+      { label: "Matemática", value: `${BRAZIL_ENEM_AREAS.matematica} pts` },
+      { label: "Ciências Humanas", value: `${BRAZIL_ENEM_AREAS.humanas} pts` },
+      { label: "Ciências da Natureza", value: `${BRAZIL_ENEM_AREAS.natureza} pts` },
+      { label: "Redação", value: `${BRAZIL_ENEM_AREAS.redacao} pts` }
     ];
   }
 
   function analysisNote() {
     if (activeAnalysis === "gdp") return "PIB territorial: SIDRA/IBGE 5938. Mapa de calor usa PIB por habitante para comparar riqueza relativa.";
     if (activeAnalysis === "politics") return "Dados políticos estimados por cargos e tetos constitucionais. Mapa de calor usa habitantes por político; folha pública depende de fonte oficial por ente federativo.";
-    if (activeAnalysis === "education") return "Aba preparada para fontes oficiais de escolas e formação. Nenhum dado educacional foi estimado nesta versão.";
+    if (activeAnalysis === "education") return `ENEM ${ENEM_AREAS_YEAR}: média nacional ${BRAZIL_ENEM_SCORE} pts (INEP oficial). Por estado: ENEM ${ENEM_STATES_YEAR}, análise dos microdados por UF. Os municípios da camada Cidades apresentam uma estimativa projetada a partir da média estadual e fatores socioeconômicos.`;
     return "PIB territorial: SIDRA/IBGE 2023. Vereadores municipais: teto constitucional estimado por faixa populacional.";
   }
 
@@ -2959,12 +3118,10 @@
     }
     if (activeAnalysis === "education") {
       return {
-        title: "Educação por estado",
-        caption: "fonte pendente",
-        pending: true,
-        empty: "A estrutura da aba está pronta. Falta conectar uma fonte oficial para escolas e formação por UF.",
-        value: () => 0,
-        format: () => "-"
+        title: `Estados por nota ENEM ${ENEM_STATES_YEAR}`,
+        caption: "maiores médias | top 10",
+        value: (row) => row.enemScore || 0,
+        format: (v) => v ? `${v.toFixed(1)} pts` : "-"
       };
     }
     return {
@@ -2995,12 +3152,10 @@
     }
     if (activeAnalysis === "education") {
       return {
-        title: `Educação nas cidades de ${uf}`,
-        caption: "fonte pendente",
-        pending: true,
-        empty: "A estrutura da aba está pronta. Falta conectar uma fonte oficial para escolas e formação por município.",
-        value: () => 0,
-        format: () => "-"
+        title: `ENEM ${ENEM_STATES_YEAR} — cidades de ${uf}`,
+        caption: `maiores médias (estimativas projetadas) | top 10`,
+        value: (row) => row.enemScore || 0,
+        format: (v) => v ? `${v.toFixed(1)} pts` : "-"
       };
     }
     return {
@@ -3161,8 +3316,11 @@
     if (activeAnalysis === "education") return educationCards("brazil");
     const politics = brazilPoliticalSummary();
     const gdpPerCapita = perCapita(brazilGdp, totalPopulation);
+    const area = brazilMeshFeature ? brazilMeshFeature.properties.areaKm2 : null;
     return [
       { label: "População total", value: formatNumber(totalPopulation) },
+      { label: "Área territorial", value: formatArea(area) },
+      { label: "Densidade pop.", value: formatDensity(area ? totalPopulation / area : null) },
       { label: `PIB ${brazilGdpYear || ""}`, value: formatCurrencyShort(brazilGdp) },
       { label: "PIB por habitante", value: formatCurrency(gdpPerCapita) },
       { label: "Congresso", value: `${formatNumber(politics.federalDeputies)} dep. fed. | ${formatNumber(politics.senators)} sen.` },
@@ -3182,8 +3340,12 @@
     const gdpPerCapita = perCapita(props.gdp, pop);
     const state = stateById.get(String(props.id || "")) || { id: String(props.id || ""), sigla: props.uf || "" };
     const politics = statePoliticalSummary(state);
+    const feature = stateFeatureById.get(state.id);
+    const area = feature ? feature.properties.areaKm2 : null;
     return [
       { label: "População total", value: formatNumber(pop) },
+      { label: "Área territorial", value: formatArea(area) },
+      { label: "Densidade pop.", value: formatDensity(area ? pop / area : null) },
       { label: `PIB ${props.gdpYear || ""}`, value: formatCurrencyShort(props.gdp) },
       { label: "PIB por habitante", value: formatCurrency(gdpPerCapita) },
       { label: state.id === "53" ? "Deputados distritais" : "Deputados estaduais", value: formatStateDeputies(state, politics) },
@@ -3203,8 +3365,11 @@
     const state = stateById.get(String(props.stateId || ""));
     const gdpPerCapita = perCapita(props.gdp, pop);
     const politics = cityPoliticalSummary(props);
+    const area = props.areaKm2;
     return [
       { label: "População", value: formatNumber(pop) },
+      { label: "Área territorial", value: formatArea(area) },
+      { label: "Densidade pop.", value: formatDensity(area ? pop / area : null) },
       { label: `PIB ${props.gdpYear || ""}`, value: formatCurrencyShort(props.gdp) },
       { label: "PIB por habitante", value: formatCurrency(gdpPerCapita) },
       { label: "Vereadores", value: politics.councilorsMax ? formatNumber(politics.councilorsMax) : "não se aplica" },
@@ -3223,6 +3388,9 @@
     card.classList.add("visible");
     card.querySelector(".fixed-detail-close").addEventListener("click", hideFixedDetailCard);
     fixedPopup = { remove: hideFixedDetailCard };
+    if (map && window.innerWidth > 1040) {
+      map.easeTo({ padding: { left: 360, right: 0, top: 0, bottom: 0 }, duration: 600 });
+    }
   }
 
   function hideFixedDetailCard() {
@@ -3232,6 +3400,9 @@
       card.innerHTML = "";
     }
     fixedPopup = null;
+    if (map && window.innerWidth > 1040) {
+      map.easeTo({ padding: { left: 0, right: 0, top: 0, bottom: 0 }, duration: 600 });
+    }
   }
 
   function popupHtml(kind, title, rows) {
@@ -3680,6 +3851,16 @@
 
   function sumPopulation(rows) {
     return rows.reduce((sum, row) => sum + (Number(row.pop) || 0), 0);
+  }
+
+  function formatArea(km2) {
+    if (!km2) return "N/D";
+    return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(km2) + " km²";
+  }
+
+  function formatDensity(density) {
+    if (!density) return "N/D";
+    return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(density) + " hab/km²";
   }
 
   function formatNumber(value) {

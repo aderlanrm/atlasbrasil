@@ -40,6 +40,7 @@ xp/
 tools/
 *.tmp
 *.temp
+.claude/
 
 # OS/editor files
 .DS_Store
