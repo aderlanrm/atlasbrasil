@@ -3241,9 +3241,9 @@
     const max = Math.max(...numericValues, 1);
     const resolvedActiveYear = activeGdpYear === "last" ? (availableGdpYears[0] || "") : activeGdpYear;
     return `
-      <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--line);">
+      <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--line);width:100%;">
         <div style="font-size:10px;color:var(--quiet);margin-bottom:8px;text-transform:uppercase;font-weight:800;">Histórico do PIB</div>
-        <div style="height:80px;display:flex;align-items:flex-end;gap:4px;">
+        <div style="height:80px;display:flex;align-items:flex-end;gap:4px;width:100%;">
           ${years.map(y => {
             const val = Number(history[y]) || 0;
             const h = Math.max(8, (val / max) * 100);
@@ -3279,7 +3279,7 @@
     elements["general-caption"].textContent = caption;
     elements["general-grid"].innerHTML = cards.map((card) => {
       if (card.isHtml) {
-        return `<div style="grid-column: 1 / -1; min-height: 0; padding: 0; border: 0; background: transparent;">${card.value}</div>`;
+        return `<div style="grid-column: 1 / -1; min-height: 100px; padding: 10px 0; border: 0; background: transparent; width: 100%;">${card.value}</div>`;
       }
       return `
         <div>
