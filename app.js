@@ -1,6 +1,12 @@
 (function () {
   "use strict";
 
+  // Proteção contra Clickjacking (Frame-Busting)
+  if (window.self !== window.top) {
+    window.top.location = window.self.location;
+  }
+
+
   const URLS = {
     mapStyle: "https://tiles.openfreemap.org/styles/liberty",
     fallbackStyle: "https://demotiles.maplibre.org/style.json",
