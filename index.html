@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta http-equiv="Content-Security-Policy" content="
-  default-src 'self';
+  default-src 'none';
   script-src 'self' cdn.jsdelivr.net unpkg.com;
   style-src 'self' fonts.googleapis.com cdn.jsdelivr.net 'unsafe-inline';
   font-src fonts.gstatic.com;
@@ -12,6 +12,9 @@
   connect-src 'self' https://servicodados.ibge.gov.br https://apisidra.ibge.gov.br https://tiles.openfreemap.org https://demotiles.maplibre.org https://server.arcgisonline.com https://img.youtube.com cdn.jsdelivr.net unpkg.com;
   worker-src blob:;
   upgrade-insecure-requests;
+  frame-ancestors 'none';
+  base-uri 'self';
+  form-action 'self';
 " />
 <title>Atlas Brasil | População no Globo</title>
 <meta name="description" content="Explore o Atlas Brasil: um dashboard interativo para análise de dados demográficos, econômicos (PIB), educacionais (ENEM) e políticos de todos os municípios brasileiros em um globo 3D." />
