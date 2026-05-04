@@ -2461,19 +2461,27 @@
 
   function renderBarChart(rows, nameFactory, target, valueFactory = (row) => row.pop || 0, valueFormatter = formatShort) {
     const max = Math.max(...rows.map((row) => valueFactory(row) || 0), 1);
+    
+    // 1. Render the structure
     target.innerHTML = rows.map((row) => {
       const value = valueFactory(row) || 0;
       const width = Math.max(2, (value / max) * 100);
       return `
         <div class="bar-row">
           <div class="bar-track">
-            <div class="bar-fill" data-width="${width}"></div>
+            <div class="bar-fill" data-width="${width.toFixed(2)}"></div>
             <div class="bar-name">${escapeHtml(nameFactory(row))}</div>
           </div>
           <div class="bar-value">${valueFormatter(value)}</div>
         </div>
       `;
     }).join("");
+
+    // 2. Apply widths via DOM API (allowed by strict CSP)
+    target.querySelectorAll('.bar-fill').forEach(bar => {
+      const w = bar.getAttribute('data-width');
+      if (w) bar.style.width = w + '%';
+    });
   }
 
   function stateChartConfig() {
