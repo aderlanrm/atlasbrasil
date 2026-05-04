@@ -1860,6 +1860,7 @@
       map.addSource("states-fill-source", { type: "geojson", data: emptyFeatureCollection() });
       map.addSource("states-points-source", { type: "geojson", data: emptyFeatureCollection() });
       map.addSource("selected-state-source", { type: "geojson", data: emptyFeatureCollection() });
+      map.addSource("selected-city-source", { type: "geojson", data: emptyFeatureCollection() });
       map.addSource("municipality-fill-source", { type: "geojson", data: emptyFeatureCollection() });
       map.addSource("municipality-points-source", { type: "geojson", data: emptyFeatureCollection() });
     }
@@ -1924,6 +1925,68 @@
         "line-width": ["interpolate", ["linear"], ["zoom"], 3, 2.2, 8, 4.2]
       }
     }, baseSymbolLayerId);
+
+    addLayerOnce({
+      id: "selected-city-fill",
+      type: "fill",
+      source: "selected-city-source",
+      layout: { visibility: "visible" },
+      paint: {
+        "fill-color": "#f2c14e",
+        "fill-opacity": 0.55
+      }
+    }, baseSymbolLayerId);
+
+    addLayerOnce({
+      id: "selected-city-glow-outer",
+      type: "line",
+      source: "selected-city-source",
+      layout: { visibility: "visible" },
+      paint: {
+        "line-color": "#f2c14e",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 4, 20, 10, 40],
+        "line-opacity": 0.35,
+        "line-blur": 20
+      }
+    }, baseSymbolLayerId);
+
+    addLayerOnce({
+      id: "selected-city-glow",
+      type: "line",
+      source: "selected-city-source",
+      layout: { visibility: "visible" },
+      paint: {
+        "line-color": "#ffffff",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 4, 10, 10, 22],
+        "line-opacity": 0.55,
+        "line-blur": 8
+      }
+    }, baseSymbolLayerId);
+
+    addLayerOnce({
+      id: "selected-city-outline",
+      type: "line",
+      source: "selected-city-source",
+      layout: { visibility: "visible" },
+      paint: {
+        "line-color": "#ffffff",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 4, 6, 10, 14],
+        "line-opacity": 1
+      }
+    }, baseSymbolLayerId);
+
+    addLayerOnce({
+      id: "selected-city-outline-inner",
+      type: "line",
+      source: "selected-city-source",
+      layout: { visibility: "visible" },
+      paint: {
+        "line-color": "#f2c14e",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 4, 3, 10, 7],
+        "line-opacity": 1
+      }
+    }, baseSymbolLayerId);
+
 
     addLayerOnce({
       id: "states-bubbles",
@@ -2900,8 +2963,8 @@
     updateHeatLegend();
     syncAtlasLayersForActiveView();
     refreshAnalysisContent();
-    if (fixedPopup) fixedPopup.remove();
-    fixedPopup = null;
+    // Keep the card open and refresh its content for the new analysis tab
+    refreshFixedDetailCard();
     savePreferences();
   }
 
@@ -2972,6 +3035,7 @@
     selectedStateId = null;
     selectedCityId = null;
     selectedCityFeature = null;
+    clearSelectedCitySource();
     updateSelectedStateSource();
     setBrazilLayerVisibility(true);
     hideAtlasAnalysisLayers();
@@ -2996,6 +3060,7 @@
     selectedStateId = null;
     selectedCityId = null;
     selectedCityFeature = null;
+    clearSelectedCitySource();
     updateSelectedStateSource();
     setBrazilLayerVisibility(false);
     setLayerVisibility("states", true);
@@ -3172,6 +3237,7 @@
     const props = feature.properties;
     selectedCityId = String(cityId);
     selectedCityFeature = feature;
+    updateSelectedCitySource(feature);
 
     // Fetch history asynchronously if not present
     if (city && (!city.gdpHistory || Object.keys(city.gdpHistory).length < 5)) {
@@ -4238,6 +4304,18 @@
   function setSourceData(sourceId, data) {
     const source = map && map.getSource(sourceId);
     if (source) source.setData(data);
+  }
+
+  function updateSelectedCitySource(feature) {
+    if (!feature || !feature.geometry) {
+      setSourceData("selected-city-source", emptyFeatureCollection());
+      return;
+    }
+    setSourceData("selected-city-source", { type: "FeatureCollection", features: [feature] });
+  }
+
+  function clearSelectedCitySource() {
+    setSourceData("selected-city-source", emptyFeatureCollection());
   }
 
   function addLayerOnce(layer, beforeId) {
