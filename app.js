@@ -2798,6 +2798,9 @@
     card.classList.add("visible");
     card.querySelector(".fixed-detail-close").addEventListener("click", hideFixedDetailCard);
     fixedPopup = { remove: hideFixedDetailCard };
+
+    applyGdpHistoryStyles("gdp-history-chart");
+
     if (window.lucide) window.lucide.createIcons();
     if (map && window.innerWidth > 1040) {
       map.easeTo({ padding: { left: 360, right: 0, top: 0, bottom: 0 }, duration: 600 });
