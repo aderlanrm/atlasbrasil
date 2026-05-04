@@ -1062,7 +1062,7 @@
       <div class="legend-head">
         <span>Mapa de calor | ${escapeHtml(config.scope)}</span>
         ${activeAnalysis === "gdp" ? `
-          <div style="display:flex;gap:4px;">
+          <div class="flex-gap-4">
             <div class="year-stepper">
               <button type="button" id="gdp-year-minus" title="Ano anterior" aria-label="Ano anterior">−</button>
               <select id="legend-year-selector" aria-label="Selecionar ano do PIB">
@@ -1076,7 +1076,7 @@
             </select>
           </div>
         ` : (activeAnalysis === "education" ? `
-          <div style="display:flex;gap:4px;">
+          <div class="flex-gap-4">
             <div class="year-stepper">
               <button type="button" id="enem-year-minus" title="Ano anterior" aria-label="Ano anterior">−</button>
               <select id="legend-enem-year-selector" aria-label="Selecionar ano do ENEM">
@@ -1087,11 +1087,16 @@
           </div>
         ` : `<strong>${escapeHtml(config.metric)}</strong>`)}
       </div>
-      <div class="legend-scale" style="background: linear-gradient(90deg, ${config.colors.join(", ")});"></div>
+      <div class="legend-scale" id="legend-gradient-scale"></div>
       <div class="legend-labels">
         ${config.labels.map((label) => `<span>${escapeHtml(label)}</span>`).join("")}
       </div>
     `;
+
+    const gradScale = legend.querySelector("#legend-gradient-scale");
+    if (gradScale) {
+      gradScale.style.background = `linear-gradient(90deg, ${config.colors.join(", ")})`;
+    }
 
     const selector = legend.querySelector("#legend-gdp-selector");
     if (selector) {
@@ -2100,18 +2105,18 @@
     const max = Math.max(...numericValues, 1);
     const resolvedActiveYear = activeGdpYear === "last" ? (availableGdpYears[0] || "") : activeGdpYear;
     return `
-      <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--line);width:100%;">
-        <div style="font-size:10px;color:var(--quiet);margin-bottom:8px;text-transform:uppercase;font-weight:800;">Histórico do PIB</div>
-        <div style="height:80px;display:flex;align-items:flex-end;gap:4px;width:100%;">
+      <div class="mt-12 pt-10 border-top-line w-full">
+        <div class="pib-history-header">Histórico do PIB</div>
+        <div class="pib-history-container" id="gdp-history-chart">
           ${years.map(y => {
             const val = Number(history[y]) || 0;
             const h = Math.max(8, (val / max) * 100);
             const isActive = String(y) === String(resolvedActiveYear);
             const isMock = parseInt(y) >= 2023;
-            return `<div title="${y}${isMock ? ' (proj.)' : ''}: ${formatCurrencyShort(val)}" style="flex:1;height:${h}%;background:${isActive ? 'var(--gold)' : (isMock ? 'rgba(242,193,78,0.15)' : 'rgba(242,193,78,0.45)')};border-radius:2px;transition:all 0.2s;"></div>`;
+            return `<div class="pib-history-bar" title="${y}${isMock ? ' (proj.)' : ''}: ${formatCurrencyShort(val)}" data-h="${h}" data-active="${isActive}" data-mock="${isMock}"></div>`;
           }).join("")}
         </div>
-        <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--quiet);margin-top:6px;">
+        <div class="pib-history-footer">
           <span>${escapeHtml(String(years[0]))}</span>
           <span>${escapeHtml(String(years[years.length-1]))}</span>
         </div>
@@ -2119,10 +2124,25 @@
     `;
   }
 
+  function applyGdpHistoryStyles(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.querySelectorAll(".pib-history-bar").forEach(bar => {
+      const h = bar.dataset.h;
+      const isActive = bar.dataset.active === "true";
+      const isMock = bar.dataset.mock === "true";
+      bar.style.flex = "1";
+      bar.style.height = h + "%";
+      bar.style.background = isActive ? "var(--gold)" : (isMock ? "rgba(242,193,78,0.15)" : "rgba(242,193,78,0.45)");
+      bar.style.borderRadius = "2px";
+      bar.style.transition = "all 0.2s";
+    });
+  }
+
   function renderSidebarCards(cards) {
     elements["analysis-cards"].innerHTML = cards.map((card) => {
       if (card.isHtml) {
-        return `<div class="stat-card" style="display:block;padding:0;border:0;background:transparent;">${card.value}</div>`;
+        return `<div class="stat-card stat-card-plain">${card.value}</div>`;
       }
       return `
         <div class="stat-card">
@@ -2138,7 +2158,7 @@
     elements["general-caption"].textContent = caption;
     elements["general-grid"].innerHTML = cards.map((card) => {
       if (card.isHtml) {
-        return `<div style="grid-column: 1 / -1; min-height: 100px; padding: 10px 0; border: 0; background: transparent; width: 100%;">${card.value}</div>`;
+        return `<div class="grid-full-span">${card.value}</div>`;
       }
       return `
         <div>
@@ -2369,10 +2389,10 @@
         cards.push({
           label: "Vídeo",
           value: `
-            <div style="margin-top:6px;width:100%;">
-              ${thumbUrl ? `<img src="${thumbUrl}" style="width:100%;border-radius:6px;margin-bottom:8px;aspect-ratio:16/9;object-fit:cover;display:block;border:1px solid rgba(255,255,255,0.1);" onerror="this.style.display='none'">` : ""}
-              <div style="font-size:10px;color:#aaa;margin-bottom:4px;text-transform:uppercase;line-height:1.2;">${escapeHtml(doc.t || "Documentário Especial")}</div>
-              <a href="${safeHref}" target="_blank" rel="noopener noreferrer" style="color:#f2c14e;text-decoration:none;display:inline-flex;align-items:center;gap:4px;font-weight:600;font-size:13px;padding:4px 0;">Assistir vídeo <i data-lucide="external-link" style="width:12px;height:12px;" aria-hidden="true"></i></a>
+            <div class="mt-6 w-full">
+              ${thumbUrl ? `<img src="${thumbUrl}" class="video-thumb">` : ""}
+              <div class="video-title">${escapeHtml(doc.t || "Documentário Especial")}</div>
+              <a href="${safeHref}" target="_blank" rel="noopener noreferrer" class="video-link">Assistir vídeo <i aria-hidden="true" data-lucide="external-link" class="icon-small"></i></a>
             </div>
           `,
           isHtml: true
@@ -2441,7 +2461,7 @@
       return `
         <div class="bar-row">
           <div class="bar-track">
-            <div class="bar-fill" style="width: ${width}%"></div>
+            <div class="bar-fill" data-width="${width}"></div>
             <div class="bar-name">${escapeHtml(nameFactory(row))}</div>
           </div>
           <div class="bar-value">${valueFormatter(value)}</div>
@@ -2810,7 +2830,7 @@
         <div class="popup-title">${escapeHtml(title)}</div>
         ${rows.map((row) => {
           if (row.isHtml) {
-            return `<div style="margin-top:10px; border-top:1px solid var(--line);">${row.value}</div>`;
+            return `<div class="mt-10 border-top-line w-full">${row.value}</div>`;
           }
           return `<div class="popup-row"><span>${escapeHtml(row.label)}</span><strong>${escapeHtml(row.value)}</strong></div>`;
         }).join("")}
