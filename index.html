@@ -11,6 +11,9 @@
   img-src 'self' data: https:;
   connect-src 'self' https://servicodados.ibge.gov.br https://apisidra.ibge.gov.br https://tiles.openfreemap.org https://demotiles.maplibre.org https://server.arcgisonline.com https://img.youtube.com cdn.jsdelivr.net unpkg.com;
   worker-src blob:;
+  object-src 'none';
+  frame-ancestors 'none';
+  block-all-mixed-content;
   upgrade-insecure-requests;
   base-uri 'self';
   form-action 'self';
