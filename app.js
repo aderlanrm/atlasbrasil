@@ -1064,11 +1064,11 @@
         ${activeAnalysis === "gdp" ? `
           <div style="display:flex;gap:4px;">
             <div class="year-stepper">
-              <button type="button" id="gdp-year-minus" title="Ano anterior">−</button>
-              <select id="legend-year-selector">
+              <button type="button" id="gdp-year-minus" title="Ano anterior" aria-label="Ano anterior">−</button>
+              <select id="legend-year-selector" aria-label="Selecionar ano do PIB">
                 ${availableGdpYears.map(y => `<option value="${escapeHtml(String(y))}" ${y === activeGdpYear ? "selected" : ""}>${escapeHtml(String(y))}</option>`).join("")}
               </select>
-              <button type="button" id="gdp-year-plus" title="Próximo ano">+</button>
+              <button type="button" id="gdp-year-plus" title="Próximo ano" aria-label="Próximo ano">+</button>
             </div>
             <select id="legend-gdp-selector">
               <option value="perCapita" ${activeGdpSubMetric === "perCapita" ? "selected" : ""}>PIB/Hab.</option>
@@ -1078,11 +1078,11 @@
         ` : (activeAnalysis === "education" ? `
           <div style="display:flex;gap:4px;">
             <div class="year-stepper">
-              <button type="button" id="enem-year-minus" title="Ano anterior">−</button>
-              <select id="legend-enem-year-selector">
+              <button type="button" id="enem-year-minus" title="Ano anterior" aria-label="Ano anterior">−</button>
+              <select id="legend-enem-year-selector" aria-label="Selecionar ano do ENEM">
                 ${availableEnemYears.map(y => `<option value="${escapeHtml(String(y))}" ${y === activeEnemYear ? "selected" : ""}>ENEM ${escapeHtml(String(y))}</option>`).join("")}
               </select>
-              <button type="button" id="enem-year-plus" title="Próximo ano">+</button>
+              <button type="button" id="enem-year-plus" title="Próximo ano" aria-label="Próximo ano">+</button>
             </div>
           </div>
         ` : `<strong>${escapeHtml(config.metric)}</strong>`)}
@@ -2365,14 +2365,14 @@
       if (doc && doc.v) {
         const videoId = getYouTubeId(doc.v);
         const thumbUrl = videoId ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg` : null;
+        const safeHref = escapeHtml(doc.v);
         cards.push({
           label: "Vídeo",
           value: `
             <div style="margin-top:6px;width:100%;">
               ${thumbUrl ? `<img src="${thumbUrl}" style="width:100%;border-radius:6px;margin-bottom:8px;aspect-ratio:16/9;object-fit:cover;display:block;border:1px solid rgba(255,255,255,0.1);" onerror="this.style.display='none'">` : ""}
               <div style="font-size:10px;color:#aaa;margin-bottom:4px;text-transform:uppercase;line-height:1.2;">${escapeHtml(doc.t || "Documentário Especial")}</div>
-              <div style="font-size:9px;color:#f2c14e;margin-bottom:6px;opacity:0.8;">Canal: ${escapeHtml(doc.c || "YouTube")}</div>
-              <a href="${doc.v}" target="_blank" rel="noopener noreferrer" style="color:#f2c14e;text-decoration:none;display:inline-flex;align-items:center;gap:4px;font-weight:600;font-size:13px;padding:4px 0;">Assistir vídeo <i data-lucide="external-link" style="width:12px;height:12px;"></i></a>
+              <a href="${safeHref}" target="_blank" rel="noopener noreferrer" style="color:#f2c14e;text-decoration:none;display:inline-flex;align-items:center;gap:4px;font-weight:600;font-size:13px;padding:4px 0;">Assistir vídeo <i data-lucide="external-link" style="width:12px;height:12px;" aria-hidden="true"></i></a>
             </div>
           `,
           isHtml: true
