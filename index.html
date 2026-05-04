@@ -3239,6 +3239,10 @@
     if (options.fly !== false) {
       map.flyTo({ center: [props.lng, props.lat], zoom: Math.max(map.getZoom(), 7.4), pitch: 0, speed: 0.8, curve: 1.3, essential: true });
     }
+    // If the Info Panel is already open, update it for the newly selected city
+    if (currentFixedCard) {
+      showMunicipalityPopup(null, props);
+    }
     savePreferences();
   }
 
@@ -3737,7 +3741,10 @@
     elements.ranking.querySelectorAll(".rank-btn").forEach((button) => {
       button.addEventListener("click", () => {
         const feature = collection.features.find((item) => item.properties.id === button.dataset.cityId);
-        if (feature) selectCity(button.dataset.cityId, feature);
+        if (feature) {
+          selectCity(button.dataset.cityId, feature);
+          showMunicipalityPopup(null, feature.properties);
+        }
       });
     });
     updateRankingActive();
