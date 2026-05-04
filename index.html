@@ -3,20 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta http-equiv="Content-Security-Policy" content="
-  default-src 'none';
-  script-src 'self' cdn.jsdelivr.net unpkg.com;
-  style-src 'self' fonts.googleapis.com cdn.jsdelivr.net;
-  font-src fonts.gstatic.com;
-  img-src 'self' data: https:;
-  connect-src 'self' https://servicodados.ibge.gov.br https://apisidra.ibge.gov.br https://tiles.openfreemap.org https://demotiles.maplibre.org https://server.arcgisonline.com https://img.youtube.com cdn.jsdelivr.net unpkg.com;
-  worker-src blob:;
-  object-src 'none';
-  block-all-mixed-content;
-  upgrade-insecure-requests;
-  base-uri 'self';
-  form-action 'self';
-" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' cdn.jsdelivr.net unpkg.com; style-src 'self' fonts.googleapis.com cdn.jsdelivr.net; font-src fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://servicodados.ibge.gov.br https://apisidra.ibge.gov.br https://tiles.openfreemap.org https://demotiles.maplibre.org https://server.arcgisonline.com https://img.youtube.com cdn.jsdelivr.net unpkg.com; worker-src blob:; object-src 'none'; block-all-mixed-content; upgrade-insecure-requests; base-uri 'self'; form-action 'self';" />
+<!-- Note: GitHub Pages não permite configurar cabeçalhos HTTP personalizados (X-Frame-Options, etc). Esses erros no Observatory são esperados nessa plataforma. -->
 <title>Atlas Brasil | População no Globo</title>
 <meta name="description" content="Explore o Atlas Brasil: um dashboard interativo para análise de dados demográficos, econômicos (PIB), educacionais (ENEM) e políticos de todos os municípios brasileiros em um globo 3D." />
 <link rel="icon" type="image/svg+xml" href="favicon.svg" />

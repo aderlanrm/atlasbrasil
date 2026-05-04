@@ -65,3 +65,6 @@ desktop.ini
 *.tar
 *.tar.gz
 *.7z
+
+server.py
+CNAME
