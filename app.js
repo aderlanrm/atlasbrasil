@@ -7,6 +7,8 @@
   }
 
 
+  const LATEST_OFFICIAL_GDP_YEAR = "2023";
+
   const URLS = {
     mapStyle: "https://tiles.openfreemap.org/styles/liberty",
     fallbackStyle: "https://demotiles.maplibre.org/style.json",
@@ -17,14 +19,14 @@
     cityPopulation: "https://apisidra.ibge.gov.br/values/t/4714/n6/all/v/93/p/2022",
     gdpBrazil: "https://apisidra.ibge.gov.br/values/t/5938/n1/all/v/37/p/all",
     gdpStates: "https://apisidra.ibge.gov.br/values/t/5938/n3/all/v/37/p/all",
-    cityGdpYear: (year) => `https://apisidra.ibge.gov.br/values/t/5938/n6/all/v/37/p/${year === "last/1" ? "2021" : year}`,
+    cityGdpYear: (year) => `https://apisidra.ibge.gov.br/values/t/5938/n6/all/v/37/p/${year === "last/1" || year === "last" ? LATEST_OFFICIAL_GDP_YEAR : year}`,
     municipalityGdpHistory: (cityId) => `https://apisidra.ibge.gov.br/values/t/5938/n6/${cityId}/v/37/p/all`,
     states: "https://servicodados.ibge.gov.br/api/v1/localidades/estados?orderBy=nome",
     cities: "https://servicodados.ibge.gov.br/api/v1/localidades/municipios?orderBy=nome"
   };
 
   const STORAGE_KEY = "atlas-brasil-preferences-v1";
-  const DATA_CACHE_NAME = "atlas-brasil-official-data-2022-v1";
+  const DATA_CACHE_NAME = "atlas-brasil-official-data-2023-v1";
   const savedPreferences = readStoredPreferences();
   const savedCamera = normalizeCamera(savedPreferences.camera);
 
@@ -1122,11 +1124,14 @@
         
         // On-demand fetch for specific year if in cities view
         if (activeView === "cities") {
-           const yearInt = parseInt(activeGdpYear);
-           const resolvedYear = (activeGdpYear === "last" || isNaN(yearInt) || yearInt > 2021) ? "last/1" : activeGdpYear;
+           const yearInt = parseInt(activeGdpYear, 10);
+           const latestOfficialYear = parseInt(LATEST_OFFICIAL_GDP_YEAR, 10);
+           const shouldFetchOfficialYear = activeGdpYear === "last" || (!isNaN(yearInt) && yearInt <= latestOfficialYear);
+           const resolvedYear = activeGdpYear === "last" || isNaN(yearInt) ? LATEST_OFFICIAL_GDP_YEAR : activeGdpYear;
            // If we don't have this year in history for most cities, fetch it
+           if (shouldFetchOfficialYear) {
            try {
-             showStatus("Atualizando dados", `Buscando PIB oficial para basear ${activeGdpYear}...`);
+             showStatus("Atualizando dados", `Buscando PIB oficial para basear ${resolvedYear}...`);
              const gdpRows = await fetchJson(URLS.cityGdpYear(resolvedYear));
              mergeGdp(gdpRows, cityById);
              
@@ -1147,6 +1152,7 @@
            } catch (err) {
              console.warn("Falha ao buscar ano específico", err);
              hideStatus();
+           }
            }
         }
 
@@ -1249,7 +1255,8 @@
       };
     }
     if (activeAnalysis === "gdp") {
-      const yearText = activeGdpYear.includes("2023") || activeGdpYear.includes("2024") || activeGdpYear.includes("2025") ? `${activeGdpYear} (proj.)` : activeGdpYear;
+      const gdpYearNumber = parseInt(activeGdpYear, 10);
+      const yearText = gdpYearNumber > parseInt(LATEST_OFFICIAL_GDP_YEAR, 10) ? `${activeGdpYear} (proj.)` : activeGdpYear;
       return {
         metric: activeGdpSubMetric === "total" ? `PIB Total ${yearText}` : `PIB por habitante ${yearText}`,
         scope: isCity ? "cidades da UF (relativo)" : "estados",
@@ -3371,7 +3378,7 @@
     const number = Number(value || 0);
     if (!number) return "-";
     const abs = Math.abs(number);
-    if (abs >= 1000000000000) return `R$ ${(number / 1000000000000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} tri`;
+    if (abs >= 1000000000000) return `R$ ${(number / 1000000000000).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} tri`;
     if (abs >= 1000000000) return `R$ ${(number / 1000000000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} bi`;
     if (abs >= 1000000) return `R$ ${(number / 1000000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mi`;
     return formatCurrency(number);
