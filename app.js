@@ -22,7 +22,8 @@
     cityGdpYear: (year) => `https://apisidra.ibge.gov.br/values/t/5938/n6/all/v/37/p/${year === "last/1" || year === "last" ? LATEST_OFFICIAL_GDP_YEAR : year}`,
     municipalityGdpHistory: (cityId) => `https://apisidra.ibge.gov.br/values/t/5938/n6/${cityId}/v/37/p/all`,
     states: "https://servicodados.ibge.gov.br/api/v1/localidades/estados?orderBy=nome",
-    cities: "https://servicodados.ibge.gov.br/api/v1/localidades/municipios?orderBy=nome"
+    cities: "https://servicodados.ibge.gov.br/api/v1/localidades/municipios?orderBy=nome",
+    worldMesh: "./data/world_data.geojson?v=" + Date.now()
   };
 
   const STORAGE_KEY = "atlas-brasil-preferences-v1";
@@ -148,7 +149,7 @@
   let activeGdpSubMetric = savedPreferences.gdpSubMetric || "perCapita";
   let dataCacheStats = createDataCacheStats();
   let basePaintByLayer = new Map();
-
+  let worldFeatureCollection = null;
   document.addEventListener("DOMContentLoaded", init);
 
   function init() {
@@ -1619,7 +1620,7 @@
   }
 
   function isAtlasLayer(id) {
-    return id.startsWith("brazil-") || id.startsWith("states-") || id.startsWith("selected-state") || id.startsWith("municipality-");
+    return id.startsWith("brazil-") || id.startsWith("states-") || id.startsWith("selected-state") || id.startsWith("municipality-") || id.startsWith("world-") || id.startsWith("selected-country");
   }
 
   function setLayerVisibility(group, visible) {
@@ -1669,6 +1670,15 @@
   }
 
   function syncAtlasLayersForActiveView() {
+    const hasWorld = Boolean(map.getLayer("world-fill"));
+    if (activeView === "world") {
+      setBrazilLayerVisibility(false);
+      hideAtlasAnalysisLayers();
+      if (hasWorld) {
+        setLayersVisibility(["world-fill", "world-outline", "selected-country-fill", "selected-country-glow-outer", "selected-country-outline"], true);
+      }
+      return;
+    }
     if (activeView === "brazil") {
       setBrazilLayerVisibility(true);
       hideAtlasAnalysisLayers();
@@ -1719,11 +1729,16 @@
     document.querySelectorAll("[data-view]").forEach((button) => {
       button.addEventListener("click", () => {
         const view = button.dataset.view;
+        if (view === "world") {
+          enterWorldMode();
+        } else {
+          setActiveView(view);
+        }
         setActiveView(view);
         if (view === "world") {
           clearHoverPopup();
           if (fixedPopup) fixedPopup.remove();
-          fixedPopup = null;
+//           fixedPopup = null;
           syncAtlasLayersForActiveView();
           map.flyTo({ center: [-30, 0], zoom: 1.55, speed: 0.8, curve: 1.35, essential: true });
         }
@@ -3535,4 +3550,207 @@
     const match = url.match(regExp);
     return (match && match[2].length === 11) ? match[2] : null;
   }
+
+  function renderSelectedWorld() {
+    elements["selected-code"].textContent = "GLOBO";
+    elements["selected-type"].textContent = "Mundo";
+    elements["selected-name"].textContent = "Visão Global";
+    elements["selected-pop"].textContent = "8 Bi+";
+    elements["selected-share"].textContent = "100%";
+    elements["selected-area"].textContent = "148 mi km²";
+    elements["selected-density"].textContent = "54 hab/km²";
+    elements["selected-rank"].textContent = "-";
+    elements["selected-context"].textContent = "Planeta Terra";
+    renderGeneralCards("Mundo", [
+        { label: "Países", value: "~195" },
+        { label: "População estimada", value: "8 bilhões" },
+        { label: "Base de dados", value: "World Bank / RestCountries" }
+    ]);
+    elements["general-note"].textContent = "Dados Globais de PIB e População.";
+  }
+
+  async function enterWorldMode() {
+    isStreetMode = false;
+    clearHoverPopup();
+    if (fixedPopup) fixedPopup.remove();
+    fixedPopup = null;
+    selectedStateId = null;
+    selectedCityId = null;
+    
+    if (!map.getSource("world-fill-source")) {
+        showStatus("Carregando mapa-múndi", "Buscando dados globais...");
+        try {
+            const data = await fetchJson(URLS.worldMesh);
+            worldFeatureCollection = data;
+            
+            map.addSource("world-fill-source", { type: "geojson", data: worldFeatureCollection });
+            map.addSource("selected-country-source", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+            
+            const baseSymbolLayerId = firstBaseSymbolLayerId();
+            addLayerOnce({
+              id: "world-fill",
+              type: "fill",
+              source: "world-fill-source",
+              layout: { visibility: "visible" },
+              paint: {
+                "fill-color": [
+                  "interpolate", ["linear"], ["to-number", ["get", "pop"], 0],
+                  0, "#17212b",
+                  1000000, "#25534e",
+                  10000000, "#5b8e54",
+                  50000000, "#c59b3f",
+                  200000000, "#ef7d60",
+                  1000000000, "#b799ff"
+                ],
+                "fill-opacity": 0.58
+              }
+            }, baseSymbolLayerId);
+            addLayerOnce({
+              id: "world-outline",
+              type: "line",
+              source: "world-fill-source",
+              layout: { visibility: "visible" },
+              paint: {
+                "line-color": "rgba(237, 243, 238, 0.4)",
+                "line-width": 0.8
+              }
+            }, baseSymbolLayerId);
+
+            addLayerOnce({
+              id: "selected-country-fill",
+              type: "fill",
+              source: "selected-country-source",
+              paint: { "fill-color": "#ffffff", "fill-opacity": 0.15 }
+            }, baseSymbolLayerId);
+
+            addLayerOnce({
+              id: "selected-country-glow-outer",
+              type: "line",
+              source: "selected-country-source",
+              paint: {
+                "line-color": "#ffffff",
+                "line-width": ["interpolate", ["linear"], ["zoom"], 1, 3, 5, 6],
+                "line-opacity": 1
+              }
+            }, baseSymbolLayerId);
+
+            addLayerOnce({
+              id: "selected-country-outline",
+              type: "line",
+              source: "selected-country-source",
+              paint: {
+                "line-color": "#51d1c2",
+                "line-width": ["interpolate", ["linear"], ["zoom"], 1, 1.5, 5, 3]
+              }
+            }, baseSymbolLayerId);
+
+            map.on("click", "world-fill", (event) => {
+               if (activeView !== "world") return;
+               clearHoverPopup();
+               const props = event.features[0].properties;
+               let fullFeature = event.features[0];
+               if (worldFeatureCollection) {
+                   const found = worldFeatureCollection.features.find(f => f.properties.ISO_A3 === props.ISO_A3);
+                   if (found) fullFeature = found;
+               }
+               selectCountry(props, fullFeature);
+               showCountryPopup(event.lngLat, props);
+            });
+            map.on("mousemove", "world-fill", (event) => {
+               if (activeView !== "world") return;
+               map.getCanvas().style.cursor = "pointer";
+               showCountryHover(event.lngLat, event.features[0].properties);
+            });
+            map.on("mouseleave", "world-fill", () => {
+               map.getCanvas().style.cursor = "";
+               clearHoverPopup();
+            });
+
+            hideStatus();
+        } catch (e) {
+            console.error("Failed to load world", e);
+            hideStatus();
+        }
+    }
+    
+    syncAtlasLayersForActiveView();
+    map.flyTo({ center: [0, 20], zoom: 1.5, speed: 0.8, curve: 1.35, essential: true });
+    
+    elements["hud-layer"].textContent = "Globo";
+    elements["metric-state"].textContent = "Mundo";
+    elements["metric-state-pop"].textContent = "8.000.000.000";
+    elements["metric-city"].textContent = "nenhum";
+    elements["metric-city-pop"].textContent = "selecione um país";
+
+    renderSelectedWorld();
+    updateHeatLegend();
+    savePreferences();
+  }
+
+  function selectCountry(props, feature) {
+    if (map.getSource("selected-country-source")) {
+       setSourceData("selected-country-source", {
+         type: "FeatureCollection",
+         features: [feature]
+       });
+    }
+    elements["metric-state"].textContent = props.ISO_A3 || "-";
+    elements["metric-state-pop"].textContent = formatNumber(props.pop || 0);
+    elements["selected-code"].textContent = props.ISO_A3 || "-";
+    elements["selected-type"].textContent = "País";
+    elements["selected-name"].textContent = props.name_pt || props.ADMIN || props.name || "Desconhecido";
+    elements["selected-pop"].textContent = formatNumber(props.pop || 0);
+    elements["selected-share"].textContent = "-";
+    elements["selected-area"].textContent = formatArea(props.areaKm2);
+    elements["selected-density"].textContent = formatDensity(props.areaKm2 ? props.pop / props.areaKm2 : null);
+    elements["selected-rank"].textContent = "-";
+    elements["selected-context"].textContent = props.region || "Global";
+    
+    renderGeneralCards(`${props.name_pt || props.ADMIN || props.name || "Desconhecido"} | ${props.ISO_A3 || "-"}`, [
+        { label: "População", value: formatNumber(props.pop || 0) },
+        { label: "Área territorial", value: formatArea(props.areaKm2) },
+        { label: "Densidade pop.", value: formatDensity(props.areaKm2 ? props.pop / props.areaKm2 : null) },
+        { label: "PIB (2022)", value: formatCurrencyShort(props.gdp) },
+        { label: "PIB por habitante", value: formatCurrency(perCapita(props.gdp, props.pop)) },
+        { label: "Região", value: props.region || "Global" }
+    ]);
+    elements["general-note"].textContent = "Dados do Banco Mundial (2022) e RestCountries.";
+  }
+
+  function showCountryHover(lngLat, props) {
+    if (!hoverCardsEnabled) return;
+    clearHoverPopup();
+    const name = props.name_pt || props.ADMIN || props.name || "Desconhecido";
+    let html = `<div class="font-bold mb-1">${escapeHtml(name)}</div>
+      <div class="text-xs text-gray-400 mb-2">${escapeHtml(props.ISO_A3)}</div>
+      <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+        <span class="text-gray-400">População</span>
+        <span class="text-right font-medium text-white">${formatShort(props.pop || 0)}</span>
+        <span class="text-gray-400">Área</span>
+        <span class="text-right font-medium text-white">${formatArea(props.areaKm2)}</span>
+        <span class="text-gray-400">PIB (22)</span>
+        <span class="text-right font-medium text-white">${formatCurrencyShort(props.gdp)}</span>
+        <span class="text-gray-400">PIB/Hab</span>
+        <span class="text-right font-medium text-white">${formatCurrency(perCapita(props.gdp, props.pop))}</span>
+      </div>`;
+    
+    hoverPopup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, className: "atlas-popup", maxWidth: "260px" })
+      .setLngLat(lngLat)
+      .setHTML(html)
+      .addTo(map);
+  }
+
+  function showCountryPopup(lngLat, props) {
+    const name = props.name_pt || props.ADMIN || props.name || "Desconhecido";
+    const rows = [
+      { label: "População", value: formatNumber(props.pop || 0) },
+      { label: "Área territorial", value: formatArea(props.areaKm2) },
+      { label: "Densidade pop.", value: formatDensity(props.areaKm2 ? props.pop / props.areaKm2 : null) },
+      { label: "PIB (2022)", value: formatCurrencyShort(props.gdp) },
+      { label: "PIB por hab.", value: formatCurrency(perCapita(props.gdp, props.pop)) },
+      { label: "Região", value: props.region || "Global" }
+    ];
+    showFixedDetailCard("País", `${name} (${props.ISO_A3 || "-"})`, rows, props);
+  }
+
 })();
