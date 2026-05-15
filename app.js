@@ -1368,7 +1368,13 @@
         const props = event.features[0].properties;
         clearPendingStateClick();
         clearHoverPopup();
-        selectCity(props.id, event.features[0]);
+        let fullFeature = event.features[0];
+        if (selectedStateId && stateCitiesCache.has(selectedStateId)) {
+          const collection = stateCitiesCache.get(selectedStateId);
+          const found = collection.features.find(f => f.properties.id === String(props.id));
+          if (found) fullFeature = found;
+        }
+        selectCity(props.id, fullFeature);
         showMunicipalityPopup(event.lngLat, props);
       });
       map.on("dblclick", layerId, (event) => {
@@ -1376,7 +1382,13 @@
         const props = event.features[0].properties;
         clearPendingStateClick();
         clearHoverPopup();
-        selectCity(props.id, event.features[0], { fly: false });
+        let fullFeature = event.features[0];
+        if (selectedStateId && stateCitiesCache.has(selectedStateId)) {
+          const collection = stateCitiesCache.get(selectedStateId);
+          const found = collection.features.find(f => f.properties.id === String(props.id));
+          if (found) fullFeature = found;
+        }
+        selectCity(props.id, fullFeature, { fly: false });
         showMunicipalityPopup(event.lngLat, props);
         setActiveView("street");
         flyToStreet();
