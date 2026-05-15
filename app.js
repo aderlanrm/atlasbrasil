@@ -747,6 +747,24 @@
     }, baseSymbolLayerId);
 
     addLayerOnce({
+      id: "selected-state-fill",
+      type: "fill",
+      source: "selected-state-source",
+      paint: { "fill-color": "#ffffff", "fill-opacity": 0.15 }
+    }, baseSymbolLayerId);
+
+    addLayerOnce({
+      id: "selected-state-glow-outer",
+      type: "line",
+      source: "selected-state-source",
+      paint: {
+        "line-color": "#ffffff",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 3, 4, 8, 8],
+        "line-opacity": 1
+      }
+    }, baseSymbolLayerId);
+
+    addLayerOnce({
       id: "selected-state-outline",
       type: "line",
       source: "selected-state-source",
@@ -1629,6 +1647,8 @@
       "states-outline",
       "states-bubbles",
       "states-labels",
+      "selected-state-fill",
+      "selected-state-glow-outer",
       "selected-state-outline",
       "municipality-fill",
       "municipality-outline",
@@ -1661,7 +1681,7 @@
     if (activeView === "states") {
       setBrazilLayerVisibility(false);
       setLayerVisibility("states", true);
-      setLayersVisibility(["selected-state-outline"], true);
+      setLayersVisibility(["selected-state-fill", "selected-state-glow-outer", "selected-state-outline"], true);
       setLayerVisibility("municipality", false);
       return;
     }
@@ -1669,7 +1689,7 @@
     if (activeView === "cities") {
       setBrazilLayerVisibility(false);
       setLayerVisibility("states", true);
-      setLayersVisibility(["selected-state-outline"], true);
+      setLayersVisibility(["selected-state-fill", "selected-state-glow-outer", "selected-state-outline"], true);
       setLayerVisibility("municipality", Boolean(selectedStateId));
       return;
     }
@@ -1715,8 +1735,7 @@
         }
         if (view === "cities") {
           if (selectedStateId) {
-            enterCityAnalysisMode();
-            flyToState(stateById.get(selectedStateId), 6.1);
+            loadStateCities(selectedStateId);
           } else {
             enterCitiesChooserMode();
           }
@@ -1883,7 +1902,7 @@
     updateSelectedStateSource();
     setBrazilLayerVisibility(false);
     setLayerVisibility("states", true);
-    setLayersVisibility(["selected-state-outline"], true);
+    setLayersVisibility(["selected-state-fill", "selected-state-glow-outer", "selected-state-outline"], true);
     setLayerVisibility("municipality", false);
     elements["hud-layer"].textContent = "Estados";
     elements["metric-state"].textContent = "Brasil";
@@ -1909,7 +1928,7 @@
     updateSelectedStateSource();
     setBrazilLayerVisibility(false);
     setLayerVisibility("states", true);
-    setLayersVisibility(["selected-state-outline"], true);
+    setLayersVisibility(["selected-state-fill", "selected-state-glow-outer", "selected-state-outline"], true);
     setLayerVisibility("municipality", false);
     elements["hud-layer"].textContent = "Cidades";
     elements["metric-state"].textContent = "Brasil";
@@ -1929,7 +1948,7 @@
     setActiveView("cities");
     setBrazilLayerVisibility(false);
     setLayerVisibility("states", true);
-    setLayersVisibility(["selected-state-outline"], true);
+    setLayersVisibility(["selected-state-fill", "selected-state-glow-outer", "selected-state-outline"], true);
     setLayerVisibility("municipality", true);
     updateSelectedStateSource();
     elements["hud-layer"].textContent = "Cidades";
@@ -2022,6 +2041,7 @@
   }
 
   function selectStateUi(state) {
+    selectedStateId = String(state.id);
     elements["metric-state"].textContent = state.sigla;
     elements["metric-state-pop"].textContent = formatNumber(state.pop || 0);
     elements["metric-city"].textContent = "nenhum";
