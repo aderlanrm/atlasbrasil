@@ -147,6 +147,7 @@
   let activeView = validView(savedPreferences.view) ? savedPreferences.view : "brazil";
   let activeAnalysis = validAnalysis(savedPreferences.analysis) ? savedPreferences.analysis : "general";
   let activeGdpSubMetric = savedPreferences.gdpSubMetric || "perCapita";
+  let activeWorldMetric = "pop";
   let dataCacheStats = createDataCacheStats();
   let basePaintByLayer = new Map();
   let worldFeatureCollection = null;
@@ -1088,7 +1089,17 @@
     legend.innerHTML = `
       <div class="legend-head">
         <span>Mapa de calor | ${escapeHtml(config.scope)}</span>
-        ${activeAnalysis === "gdp" ? `
+        ${activeView === "world" ? `
+          <div class="flex-gap-4">
+            <select id="world-metric-select" aria-label="Variável">
+              <option value="pop" ${activeWorldMetric==="pop"?"selected":""}>População</option>
+              <option value="area" ${activeWorldMetric==="area"?"selected":""}>Área territorial</option>
+              <option value="density" ${activeWorldMetric==="density"?"selected":""}>Densidade pop.</option>
+              <option value="gdp" ${activeWorldMetric==="gdp"?"selected":""}>PIB</option>
+              <option value="gdpPerCapita" ${activeWorldMetric==="gdpPerCapita"?"selected":""}>PIB per capita</option>
+            </select>
+          </div>
+        ` : (activeAnalysis === "gdp" ? `
           <div class="flex-gap-4">
             <div class="year-stepper">
               <button type="button" id="gdp-year-minus" title="Ano anterior" aria-label="Ano anterior">−</button>
@@ -1112,7 +1123,7 @@
               <button type="button" id="enem-year-plus" title="Próximo ano" aria-label="Próximo ano">+</button>
             </div>
           </div>
-        ` : `<strong>${escapeHtml(config.metric)}</strong>`)}
+        ` : `<strong>${escapeHtml(config.metric)}</strong>`))}
       </div>
       <div class="legend-scale" id="legend-gradient-scale"></div>
       <div class="legend-labels">
@@ -1123,6 +1134,15 @@
     const gradScale = legend.querySelector("#legend-gradient-scale");
     if (gradScale) {
       gradScale.style.background = `linear-gradient(90deg, ${config.colors.join(", ")})`;
+    }
+
+    const worldSelector = legend.querySelector("#world-metric-select");
+    if (worldSelector) {
+      worldSelector.addEventListener("change", (e) => {
+        activeWorldMetric = e.target.value;
+        if (window.updateWorldLayerColor) window.updateWorldLayerColor();
+        updateHeatLegend();
+      });
     }
 
     const selector = legend.querySelector("#legend-gdp-selector");
@@ -1248,7 +1268,24 @@
   }
 
   function heatLegendConfig() {
-    if (!["states", "cities"].includes(activeView)) return null;
+    if (!["states", "cities", "world"].includes(activeView)) return null;
+
+    if (activeView === "world") {
+      let labels, metricLabel;
+      if (activeWorldMetric === "pop") { metricLabel = "População"; labels = ["<1mi", "10mi", "50mi", "200mi", "1bi+"]; }
+      else if (activeWorldMetric === "area") { metricLabel = "Área territorial"; labels = ["Pequeno", "Médio", "Grande", "Gigante", "Continental"]; }
+      else if (activeWorldMetric === "density") { metricLabel = "Densidade pop."; labels = ["<10", "50", "150", "500", "1000+"]; }
+      else if (activeWorldMetric === "gdp") { metricLabel = "PIB US$ (2024)"; labels = ["<10bi", "100bi", "500bi", "2tri", "10tri+"]; }
+      else if (activeWorldMetric === "gdpPerCapita") { metricLabel = "PIB per capita US$ (24)"; labels = ["<2k", "5k", "15k", "35k", "60k+"]; }
+      
+      return {
+        metric: metricLabel,
+        scope: "Global",
+        colors: ["#17212b", "#25534e", "#5b8e54", "#c59b3f", "#ef7d60", "#b799ff"],
+        labels: labels,
+        isWorld: true
+      };
+    }
 
     const scope = activeView === "cities" && selectedStateId ? "city" : "state";
     const isCity = scope === "city";
@@ -1803,6 +1840,7 @@
     activeView = view;
     const button = document.querySelector(`[data-view="${view}"]`);
     if (button) setActiveButton("[data-view]", button);
+    if (window.updateWorldLayerColor) window.updateWorldLayerColor();
     updateHeatLegend();
     savePreferences();
   }
@@ -1846,15 +1884,7 @@
 
     if (activeView === "world") {
       setActiveView("world");
-      clearHoverPopup();
-      if (fixedPopup) fixedPopup.remove();
-      fixedPopup = null;
-      elements["hud-layer"].textContent = "Globo";
-      renderSelectedBrazil();
-      renderStateChart();
-      renderEmptyRanking("Visão global restaurada. Use Brasil, Estados ou Cidades para voltar ao recorte brasileiro.");
-      syncAtlasLayersForActiveView();
-      if (!preserveCamera) map.flyTo({ center: [-30, 0], zoom: 1.55, speed: 0.8, curve: 1.35, essential: true });
+      await enterWorldMode({ preserveCamera });
     } else if (activeView === "states") {
       setActiveView("states");
       enterStateAnalysisMode({ selectBrazil: true, preserveCamera });
@@ -1901,6 +1931,7 @@
     renderStateChart();
     renderEmptyRanking("A visão Brasil mostra o país como um território único. Use Estados para comparar UFs ou Cidades para detalhar cidades.");
     if (!options.preserveCamera) fitBrazil();
+    if (window.updateWorldLayerColor) window.updateWorldLayerColor();
     updateHeatLegend();
     savePreferences();
   }
@@ -1928,6 +1959,7 @@
     renderStateChart();
     renderEmptyRanking("Passe o mouse sobre um estado para ler os dados. Dê duplo clique em uma UF para explorar suas cidades.");
     if (!options.preserveCamera) fitBrazil();
+    if (window.updateWorldLayerColor) window.updateWorldLayerColor();
     updateHeatLegend();
     savePreferences();
   }
@@ -1954,6 +1986,7 @@
     renderStateChart();
     renderEmptyRanking("Dê duplo clique em uma UF para carregar as cidades antes de entrar no detalhe.");
     if (!options.preserveCamera) fitBrazil();
+    if (window.updateWorldLayerColor) window.updateWorldLayerColor();
     updateHeatLegend();
     savePreferences();
   }
@@ -1968,6 +2001,7 @@
     updateSelectedStateSource();
     elements["hud-layer"].textContent = "Cidades";
     updateAnalysisPaint();
+    if (window.updateWorldLayerColor) window.updateWorldLayerColor();
     updateHeatLegend();
     savePreferences();
   }
@@ -2282,7 +2316,7 @@
       { label: "População", value: formatNumber(props.pop || 0) },
       { label: "Área territorial", value: formatArea(area) },
       { label: "Densidade pop.", value: formatDensity(area ? (props.pop || 0) / area : null) },
-      { label: `PIB ${props.gdpYear || ""}`, value: formatCurrencyShort(props.gdp) },
+      { label: `PIB ${props.gdpYear || ""}`, value: formatCurrencyShortUSD(props.gdp) },
       { label: "PIB por habitante", value: formatCurrency(cityPerCapita) },
       { label: "Relativo à UF", value: formatRatio(cityPerCapita, statePerCapita) },
       { label: "Executivo municipal", value: politics.mayor ? "1 prefeito | 1 vice" : "não se aplica" },
@@ -2808,7 +2842,7 @@
       { label: "População total", value: formatNumber(pop) },
       { label: "Área territorial", value: formatArea(area) },
       { label: "Densidade pop.", value: formatDensity(area ? pop / area : null) },
-      { label: `PIB ${props.gdpYear || ""}`, value: formatCurrencyShort(props.gdp) },
+      { label: `PIB ${props.gdpYear || ""}`, value: formatCurrencyShortUSD(props.gdp) },
       { label: "PIB por habitante", value: formatCurrency(gdpPerCapita) },
       { label: state.id === "53" ? "Deputados distritais" : "Deputados estaduais", value: formatStateDeputies(state, politics) },
       { label: "Prefeitos", value: politics.mayors ? formatNumber(politics.mayors) : "não se aplica" },
@@ -2833,7 +2867,7 @@
       { label: "População", value: formatNumber(pop) },
       { label: "Área territorial", value: formatArea(area) },
       { label: "Densidade pop.", value: formatDensity(area ? pop / area : null) },
-      { label: `PIB ${props.gdpYear || ""}`, value: formatCurrencyShort(props.gdp) },
+      { label: `PIB ${props.gdpYear || ""}`, value: formatCurrencyShortUSD(props.gdp) },
       { label: "PIB por habitante", value: formatCurrency(gdpPerCapita) },
       { label: "Vereadores", value: politics.councilorsMax ? formatNumber(politics.councilorsMax) : "não se aplica" },
       { label: `${props.uf || "UF"} | ranking`, value: props.rank ? `${props.rank}º` : "-" },
@@ -3431,6 +3465,27 @@
     return formatCurrency(number);
   }
 
+
+  function formatCurrencyUSD(value) {
+    const number = Number(value || 0);
+    if (!number) return "-";
+    return number.toLocaleString("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0
+    });
+  }
+
+  function formatCurrencyShortUSD(value) {
+    const number = Number(value || 0);
+    if (!number) return "-";
+    const abs = Math.abs(number);
+    if (abs >= 1000000000000) return `US$ ${(number / 1000000000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} tri`;
+    if (abs >= 1000000000) return `US$ ${(number / 1000000000).toLocaleString("en-US", { maximumFractionDigits: 1 })} bi`;
+    if (abs >= 1000000) return `US$ ${(number / 1000000).toLocaleString("en-US", { maximumFractionDigits: 1 })} mi`;
+    return formatCurrencyUSD(number);
+  }
+
   function perCapita(total, population) {
     const value = Number(total || 0);
     const pop = Number(population || 0);
@@ -3569,7 +3624,7 @@
     elements["general-note"].textContent = "Dados Globais de PIB e População.";
   }
 
-  async function enterWorldMode() {
+  async function enterWorldMode(options = {}) {
     isStreetMode = false;
     clearHoverPopup();
     if (fixedPopup) fixedPopup.remove();
@@ -3674,7 +3729,7 @@
     }
     
     syncAtlasLayersForActiveView();
-    map.flyTo({ center: [0, 20], zoom: 1.5, speed: 0.8, curve: 1.35, essential: true });
+    if (!options.preserveCamera) map.flyTo({ center: [0, 20], zoom: 1.5, speed: 0.8, curve: 1.35, essential: true });
     
     elements["hud-layer"].textContent = "Globo";
     elements["metric-state"].textContent = "Mundo";
@@ -3683,6 +3738,7 @@
     elements["metric-city-pop"].textContent = "selecione um país";
 
     renderSelectedWorld();
+    if (window.updateWorldLayerColor) window.updateWorldLayerColor();
     updateHeatLegend();
     savePreferences();
   }
@@ -3710,11 +3766,11 @@
         { label: "População", value: formatNumber(props.pop || 0) },
         { label: "Área territorial", value: formatArea(props.areaKm2) },
         { label: "Densidade pop.", value: formatDensity(props.areaKm2 ? props.pop / props.areaKm2 : null) },
-        { label: "PIB (2022)", value: formatCurrencyShort(props.gdp) },
-        { label: "PIB por habitante", value: formatCurrency(perCapita(props.gdp, props.pop)) },
+        { label: "PIB (2024)", value: formatCurrencyShortUSD(props.gdp) },
+        { label: "PIB por habitante", value: formatCurrencyUSD(perCapita(props.gdp, props.pop)) },
         { label: "Região", value: props.region || "Global" }
     ]);
-    elements["general-note"].textContent = "Dados do Banco Mundial (2022) e RestCountries.";
+    elements["general-note"].textContent = "Dados do Banco Mundial (2024) e RestCountries.";
   }
 
   function showCountryHover(lngLat, props) {
@@ -3728,10 +3784,10 @@
         <span class="text-right font-medium text-white">${formatShort(props.pop || 0)}</span>
         <span class="text-gray-400">Área</span>
         <span class="text-right font-medium text-white">${formatArea(props.areaKm2)}</span>
-        <span class="text-gray-400">PIB (22)</span>
-        <span class="text-right font-medium text-white">${formatCurrencyShort(props.gdp)}</span>
+        <span class="text-gray-400">PIB (24)</span>
+        <span class="text-right font-medium text-white">${formatCurrencyShortUSD(props.gdp)}</span>
         <span class="text-gray-400">PIB/Hab</span>
-        <span class="text-right font-medium text-white">${formatCurrency(perCapita(props.gdp, props.pop))}</span>
+        <span class="text-right font-medium text-white">${formatCurrencyUSD(perCapita(props.gdp, props.pop))}</span>
       </div>`;
     
     hoverPopup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, className: "atlas-popup", maxWidth: "260px" })
@@ -3746,11 +3802,70 @@
       { label: "População", value: formatNumber(props.pop || 0) },
       { label: "Área territorial", value: formatArea(props.areaKm2) },
       { label: "Densidade pop.", value: formatDensity(props.areaKm2 ? props.pop / props.areaKm2 : null) },
-      { label: "PIB (2022)", value: formatCurrencyShort(props.gdp) },
-      { label: "PIB por hab.", value: formatCurrency(perCapita(props.gdp, props.pop)) },
+      { label: "PIB (2024)", value: formatCurrencyShortUSD(props.gdp) },
+      { label: "PIB por hab.", value: formatCurrencyUSD(perCapita(props.gdp, props.pop)) },
       { label: "Região", value: props.region || "Global" }
     ];
     showFixedDetailCard("País", `${name} (${props.ISO_A3 || "-"})`, rows, props);
+  }
+
+  window.updateWorldLayerColor = function updateWorldLayerColor() {
+    if (!map.getLayer("world-fill")) return;
+    let colorExpr;
+    if (activeWorldMetric === "pop") {
+      colorExpr = [
+        "interpolate", ["linear"], ["to-number", ["get", "pop"], 0],
+        0, "#17212b",
+        1000000, "#25534e",
+        10000000, "#5b8e54",
+        50000000, "#c59b3f",
+        200000000, "#ef7d60",
+        1000000000, "#b799ff"
+      ];
+    } else if (activeWorldMetric === "area") {
+      colorExpr = [
+        "interpolate", ["linear"], ["to-number", ["get", "areaKm2"], 0],
+        0, "#17212b",
+        10000, "#25534e",
+        100000, "#5b8e54",
+        500000, "#c59b3f",
+        2000000, "#ef7d60",
+        10000000, "#b799ff"
+      ];
+    } else if (activeWorldMetric === "density") {
+      colorExpr = [
+        "interpolate", ["linear"], 
+        ["/", ["to-number", ["get", "pop"], 0], ["max", ["to-number", ["get", "areaKm2"], 1], 1]],
+        0, "#17212b",
+        10, "#25534e",
+        50, "#5b8e54",
+        150, "#c59b3f",
+        500, "#ef7d60",
+        1000, "#b799ff"
+      ];
+    } else if (activeWorldMetric === "gdp") {
+      colorExpr = [
+        "interpolate", ["linear"], ["to-number", ["get", "gdp"], 0],
+        0, "#17212b",
+        10000000000, "#25534e",
+        100000000000, "#5b8e54",
+        500000000000, "#c59b3f",
+        2000000000000, "#ef7d60",
+        10000000000000, "#b799ff"
+      ];
+    } else if (activeWorldMetric === "gdpPerCapita") {
+      colorExpr = [
+        "interpolate", ["linear"], 
+        ["/", ["to-number", ["get", "gdp"], 0], ["max", ["to-number", ["get", "pop"], 1], 1]],
+        0, "#17212b",
+        2000, "#25534e",
+        5000, "#5b8e54",
+        15000, "#c59b3f",
+        35000, "#ef7d60",
+        60000, "#b799ff"
+      ];
+    }
+    map.setPaintProperty("world-fill", "fill-color", colorExpr);
   }
 
 })();

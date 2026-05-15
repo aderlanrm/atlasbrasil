@@ -27,8 +27,8 @@ for country in rc_data:
             "region": region
         }
 
-print("Downloading World Bank GDP data (2022)...")
-wb_url = "https://api.worldbank.org/v2/country/all/indicator/NY.GDP.MKTP.CD?format=json&per_page=300&date=2022"
+print("Downloading World Bank GDP data (2024)...")
+wb_url = "https://api.worldbank.org/v2/country/all/indicator/NY.GDP.MKTP.CD?format=json&per_page=300&date=2024"
 req = urllib.request.urlopen(wb_url)
 wb_data = json.loads(req.read())
 
@@ -44,6 +44,15 @@ print("Merging data...")
 for feature in geo_data["features"]:
     props = feature["properties"]
     iso3 = props.get("ISO_A3") or props.get("ISO3166-1-Alpha-3") or props.get("id")
+    
+    # Fix for countries with -99 ISO code in some GeoJSON sources
+    name_admin = (props.get("ADMIN") or props.get("name") or "").lower()
+    if iso3 == "-99":
+        if "france" in name_admin: iso3 = "FRA"
+        elif "norway" in name_admin: iso3 = "NOR"
+        elif "somaliland" in name_admin: iso3 = "SOM"
+        elif "kosovo" in name_admin: iso3 = "UNK"
+    
     props["ISO_A3"] = iso3
     
     # Defaults

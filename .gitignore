@@ -41,6 +41,8 @@ tools/
 *.tmp
 *.temp
 .claude/
+patch*
+debug*
 
 # OS/editor files
 .DS_Store
