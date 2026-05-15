@@ -1704,6 +1704,11 @@
   function hideAtlasLayersForStreet() {
     hideAtlasAnalysisLayers();
     setBrazilLayerVisibility(false);
+    setWorldLayerVisibility(false);
+  }
+
+  function setWorldLayerVisibility(visible) {
+    setLayersVisibility(["world-fill", "world-outline", "selected-country-fill", "selected-country-glow-outer", "selected-country-outline"], visible);
   }
 
   function syncAtlasLayersForActiveView() {
@@ -1711,11 +1716,13 @@
     if (activeView === "world") {
       setBrazilLayerVisibility(false);
       hideAtlasAnalysisLayers();
-      if (hasWorld) {
-        setLayersVisibility(["world-fill", "world-outline", "selected-country-fill", "selected-country-glow-outer", "selected-country-outline"], true);
-      }
+      if (hasWorld) setWorldLayerVisibility(true);
       return;
     }
+    
+    // Default: hide world if not in world view
+    if (hasWorld) setWorldLayerVisibility(false);
+
     if (activeView === "brazil") {
       setBrazilLayerVisibility(true);
       hideAtlasAnalysisLayers();
