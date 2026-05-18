@@ -29,6 +29,9 @@
     securityGlobal: "./data/security_global.json?v=" + Date.now(),
     securityBrazil: "./data/security_brazil.json?v=" + Date.now(),
     securityBrazilCities: "./data/security_brazil_cities.json?v=" + Date.now(),
+    healthGlobal: "./data/health_global.json?v=" + Date.now(),
+    healthBrazil: "./data/health_brazil.json?v=" + Date.now(),
+    healthBrazilCities: "./data/health_brazil_cities.json?v=" + Date.now(),
     worldMesh: "./data/world_data.geojson?v=" + Date.now()
   };
 
@@ -304,6 +307,101 @@
       updatePolicy: "Substituir por base municipal auditável quando disponível.",
       note: "Fallback transparente quando IPEA não cobre o município."
     },
+    healthGlobalWho: {
+      label: "Saude global",
+      shortLabel: "WHO/GHO",
+      provider: "WHO Global Health Observatory",
+      type: "json",
+      provenance: "compilado",
+      freshness: "Indicadores 2021-2023, conforme pais e variavel",
+      url: "https://www.who.int/data/gho",
+      upstreamLabel: "WHO/GHO + World Bank WDI + IHME GBD",
+      upstreamSources: [
+        { label: "WHO Global Health Observatory", url: "https://www.who.int/data/gho/data/indicators/indicators-index", fields: "leitos por 10.000, profissionais, UHC, HALE e mortalidade", usage: "fonte primaria para comparacao mundial" },
+        { label: "World Bank WDI", url: "https://api.worldbank.org/v2/", fields: "expectativa de vida, gasto em saude e indicadores WDI", usage: "API alternativa e normalizacao por ISO3" },
+        { label: "IHME GBD", url: "https://vizhub.healthdata.org/gbd-results/", fields: "carga de doenca e expectativa de vida saudavel", usage: "contexto de perda de saude" }
+      ],
+      quality: "Compilado para MVP",
+      fields: ["ISO3", "expectativa de vida", "HALE", "UHC", "leitos/10k", "medicos/10k", "enfermagem/10k", "gasto em saude"],
+      methodology: "O arquivo data/health_global.json normaliza indicadores internacionais por ISO3 para o mapa global. A proxima etapa deve substituir a base inicial por extracao automatizada das APIs oficiais.",
+      limitations: ["Cobertura inicial de paises selecionados.", "Indicadores podem ter anos de referencia diferentes.", "Use como panorama comparativo inicial, nao como base epidemiologica final."],
+      updatePolicy: "Baixar os indicadores WHO/GHO e WDI por API, preservar ano por indicador e regenerar data/health_global.json.",
+      note: "Base inicial para comparacao global de saude."
+    },
+    healthGlobalWorldBank: {
+      label: "Saude global via WDI",
+      shortLabel: "World Bank",
+      provider: "World Bank World Development Indicators",
+      type: "api",
+      provenance: "real",
+      freshness: "Series anuais variaveis, muitas com historico desde 1960",
+      url: "https://datahelpdesk.worldbank.org/knowledgebase/articles/889392",
+      quality: "Oficial",
+      fields: ["SH.MED.BEDS.ZS", "SH.MED.PHYS.ZS", "SP.DYN.LE00.IN", "SH.XPD.CHEX.GD.ZS", "SH.UHC.SRVS.CV.XD"],
+      methodology: "API alternativa para obter indicadores de saude por pais. Muitas series do WDI redistribuem dados da OMS, ONU e fontes nacionais.",
+      limitations: ["Nao substitui a OMS como fonte primaria de metadados de saude.", "A cobertura e o ultimo ano variam por pais e indicador."],
+      updatePolicy: "Consultar https://api.worldbank.org/v2/country/all/indicator/{CODIGO}?format=json&per_page=20000 para cada indicador.",
+      note: "Fonte alternativa para divergencias e series historicas."
+    },
+    healthBrazilDatasus: {
+      label: "Saude Brasil",
+      shortLabel: "DATASUS/CNES",
+      provider: "DATASUS, CNES, SIM, SINASC, SIH/SUS e IBGE",
+      type: "json",
+      provenance: "compilado",
+      freshness: "Base inicial 2022-2024, conforme indicador",
+      url: "https://datasus.saude.gov.br/informacoes-de-saude-tabnet/",
+      upstreamLabel: "CNES + SIM + SINASC + SIH/SUS + IBGE",
+      upstreamSources: [
+        { label: "CNES/DATASUS", url: "https://estabelecimentos.datasus.gov.br/pages/consultas.jsp", fields: "estabelecimentos, leitos, UTI, profissionais e equipamentos", usage: "capacidade instalada" },
+        { label: "SIM/DATASUS", url: "https://opendatasus.saude.gov.br/dataset/sim", fields: "obitos e causas CID-10", usage: "mortalidade e resultados de saude" },
+        { label: "SINASC/DATASUS", url: "https://datasus.saude.gov.br/informacoes-de-saude-tabnet/", fields: "nascidos vivos, pre-natal, peso ao nascer", usage: "denominador de mortalidade infantil/materna" },
+        { label: "IBGE/SIDRA", url: "https://sidra.ibge.gov.br/tabela/6579", fields: "populacao por UF e municipio", usage: "denominador per capita" }
+      ],
+      quality: "Compilado para MVP",
+      fields: ["leitos/1.000", "leitos SUS/1.000", "UTI/100k", "medicos/1.000", "enfermeiros/1.000", "mortalidade infantil", "mortalidade materna", "vacinacao", "saude suplementar"],
+      methodology: "O arquivo data/health_brazil.json traz indicadores estaduais normalizados por populacao. Municipios usam proxy pela UF ate a integracao completa por codigo IBGE.",
+      limitations: ["Primeira versao compilada e arredondada.", "Municipios ainda nao usam dado CNES/SIM/SINASC real proprio.", "Indicadores de capacidade e resultado nao devem ser somados em um unico ranking sem metodologia."],
+      updatePolicy: "Criar extrator oficial para CNES, SIM, SINASC, SIH/SUS, ANS/SIOPS e IBGE, preservando competencia/ano.",
+      note: "Base inicial para panorama brasileiro de saude."
+    },
+    healthBrazilCitiesDatasus: {
+      label: "Saude municipal",
+      shortLabel: "DATASUS municipal",
+      provider: "CNES, SIM, SINASC, SI-PNI e IBGE",
+      type: "json",
+      provenance: "compilado",
+      freshness: "Base municipal inicial 2022-2024, conforme indicador",
+      url: "./data/health_brazil_cities.json",
+      upstreamLabel: "CNES + SIM + SINASC + SI-PNI + IBGE por codigo municipal",
+      upstreamSources: [
+        { label: "CNES/DATASUS", url: "https://cnes.datasus.gov.br/", fields: "leitos, UTI, estabelecimentos e profissionais por municipio", usage: "capacidade instalada municipal" },
+        { label: "SIM/DATASUS", url: "https://opendatasus.saude.gov.br/dataset/sim", fields: "obitos por municipio de residencia", usage: "mortalidade infantil e materna" },
+        { label: "SINASC/DATASUS", url: "https://datasus.saude.gov.br/informacoes-de-saude-tabnet/", fields: "nascidos vivos por municipio de residencia", usage: "denominador de mortalidade" },
+        { label: "SI-PNI/DATASUS", url: "https://opendatasus.saude.gov.br/", fields: "cobertura vacinal municipal", usage: "prevencao e imunizacao" },
+        { label: "IBGE", url: "https://servicodados.ibge.gov.br/api/docs/localidades", fields: "codigo IBGE e populacao", usage: "join territorial e denominadores" }
+      ],
+      quality: "Cobertura municipal inicial",
+      fields: ["codigo IBGE", "leitos/1.000", "leitos SUS/1.000", "UTI/100k", "medicos/1.000", "mortalidade infantil", "mortalidade materna", "vacinacao"],
+      methodology: "O app usa dados municipais quando o codigo IBGE aparece em data/health_brazil_cities.json. Cidades sem linha propria continuam com proxy da UF, explicitamente sinalizado no card.",
+      limitations: ["Cobertura inicial parcial.", "Cidades polo podem concentrar hospitais que atendem populacao regional.", "Mortalidade em municipios pequenos deve preferir media movel de 3 anos na proxima geracao automatizada."],
+      updatePolicy: "Gerar o JSON completo a partir de CNES/SIM/SINASC/SI-PNI/IBGE por codigo IBGE de 7 digitos.",
+      note: "Dado municipal quando disponivel; fallback transparente pela UF."
+    },
+    healthBrazilCityProxy: {
+      label: "Saude de cidades",
+      shortLabel: "Proxy UF",
+      provider: "Calculo local a partir dos indicadores estaduais",
+      type: "computed",
+      provenance: "estimado",
+      freshness: "Proxy derivado da UF",
+      quality: "Proxy transparente",
+      fields: ["indicador estadual ativo", "codigo da UF", "cidade selecionada"],
+      methodology: "Enquanto a extracao municipal do CNES/DATASUS nao esta integrada, a cidade recebe o indicador da sua UF para permitir navegacao visual.",
+      limitations: ["Nao e dado municipal real.", "Nao deve ser usado para ranking municipal final.", "Polos regionais podem atender populacao de varios municipios, exigindo leitura por local de residencia e local de atendimento."],
+      updatePolicy: "Substituir por base municipal auditavel do CNES, SIM, SINASC, SIH/SUS e IBGE por codigo IBGE de 7 digitos.",
+      note: "Fallback transparente ate integrar dado municipal."
+    },
     politicsEstimate: {
       label: "Representação política",
       shortLabel: "Estimativa",
@@ -453,6 +551,37 @@
       },
       note: "No Globo, alterna entre homicídios (UNODC) e Global Peace Index. No Brasil e UFs, alterna entre MVI, roubos de veículos, feminicídio e violência doméstica (FBSP). Em cidades, prioriza dados reais do IPEA Atlas; quando ausente, usa proxy pela UF."
     },
+    health: {
+      label: "Saude",
+      caption: "Saude e hospitais",
+      icon: "heart-pulse",
+      group: "primary",
+      title: "Saude, hospitais, leitos e acesso",
+      defaultMetric: "bedsPer1000",
+      metricStateKey: "healthSubMetric",
+      sourceIds: ["healthGlobalWho", "healthBrazilDatasus", "healthBrazilCitiesDatasus", "healthBrazilCityProxy"],
+      metrics: {
+        bedsPer1000: { label: "Leitos", metric: "Leitos por 1.000 hab.", sourceIds: ["healthBrazilDatasus", "healthBrazilCitiesDatasus"] },
+        icuBedsPer100k: { label: "UTI", metric: "Leitos UTI por 100k hab.", sourceIds: ["healthBrazilDatasus", "healthBrazilCitiesDatasus"] },
+        doctorsPer1000: { label: "Medicos", metric: "Medicos por 1.000 hab.", sourceIds: ["healthBrazilDatasus", "healthBrazilCitiesDatasus"] },
+        infantMortality: { label: "Mort. infantil", metric: "Mortalidade infantil por 1.000 NV", sourceIds: ["healthBrazilDatasus", "healthBrazilCitiesDatasus"] },
+        vaccinationCoverage: { label: "Vacinacao", metric: "Cobertura vacinal (%)", sourceIds: ["healthBrazilDatasus", "healthBrazilCitiesDatasus"] },
+        uhcIndex: { label: "UHC", metric: "Cobertura essencial UHC", sourceIds: ["healthGlobalWho", "healthGlobalWorldBank"] },
+        lifeExpectancy: { label: "Expect. vida", metric: "Expectativa de vida", sourceIds: ["healthGlobalWho", "healthGlobalWorldBank"] },
+        hospitalBedsPer10000: { label: "Leitos globais", metric: "Leitos por 10.000 hab.", sourceIds: ["healthGlobalWho", "healthGlobalWorldBank"] }
+      },
+      note: "No Globo, usa indicadores padronizados da OMS/Banco Mundial/IHME. No Brasil e UFs, usa base inicial DATASUS/CNES/SIM/SINASC/IBGE. Em cidades, usa dado municipal quando existir em health_brazil_cities.json; quando faltar, usa proxy pela UF."
+    },
+    sse: {
+      label: "SSE",
+      caption: "Saude, Seguranca, Educacao",
+      icon: "target",
+      group: "primary",
+      title: "Indice composto SSE: Saude + Seguranca + Educacao",
+      defaultMetric: "sseTotal",
+      sourceIds: ["healthBrazilDatasus", "securityBrazilFBSP", "enemLocal"],
+      note: "V1 simplificada: cada dimensao normalizada para 0-100 e o SSE total e a media simples (1/3 cada). Saude = media de leitos, medicos, vacinacao e (inverso de) mortalidade infantil. Seguranca = inverso da taxa de homicidios (MVI). Educacao = nota ENEM normalizada entre 450 e 650."
+    },
     travel: {
       label: "Viajando o Brasil",
       caption: "Viajando o Brasil",
@@ -598,6 +727,10 @@
   let securityBrazilData = null;
   let securityBrazilCitiesData = null;
   let activeSecuritySubMetric = savedPreferences.securitySubMetric || "mviRate";
+  let healthGlobalData = null;
+  let healthBrazilData = null;
+  let healthBrazilCitiesData = null;
+  let activeHealthSubMetric = savedPreferences.healthSubMetric || "bedsPer1000";
   let activeSourceSelections = { ...(savedPreferences.sourceSelections || {}) };
   let fallbackStyleTried = false;
   let activeBaseMode = validBaseMode(savedPreferences.base) ? savedPreferences.base : "hybrid";
@@ -733,6 +866,18 @@
         console.warn("Falha ao carregar dados municipais de segurança.", error);
         return null;
       }),
+      fetchJson(URLS.healthGlobal).catch((error) => {
+        console.warn("Falha ao carregar dados globais de saude.", error);
+        return null;
+      }),
+      fetchJson(URLS.healthBrazil).catch((error) => {
+        console.warn("Falha ao carregar dados de saude do Brasil.", error);
+        return null;
+      }),
+      fetchJson(URLS.healthBrazilCities).catch((error) => {
+        console.warn("Falha ao carregar dados municipais de saude.", error);
+        return null;
+      }),
       fetchJson(URLS.brazilMesh).catch((error) => {
         console.warn("Falha ao carregar malha nacional do Brasil.", error);
         return null;
@@ -740,7 +885,7 @@
       fetchJson(URLS.statesMesh)
     ]);
 
-    const [stateRows, cityRows, gdpBrazilRows, gdpStateRows, gdpCityRows, states, cities, hdiGlobalRows, hdiOwidRows, idhmBrazilRows, securityGlobalRows, securityBrazilRows, securityBrazilCitiesRows, brazilMesh, statesMesh] = requests.map((result) => (
+    const [stateRows, cityRows, gdpBrazilRows, gdpStateRows, gdpCityRows, states, cities, hdiGlobalRows, hdiOwidRows, idhmBrazilRows, securityGlobalRows, securityBrazilRows, securityBrazilCitiesRows, healthGlobalRows, healthBrazilRows, healthBrazilCitiesRows, brazilMesh, statesMesh] = requests.map((result) => (
       result.status === "fulfilled" ? result.value : null
     ));
 
@@ -757,10 +902,14 @@
     mergeSecurityGlobal(securityGlobalRows);
     mergeSecurityBrazil(securityBrazilRows);
     mergeSecurityBrazilCities(securityBrazilCitiesRows);
+    mergeHealthGlobal(healthGlobalRows);
+    mergeHealthBrazil(healthBrazilRows);
+    mergeHealthBrazilCities(healthBrazilCitiesRows);
     hydrateBrazilMesh(brazilMesh);
     hydrateStatesMesh(statesMesh);
     syncHdiToActiveYear();
     syncSecurityData();
+    syncHealthData();
 
     // Apply projections after all data is merged
     mockGdpProjections(brazilGdpHistory);
@@ -1077,6 +1226,89 @@
     return collection;
   }
 
+  function mergeHealthGlobal(data) {
+    if (!data || !data.countries) return;
+    healthGlobalData = data;
+    if (worldFeatureCollection) {
+      hydrateWorldHealth(worldFeatureCollection);
+      setSourceData("world-fill-source", worldFeatureCollection);
+    }
+  }
+
+  function mergeHealthBrazil(data) {
+    if (!data || !data.states) return;
+    healthBrazilData = data;
+    Object.entries(data.states || {}).forEach(([uf, row]) => {
+      const state = Array.from(stateById.values()).find((s) => s.sigla === uf);
+      if (!state) return;
+      applyHealthRow(state, row);
+    });
+    syncHealthData();
+  }
+
+  function mergeHealthBrazilCities(data) {
+    if (!data || !data.cities) return;
+    healthBrazilCitiesData = data;
+    syncHealthData();
+  }
+
+  function applyHealthRow(target, row) {
+    target.bedsPer1000 = row.bedsPer1000 || 0;
+    target.susBedsPer1000 = row.susBedsPer1000 || 0;
+    target.icuBedsPer100k = row.icuBedsPer100k || 0;
+    target.doctorsPer1000 = row.doctorsPer1000 || 0;
+    target.nursesPer1000 = row.nursesPer1000 || 0;
+    target.infantMortality = row.infantMortality || 0;
+    target.maternalMortality = row.maternalMortality || 0;
+    target.vaccinationCoverage = row.vaccinationCoverage || 0;
+    target.privateCoverage = row.privateCoverage || 0;
+    target.healthYear = row.year || 2023;
+    target.healthSource = row.source || target.healthSource || "";
+  }
+
+  function syncHealthData() {
+    if (!healthBrazilData && !healthGlobalData && !healthBrazilCitiesData) return;
+    if (healthBrazilData && brazilMeshFeature) {
+      applyHealthRow(brazilMeshFeature.properties, healthBrazilData.brazil || {});
+    }
+    stateCitiesCache.forEach((collection, cachedStateId) => {
+      collection.features.forEach((feature) => {
+        feature.properties = { ...feature.properties, ...cityMapProperties(feature.properties) };
+      });
+      if (selectedStateId && String(selectedStateId) === String(cachedStateId)) {
+        updateMunicipalitySources(collection);
+      }
+    });
+    if (worldFeatureCollection) {
+      hydrateWorldHealth(worldFeatureCollection);
+      setSourceData("world-fill-source", worldFeatureCollection);
+    }
+  }
+
+  function hydrateWorldHealth(collection) {
+    if (!collection || !healthGlobalData || !healthGlobalData.countries) return collection;
+    collection.features.forEach((feature) => {
+      const props = feature.properties || {};
+      const iso3 = props.ISO_A3 || props.ADM0_A3 || props.iso3 || props.ISO3;
+      const row = healthGlobalData.countries[iso3];
+      if (!row) return;
+      feature.properties = {
+        ...props,
+        lifeExpectancy: row.lifeExpectancy || 0,
+        healthyLifeExpectancy: row.healthyLifeExpectancy || 0,
+        uhcIndex: row.uhcIndex || 0,
+        hospitalBedsPer10000: row.hospitalBedsPer10000 || 0,
+        physiciansPer10000: row.physiciansPer10000 || 0,
+        nursesMidwivesPer10000: row.nursesMidwivesPer10000 || 0,
+        healthExpPctGdp: row.healthExpPctGdp || 0,
+        outOfPocketPct: row.outOfPocketPct || 0,
+        healthYear: row.year || 2022,
+        healthSource: row.source || "WHO/WDI/IHME"
+      };
+    });
+    return collection;
+  }
+
   function hdiYearsForActiveView(view = activeView) {
     if (view === "world") {
       const data = activeGlobalHdiDataset();
@@ -1342,6 +1574,15 @@
 
   function stateMapProperties(state) {
     const politics = statePoliticalSummary(state);
+    const enemScore = (ENEM_HISTORY_SCORES[activeEnemYear] || {})[state.sigla] || 0;
+    const scores = sseScores({
+      bedsPer1000: state.bedsPer1000,
+      doctorsPer1000: state.doctorsPer1000,
+      vaccinationCoverage: state.vaccinationCoverage,
+      infantMortality: state.infantMortality,
+      mviRate: state.mviRate,
+      enemScore: enemScore,
+    });
     return {
       id: state.id,
       name: state.nome,
@@ -1362,13 +1603,28 @@
       domesticViolenceRate: state.domesticViolenceRate || 0,
       mvi: state.mvi || 0,
       securityYear: state.securityYear || 2023,
+      bedsPer1000: state.bedsPer1000 || 0,
+      susBedsPer1000: state.susBedsPer1000 || 0,
+      icuBedsPer100k: state.icuBedsPer100k || 0,
+      doctorsPer1000: state.doctorsPer1000 || 0,
+      nursesPer1000: state.nursesPer1000 || 0,
+      infantMortality: state.infantMortality || 0,
+      maternalMortality: state.maternalMortality || 0,
+      vaccinationCoverage: state.vaccinationCoverage || 0,
+      privateCoverage: state.privateCoverage || 0,
+      healthYear: state.healthYear || 2023,
+      healthProxy: false,
       politicsTotal: politics.total,
       peoplePerPolitician: inhabitantsPerPolitician(state.pop, politics.total),
       stateDeputies: politics.stateDeputies,
       federalDeputies: politics.federalDeputies,
       mayors: politics.mayors,
       councilorsMax: politics.councilorsMax,
-      enemScore: (ENEM_HISTORY_SCORES[activeEnemYear] || {})[state.sigla] || 0,
+      enemScore: enemScore,
+      sseTotal: scores.sseTotal,
+      saudeScore: scores.saudeScore,
+      segurancaScore: scores.segurancaScore,
+      educacaoScore: scores.educacaoScore,
       travelScore: Object.keys(DOCUMENTED_CITIES).some(id => id.startsWith(state.id)) ? 1 : 0,
       lng: state.lng,
       lat: state.lat
@@ -1392,6 +1648,9 @@
     const hasRealData = !!cityRealData;
     const cityHomicideRate = cityRealData ? (cityRealData.homicideRate || 0) : 0;
     const citySecurityYear = cityRealData ? (cityRealData.year || 2022) : (state ? (state.securityYear || 2023) : 2023);
+    const cityHealthData = healthBrazilCitiesData && healthBrazilCitiesData.cities ? healthBrazilCitiesData.cities[String(props.id)] : null;
+    const hasCityHealthData = !!cityHealthData && !cityHealthData.proxy;
+    const healthBase = cityHealthData || state || {};
     return {
       gdpPerCapita: perCapita(props.gdp, props.pop),
       politicsTotal: politics.total,
@@ -1410,8 +1669,29 @@
       mvi: state ? (state.mvi || 0) : 0,
       securityYear: citySecurityYear,
       securityReal: hasRealData,
+      bedsPer1000: healthBase.bedsPer1000 || 0,
+      susBedsPer1000: healthBase.susBedsPer1000 || 0,
+      icuBedsPer100k: healthBase.icuBedsPer100k || 0,
+      doctorsPer1000: healthBase.doctorsPer1000 || 0,
+      nursesPer1000: healthBase.nursesPer1000 || 0,
+      infantMortality: healthBase.infantMortality || 0,
+      maternalMortality: healthBase.maternalMortality || 0,
+      vaccinationCoverage: healthBase.vaccinationCoverage || 0,
+      privateCoverage: healthBase.privateCoverage || 0,
+      healthYear: healthBase.year || healthBase.healthYear || 2023,
+      healthReal: hasCityHealthData,
+      healthProxy: !hasCityHealthData,
+      healthSource: hasCityHealthData ? (cityHealthData.source || "CNES/SIM/SINASC/SI-PNI/IBGE") : (healthBase.source || "Proxy UF"),
       enemScore: baseScore > 0 ? parseFloat((baseScore + cityEnemVariation).toFixed(1)) : 0,
-      travelScore: DOCUMENTED_CITIES[props.id] ? 1 : 0
+      travelScore: DOCUMENTED_CITIES[props.id] ? 1 : 0,
+      ...sseScores({
+        bedsPer1000: healthBase.bedsPer1000 || 0,
+        doctorsPer1000: healthBase.doctorsPer1000 || 0,
+        vaccinationCoverage: healthBase.vaccinationCoverage || 0,
+        infantMortality: healthBase.infantMortality || 0,
+        mviRate: hasRealData ? cityHomicideRate : (state ? (state.mviRate || 0) : 0),
+        enemScore: baseScore > 0 ? parseFloat((baseScore + cityEnemVariation).toFixed(1)) : 0,
+      })
     };
   }
 
@@ -1758,6 +2038,9 @@
        };
        const field = metricMap[activeSecuritySubMetric] || "mviRate";
        values = collection.features.map(f => f.properties[field] || 0);
+    } else if (metricType === "health") {
+       const field = healthMetricField();
+       values = collection.features.map(f => f.properties[field] || 0);
     } else {
        values = collection.features.map(f => f.properties.pop || 0);
     }
@@ -1820,6 +2103,30 @@
         colors = ["#17212b", "#5c3a1e", "#a0522d", "#ef7d60", "#ff3b3b"];
         if (!scale || scale.max <= scale.min) stops = metricStops[metric] || metricStops.mviRate;
       }
+    } else if (activeAnalysis === "sse") {
+      // 0-100 score: red (low) -> green (high). Fixed stops; ignore scale.
+      colors = ["#ef7d60", "#f2c14e", "#a9d65c", "#4f8f70", "#1a5f8a"];
+      stops = [20, 40, 60, 80, 95];
+      scale = null;
+    } else if (activeAnalysis === "health") {
+      const metric = activeHealthSubMetric || "bedsPer1000";
+      const isNegative = metric === "infantMortality" || metric === "maternalMortality" || metric === "outOfPocketPct";
+      colors = isNegative
+        ? ["#4f8f70", "#a9d65c", "#f2c14e", "#ef7d60", "#ff3b3b"]
+        : ["#17212b", "#1a5f8a", "#4f8f70", "#a9d65c", "#f2c14e"];
+      if (!scale || scale.max <= scale.min) {
+        const metricStops = {
+          bedsPer1000: [0.8, 1.4, 2.0, 2.6, 3.2],
+          icuBedsPer100k: [8, 14, 20, 26, 34],
+          doctorsPer1000: activeView === "world" ? [5, 15, 25, 40, 55] : [0.8, 1.5, 2.2, 3.0, 4.5],
+          infantMortality: [8, 10, 12, 15, 18],
+          vaccinationCoverage: [70, 78, 84, 88, 92],
+          uhcIndex: [40, 60, 75, 85, 92],
+          lifeExpectancy: [55, 65, 72, 78, 84],
+          hospitalBedsPer10000: [5, 15, 30, 60, 100]
+        };
+        stops = metricStops[metric] || metricStops.bedsPer1000;
+      }
     } else {
       colors = ["#17212b", "#25534e", "#5b8e54", "#c59b3f", "#ef7d60"];
       if (isCity) colors.push("#b799ff");
@@ -1871,6 +2178,11 @@
         ? ["interpolate", ["linear"], metric, 509, 3, 540, 5, 569, 7]
         : ["interpolate", ["linear"], metric, 509, 5, 540, 10, 569, 16];
     }
+    if (activeAnalysis === "sse") {
+      return scope === "city"
+        ? ["interpolate", ["linear"], metric, 0, 3, 50, 8, 80, 14, 100, 20]
+        : ["interpolate", ["linear"], metric, 0, 5, 50, 12, 80, 20, 100, 30];
+    }
     if (activeAnalysis === "travel") {
       return ["interpolate", ["linear"], metric, 0, 0, 1, 15];
     }
@@ -1907,6 +2219,26 @@
       }
       return expr;
     }
+    if (activeAnalysis === "health") {
+      if (activeView === "world") {
+        const healthMetric = activeHealthSubMetric || "uhcIndex";
+        if (healthMetric === "lifeExpectancy") return ["interpolate", ["linear"], metric, 55, 3, 65, 7, 72, 12, 78, 20, 84, 30];
+        if (healthMetric === "hospitalBedsPer10000") return ["interpolate", ["sqrt"], metric, 0, 3, 15, 7, 30, 12, 60, 20, 100, 30];
+        if (healthMetric === "doctorsPer1000") return ["interpolate", ["linear"], metric, 5, 3, 15, 7, 25, 12, 40, 20, 55, 30];
+        return ["interpolate", ["linear"], metric, 40, 3, 60, 7, 75, 12, 85, 20, 92, 30];
+      }
+      const healthMetric = activeHealthSubMetric || "bedsPer1000";
+      const stops = {
+        bedsPer1000: [0.8, 5, 1.4, 10, 2.0, 16, 2.6, 24, 3.2, 34],
+        icuBedsPer100k: [8, 5, 14, 10, 20, 16, 26, 24, 34, 34],
+        doctorsPer1000: [0.8, 5, 1.5, 10, 2.2, 16, 3.0, 24, 4.5, 34],
+        infantMortality: [8, 5, 10, 10, 12, 16, 15, 24, 18, 34],
+        vaccinationCoverage: [70, 5, 78, 10, 84, 16, 88, 24, 92, 34]
+      }[healthMetric] || [0.8, 5, 1.4, 10, 2.0, 16, 2.6, 24, 3.2, 34];
+      const expr = ["interpolate", ["sqrt"], metric];
+      for (let i = 0; i < stops.length; i += 2) expr.push(stops[i], stops[i + 1]);
+      return expr;
+    }
     return scope === "city"
       ? ["interpolate", ["sqrt"], metric, 1000, 3, 10000, 5, 100000, 8, 500000, 13, 2000000, 22, 11000000, 36]
       : ["interpolate", ["sqrt"], metric, 600000, 5, 3000000, 9, 9000000, 15, 44000000, 28];
@@ -1920,6 +2252,8 @@
     if (activeAnalysis === "politics") return ["to-number", ["get", "peoplePerPolitician"], 0];
     if (activeAnalysis === "education") return ["to-number", ["get", "enemScore"], 0];
     if (activeAnalysis === "travel") return ["to-number", ["get", "travelScore"], 0];
+    if (activeAnalysis === "health") return ["to-number", ["get", healthMetricField()], 0];
+    if (activeAnalysis === "sse") return ["to-number", ["get", "sseTotal"], 0];
     if (activeAnalysis === "security") {
       if (activeView === "world") {
         const sourceId = activeSourceOptionId("security", "world");
@@ -1944,6 +2278,8 @@
     if (activeAnalysis === "education") return "#b8e8e0";
     if (activeAnalysis === "travel") return "#f2c14e";
     if (activeAnalysis === "security") return "#ef7d60";
+    if (activeAnalysis === "health") return "#51d1c2";
+    if (activeAnalysis === "sse") return "#a9d65c";
     return "#51d1c2";
   }
 
@@ -1954,6 +2290,7 @@
     if (activeAnalysis === "education") return "#1a5f8a";
     if (activeAnalysis === "travel") return "#f2c14e";
     if (activeAnalysis === "security") return "#ef7d60";
+    if (activeAnalysis === "sse") return "#a9d65c";
     return "#18b978";
   }
 
@@ -1966,6 +2303,67 @@
     if (!config.metrics) return null;
     const key = activeAnalysis === "gdp" ? activeGdpSubMetric : config.defaultMetric;
     return config.metrics[key] || config.metrics[config.defaultMetric] || null;
+  }
+
+  function clamp01to100(value) {
+    if (!Number.isFinite(value)) return 0;
+    if (value < 0) return 0;
+    if (value > 100) return 100;
+    return value;
+  }
+
+  function sseScores(row) {
+    // V1: each dimension normalized to 0-100 from a single or few indicators.
+    // Saude: simple average of bedsPer1000 (cap 4), doctorsPer1000 (cap 4),
+    // vaccinationCoverage (already 0-100), and inverse infantMortality (0 deaths=100, 20+=0).
+    const beds = clamp01to100((Number(row.bedsPer1000) || 0) / 4 * 100);
+    const docs = clamp01to100((Number(row.doctorsPer1000) || 0) / 4 * 100);
+    const vacc = clamp01to100(Number(row.vaccinationCoverage) || 0);
+    const infMort = Number(row.infantMortality) || 0;
+    const infInv = clamp01to100(100 - infMort * 5);
+    const healthCount = [beds, docs, vacc, infInv].filter((v) => v > 0).length || 1;
+    const saude = (beds + docs + vacc + infInv) / healthCount;
+
+    // Seguranca: inverse MVI (homicidios / 100k). 0 = 100, 50+ = 0.
+    const mvi = Number(row.mviRate) || 0;
+    const seguranca = clamp01to100(100 - mvi * 2);
+
+    // Educacao: ENEM scaled. 450 = 0, 650 = 100.
+    const enem = Number(row.enemScore) || 0;
+    const educacao = enem > 0 ? clamp01to100((enem - 450) / 200 * 100) : 0;
+
+    const dims = [saude, seguranca, educacao].filter((v) => v > 0);
+    const total = dims.length ? dims.reduce((a, b) => a + b, 0) / dims.length : 0;
+
+    return {
+      sseTotal: Number(total.toFixed(1)),
+      saudeScore: Number(saude.toFixed(1)),
+      segurancaScore: Number(seguranca.toFixed(1)),
+      educacaoScore: Number(educacao.toFixed(1)),
+    };
+  }
+
+  function healthMetricField() {
+    const metric = activeHealthSubMetric || "bedsPer1000";
+    if (activeView === "world") {
+      const worldMap = {
+        uhcIndex: "uhcIndex",
+        lifeExpectancy: "lifeExpectancy",
+        hospitalBedsPer10000: "hospitalBedsPer10000",
+        doctorsPer1000: "physiciansPer10000",
+        bedsPer1000: "hospitalBedsPer10000",
+        icuBedsPer100k: "hospitalBedsPer10000",
+        vaccinationCoverage: "uhcIndex"
+      };
+      return worldMap[metric] || "uhcIndex";
+    }
+    return {
+      bedsPer1000: "bedsPer1000",
+      icuBedsPer100k: "icuBedsPer100k",
+      doctorsPer1000: "doctorsPer1000",
+      infantMortality: "infantMortality",
+      vaccinationCoverage: "vaccinationCoverage"
+    }[metric] || "bedsPer1000";
   }
 
   function activeSourceOptions(analysis = activeAnalysis, view = activeView) {
@@ -1994,6 +2392,11 @@
       if (activeView === "world") return ["hdiGlobalUndp"];
       if (activeView === "cities") return ["idhmPnudBrazil", "idhmCityProxy"];
       return ["idhmPnudBrazil"];
+    }
+    if (activeAnalysis === "health") {
+      if (activeView === "world") return ["healthGlobalWho", "healthGlobalWorldBank"];
+      if (activeView === "cities") return ["healthBrazilCitiesDatasus", "healthBrazilDatasus", "healthBrazilCityProxy", "populationIbge"];
+      return ["healthBrazilDatasus", "populationIbge"];
     }
     if (activeView === "world") {
       const metric = WORLD_METRIC_CATALOG[activeWorldMetric] || WORLD_METRIC_CATALOG.pop;
@@ -2123,6 +2526,17 @@
     )).join("");
   }
 
+  function healthMetricsForActiveView() {
+    const metrics = ANALYSIS_CATALOG.health.metrics;
+    const keys = activeView === "world"
+      ? ["uhcIndex", "lifeExpectancy", "hospitalBedsPer10000", "doctorsPer1000"]
+      : ["bedsPer1000", "icuBedsPer100k", "doctorsPer1000", "infantMortality", "vaccinationCoverage"];
+    return keys.reduce((acc, key) => {
+      if (metrics[key]) acc[key] = metrics[key];
+      return acc;
+    }, {});
+  }
+
   function renderSourceOptionSelector() {
     const options = activeSourceOptions();
     if (options.length < 2) return "";
@@ -2169,6 +2583,12 @@
               </select>
             ` : ""}
           </div>
+        ` : (activeAnalysis === "health" ? `
+          <div class="flex-gap-4">
+            <select id="legend-health-selector" aria-label="Selecionar indicador de saude">
+              ${renderMetricOptions(healthMetricsForActiveView(), activeHealthSubMetric)}
+            </select>
+          </div>
         ` : (activeAnalysis === "gdp" ? `
           <div class="flex-gap-4">
             <div class="year-stepper">
@@ -2198,7 +2618,7 @@
               ${renderMetricOptions(WORLD_METRIC_CATALOG, activeWorldMetric)}
             </select>
           </div>
-        ` : `<strong>${escapeHtml(config.metric)}</strong>`))))}
+        ` : `<strong>${escapeHtml(config.metric)}</strong>`)))))}
       </div>
       <div class="legend-scale" id="legend-gradient-scale"></div>
       <div class="legend-labels">
@@ -2313,6 +2733,19 @@
     if (securitySelector) {
       securitySelector.addEventListener("change", (e) => {
         activeSecuritySubMetric = validAnalysisMetric("security", e.target.value) ? e.target.value : ANALYSIS_CATALOG.security.defaultMetric;
+        updateAnalysisPaint();
+        updateHeatLegend();
+        refreshAnalysisContent();
+        refreshFixedDetailCard();
+        savePreferences();
+      });
+    }
+
+    const healthSelector = legend.querySelector("#legend-health-selector");
+    if (healthSelector) {
+      healthSelector.addEventListener("change", (e) => {
+        activeHealthSubMetric = validAnalysisMetric("health", e.target.value) ? e.target.value : ANALYSIS_CATALOG.health.defaultMetric;
+        if (window.updateWorldLayerColor) window.updateWorldLayerColor();
         updateAnalysisPaint();
         updateHeatLegend();
         refreshAnalysisContent();
@@ -2505,6 +2938,68 @@
         scope: isCity ? "locais com vídeo" : "estados visitados",
         colors: ["#17212b", "#f2c14e"],
         labels: ["Sem vídeos", "Com documentários"]
+      };
+    }
+    if (activeAnalysis === "sse") {
+      const isCity = activeView === "cities" && selectedStateId;
+      return {
+        metric: "SSE total (0-100)",
+        scope: isCity ? "cidades da UF" : "estados",
+        colors: ["#ef7d60", "#f2c14e", "#a9d65c", "#4f8f70", "#1a5f8a"],
+        labels: ["20", "40", "60", "80", "95"],
+        sourceIds: ["healthBrazilDatasus", "securityBrazilFBSP", "enemLocal"]
+      };
+    }
+    if (activeAnalysis === "health") {
+      if (activeView === "world") {
+        const metricLabels = {
+          uhcIndex: "UHC cobertura essencial",
+          lifeExpectancy: "Expectativa de vida",
+          hospitalBedsPer10000: "Leitos por 10.000 hab.",
+          doctorsPer1000: "Medicos por 10.000 hab."
+        };
+        const metric = activeHealthSubMetric || "uhcIndex";
+        const labels = {
+          uhcIndex: ["40", "60", "75", "85", "92+"],
+          lifeExpectancy: ["55", "65", "72", "78", "84+"],
+          hospitalBedsPer10000: ["5", "15", "30", "60", "100+"],
+          doctorsPer1000: ["5", "15", "25", "40", "55+"]
+        };
+        return {
+          metric: metricLabels[metric] || "UHC cobertura essencial",
+          scope: "Global",
+          colors: ["#17212b", "#1a5f8a", "#4f8f70", "#a9d65c", "#f2c14e"],
+          labels: labels[metric] || labels.uhcIndex,
+          sourceIds: ["healthGlobalWho", "healthGlobalWorldBank"],
+          isWorld: true
+        };
+      }
+      const metric = activeHealthSubMetric || "bedsPer1000";
+      const metricLabels = {
+        bedsPer1000: "Leitos por 1.000 hab.",
+        icuBedsPer100k: "UTI por 100k hab.",
+        doctorsPer1000: "Medicos por 1.000 hab.",
+        infantMortality: "Mortalidade infantil por 1.000 NV",
+        vaccinationCoverage: "Cobertura vacinal (%)"
+      };
+      const metricStops = {
+        bedsPer1000: ["0,8", "1,4", "2,0", "2,6", "3,2+"],
+        icuBedsPer100k: ["8", "14", "20", "26", "34+"],
+        doctorsPer1000: ["0,8", "1,5", "2,2", "3,0", "4,5+"],
+        infantMortality: ["8", "10", "12", "15", "18+"],
+        vaccinationCoverage: ["70", "78", "84", "88", "92+"]
+      };
+      const negative = metric === "infantMortality";
+      return {
+        metric: metricLabels[metric] || metricLabels.bedsPer1000,
+        scope: isCity ? "cidades da UF (municipal + proxy)" : "estados",
+        colors: negative
+          ? ["#4f8f70", "#a9d65c", "#f2c14e", "#ef7d60", "#ff3b3b"]
+          : ["#17212b", "#1a5f8a", "#4f8f70", "#a9d65c", "#f2c14e"],
+        labels: (scale && scale.max > scale.min)
+          ? [formatLabel(scale.min, "health"), "...", formatLabel(scale.max, "health")]
+          : (metricStops[metric] || metricStops.bedsPer1000),
+        sourceIds: isCity ? ["healthBrazilCitiesDatasus", "healthBrazilDatasus", "healthBrazilCityProxy", "populationIbge"] : ["healthBrazilDatasus", "populationIbge"]
       };
     }
 
@@ -3075,6 +3570,7 @@
 
   function setActiveView(view) {
     activeView = view;
+    ensureHealthMetricForView();
     const button = document.querySelector(`[data-view="${view}"]`);
     if (button) setActiveButton("[data-view]", button);
     if (window.updateWorldLayerColor) window.updateWorldLayerColor();
@@ -3085,6 +3581,7 @@
   function setActiveAnalysis(analysis) {
     activeAnalysis = validAnalysis(analysis) ? analysis : "general";
     const config = activeAnalysisConfig();
+    ensureHealthMetricForView();
     if (config.metrics && !validAnalysisMetric(activeAnalysis, activeGdpSubMetric)) {
       activeGdpSubMetric = config.defaultMetric || Object.keys(config.metrics)[0];
     }
@@ -3100,6 +3597,14 @@
     // Keep the card open and refresh its content for the new analysis tab
     refreshFixedDetailCard();
     savePreferences();
+  }
+
+  function ensureHealthMetricForView() {
+    if (activeAnalysis !== "health") return;
+    const metrics = healthMetricsForActiveView();
+    if (!Object.prototype.hasOwnProperty.call(metrics, activeHealthSubMetric)) {
+      activeHealthSubMetric = activeView === "world" ? "uhcIndex" : ANALYSIS_CATALOG.health.defaultMetric;
+    }
   }
 
   function refreshAnalysisContent() {
@@ -3536,6 +4041,7 @@
     }).join("");
     applyGdpHistoryStyles("gdp-history-chart");
     applyGdpHistoryStyles("hdi-history-chart");
+    applySseBarStyles();
     if (window.lucide) window.lucide.createIcons();
   }
 
@@ -3554,6 +4060,7 @@
     }).join("");
     applyGdpHistoryStyles("gdp-history-chart");
     applyGdpHistoryStyles("hdi-history-chart");
+    applySseBarStyles();
     if (window.lucide) window.lucide.createIcons();
   }
 
@@ -3625,10 +4132,153 @@
     if (activeAnalysis === "politics") return politicsCards(scope, data);
     if (activeAnalysis === "education") return educationCards(scope, data);
     if (activeAnalysis === "security") return securityCards(scope, data);
+    if (activeAnalysis === "health") return healthCards(scope, data);
+    if (activeAnalysis === "sse") return sseCards(scope, data);
     if (activeAnalysis === "travel") return travelCards(scope, data);
     if (scope === "state") return stateGeneralCards(data);
     if (scope === "city") return cityGeneralCards(data);
     return brazilGeneralCards();
+  }
+
+  function healthCards(scope, data) {
+    const metric = activeHealthSubMetric || (activeView === "world" ? "uhcIndex" : "bedsPer1000");
+    const metricLabels = {
+      bedsPer1000: "Leitos",
+      icuBedsPer100k: "UTI",
+      doctorsPer1000: "Medicos",
+      infantMortality: "Mortalidade infantil",
+      vaccinationCoverage: "Vacinacao",
+      uhcIndex: "UHC",
+      lifeExpectancy: "Expectativa de vida",
+      hospitalBedsPer10000: "Leitos"
+    };
+    const valueForMetric = (row) => row[healthMetricField()] || row[metric] || 0;
+    const formatHealthValue = (key, value) => {
+      if (key === "lifeExpectancy") return value ? `${value.toFixed(1)} anos` : "sem dado";
+      if (key === "uhcIndex" || key === "vaccinationCoverage" || key === "privateCoverage") return value ? `${value.toFixed(1)}%` : "sem dado";
+      if (key === "hospitalBedsPer10000" || key === "physiciansPer10000") return value ? `${value.toFixed(1)} por 10k` : "sem dado";
+      if (key === "infantMortality") return value ? `${value.toFixed(1)} por 1.000 NV` : "sem dado";
+      if (key === "maternalMortality") return value ? `${value.toFixed(1)} por 100k NV` : "sem dado";
+      if (key === "icuBedsPer100k") return value ? `${value.toFixed(1)} por 100k` : "sem dado";
+      return value ? `${value.toFixed(1)} por 1.000` : "sem dado";
+    };
+
+    if (scope === "state") {
+      return [
+        { label: `${metricLabels[metric] || "Saude"} ${data.healthYear || 2023}`, value: formatHealthValue(metric, valueForMetric(data)) },
+        { label: "Ranking do indicador", value: rankTextByMetric(Array.from(stateById.values()), data.id, (row) => row[healthMetricField()] || 0, "no Brasil") },
+        { label: "Leitos totais", value: formatHealthValue("bedsPer1000", data.bedsPer1000 || 0) },
+        { label: "Leitos SUS", value: formatHealthValue("bedsPer1000", data.susBedsPer1000 || 0) },
+        { label: "UTI", value: formatHealthValue("icuBedsPer100k", data.icuBedsPer100k || 0) },
+        { label: "Medicos", value: formatHealthValue("doctorsPer1000", data.doctorsPer1000 || 0) },
+        { label: "Mortalidade infantil", value: formatHealthValue("infantMortality", data.infantMortality || 0) },
+        { label: "Fonte", value: compactSourceLine(["healthBrazilDatasus", "populationIbge"]) }
+      ];
+    }
+    if (scope === "city") {
+      const sourceIds = data.healthReal
+        ? ["healthBrazilCitiesDatasus", "populationIbge"]
+        : ["healthBrazilDatasus", "healthBrazilCityProxy", "populationIbge"];
+      return [
+        { label: `${metricLabels[metric] || "Saude"} ${data.healthYear || 2023}${data.healthReal ? "" : " (Proxy UF)"}`, value: formatHealthValue(metric, valueForMetric(data)) },
+        { label: "Nivel do dado", value: data.healthReal ? "Dado municipal" : "Proxy pela UF, nao cidade" },
+        { label: "UF usada", value: `${data.stateName || ""} (${data.uf || ""})` },
+        { label: data.healthReal ? "Leitos totais" : "Leitos totais UF", value: formatHealthValue("bedsPer1000", data.bedsPer1000 || 0) },
+        { label: data.healthReal ? "UTI" : "UTI UF", value: formatHealthValue("icuBedsPer100k", data.icuBedsPer100k || 0) },
+        { label: data.healthReal ? "Mortalidade infantil" : "Mortalidade infantil UF", value: formatHealthValue("infantMortality", data.infantMortality || 0) },
+        { label: "Fonte", value: compactSourceLine(sourceIds) }
+      ];
+    }
+    const brData = healthBrazilData ? healthBrazilData.brazil : {};
+    return [
+      { label: `${metricLabels[metric] || "Saude"} Brasil ${brData.year || 2023}`, value: formatHealthValue(metric, brData[healthMetricField()] || brData[metric] || 0) },
+      { label: "Leitos totais", value: formatHealthValue("bedsPer1000", brData.bedsPer1000 || 0) },
+      { label: "Leitos SUS", value: formatHealthValue("bedsPer1000", brData.susBedsPer1000 || 0) },
+      { label: "UTI", value: formatHealthValue("icuBedsPer100k", brData.icuBedsPer100k || 0) },
+      { label: "Medicos", value: formatHealthValue("doctorsPer1000", brData.doctorsPer1000 || 0) },
+      { label: "Mortalidade infantil", value: formatHealthValue("infantMortality", brData.infantMortality || 0) },
+      { label: "Fonte", value: compactSourceLine(["healthBrazilDatasus", "populationIbge"]) }
+    ];
+  }
+  function sseBarsHtml(scores) {
+    const rows = [
+      { key: "sseTotal", label: "SSE", color: "#a9d65c", value: scores.sseTotal },
+      { key: "saudeScore", label: "Saúde", color: "#51d1c2", value: scores.saudeScore },
+      { key: "segurancaScore", label: "Segur.", color: "#ef7d60", value: scores.segurancaScore },
+      { key: "educacaoScore", label: "Educ.", color: "#b8e8e0", value: scores.educacaoScore },
+    ];
+    const bars = rows.map((row) => {
+      const h = Math.max(2, Math.min(100, row.value || 0));
+      return `
+        <div class="sse-col" data-k="${escapeHtml(row.key)}">
+          <div class="sse-col-value">${row.value.toFixed(1)}</div>
+          <div class="sse-bar-track">
+            <div class="sse-bar-fill" data-w="${h}" data-c="${escapeHtml(row.color)}"></div>
+          </div>
+          <div class="sse-col-label">${escapeHtml(row.label)}</div>
+        </div>
+      `;
+    }).join("");
+    return `<div class="sse-bars">${bars}</div>`;
+  }
+
+  function applySseBarStyles() {
+    document.querySelectorAll(".sse-bar-fill").forEach((bar) => {
+      if (bar.style.height) return;
+      bar.style.height = bar.dataset.w + "%";
+      bar.style.background = bar.dataset.c;
+    });
+  }
+
+  function brazilSseScores() {
+    const bp = brazilMeshFeature ? brazilMeshFeature.properties : {};
+    // National ENEM = simple avg of state values for active year
+    const enemMap = ENEM_HISTORY_SCORES[activeEnemYear] || {};
+    const enemValues = Object.values(enemMap).filter((v) => v > 0);
+    const enemAvg = enemValues.length ? enemValues.reduce((a, b) => a + b, 0) / enemValues.length : 0;
+    return sseScores({
+      bedsPer1000: bp.bedsPer1000 || 0,
+      doctorsPer1000: bp.doctorsPer1000 || 0,
+      vaccinationCoverage: bp.vaccinationCoverage || 0,
+      infantMortality: bp.infantMortality || 0,
+      mviRate: bp.mviRate || 0,
+      enemScore: enemAvg,
+    });
+  }
+
+  function sseCards(scope, data) {
+    let scores;
+    if (scope === "state") {
+      // state objects do not carry sseTotal directly - recompute from raw fields
+      const enemScore = (ENEM_HISTORY_SCORES[activeEnemYear] || {})[data.sigla] || 0;
+      scores = sseScores({
+        bedsPer1000: data.bedsPer1000,
+        doctorsPer1000: data.doctorsPer1000,
+        vaccinationCoverage: data.vaccinationCoverage,
+        infantMortality: data.infantMortality,
+        mviRate: data.mviRate,
+        enemScore: enemScore,
+      });
+    } else if (scope === "city") {
+      // city feature properties already have the merged scores
+      scores = {
+        sseTotal: Number(data.sseTotal) || 0,
+        saudeScore: Number(data.saudeScore) || 0,
+        segurancaScore: Number(data.segurancaScore) || 0,
+        educacaoScore: Number(data.educacaoScore) || 0,
+      };
+    } else {
+      scores = brazilSseScores();
+    }
+    return [
+      { isHtml: true, value: sseBarsHtml(scores) },
+      { label: "Fórmula", value: "média simples 1/3 de cada dimensão (0-100)" },
+      { label: "Saúde inclui", value: "leitos, médicos, vacinação, mort. infantil (inv.)" },
+      { label: "Segurança inclui", value: "MVI invertido (0=100, 50+=0)" },
+      { label: "Educação inclui", value: `nota ENEM ${activeEnemYear || ""} normalizada 450-650` },
+      { label: "Versão", value: "V1 simplificada — refinar pesos depois" },
+      { label: "Fonte", value: compactSourceLine(["healthBrazilDatasus", "securityBrazilFBSP", "enemLocal"]) },
+    ];
   }
 
   function securityCards(scope, data) {
@@ -3898,7 +4548,10 @@
     const securityWarning = activeAnalysis === "security"
       ? ` Indicador ativo: ${activeSecuritySubMetric || "mviRate"}.${activeView === "cities" ? " Em cidades, prioriza dado IPEA Atlas; quando ausente, usa proxy UF." : ""}`
       : "";
-    return `${config.note}${projectionWarning}${hdiWarning}${securityWarning} Fonte/procedência: ${sourceDetailsLine()}.`;
+    const healthWarning = activeAnalysis === "health"
+      ? ` Indicador ativo: ${activeHealthSubMetric || "bedsPer1000"}.${activeView === "cities" ? " Em cidades, usa dado municipal quando disponivel; quando ausente, usa proxy UF." : ""}`
+      : "";
+    return `${config.note}${projectionWarning}${hdiWarning}${securityWarning}${healthWarning} Fonte/procedência: ${sourceDetailsLine()}.`;
   }
 
   function renderStateChart() {
@@ -4021,6 +4674,29 @@
         format: (v) => `${v.toFixed(1)} por 100k`
       };
     }
+    if (activeAnalysis === "health") {
+      const metric = activeHealthSubMetric || "bedsPer1000";
+      const metricTitles = {
+        bedsPer1000: "leitos",
+        icuBedsPer100k: "UTI",
+        doctorsPer1000: "medicos",
+        infantMortality: "mortalidade infantil",
+        vaccinationCoverage: "vacinacao"
+      };
+      const formatMap = {
+        bedsPer1000: (v) => `${v.toFixed(1)} /1k`,
+        icuBedsPer100k: (v) => `${v.toFixed(1)} /100k`,
+        doctorsPer1000: (v) => `${v.toFixed(1)} /1k`,
+        infantMortality: (v) => `${v.toFixed(1)} /1k NV`,
+        vaccinationCoverage: (v) => `${v.toFixed(1)}%`
+      };
+      return {
+        title: `Estados por ${metricTitles[metric] || "saude"}`,
+        caption: metric === "infantMortality" ? "maiores taxas | top 10" : "maiores indicadores | top 10",
+        value: (row) => row[healthMetricField()] || 0,
+        format: formatMap[metric] || ((v) => v.toFixed(1))
+      };
+    }
     return {
       title: "Estados mais populosos",
       caption: "top 10",
@@ -4069,6 +4745,22 @@
         caption: metric === "mviRate" ? "IPEA + proxy UF quando ausente" : "proxy pela UF",
         value: (row) => row[metric] || 0,
         format: (v) => `${v.toFixed(1)} por 100k`
+      };
+    }
+    if (activeAnalysis === "health") {
+      const metric = activeHealthSubMetric || "bedsPer1000";
+      const metricTitles = {
+        bedsPer1000: "leitos",
+        icuBedsPer100k: "UTI",
+        doctorsPer1000: "medicos",
+        infantMortality: "mortalidade infantil",
+        vaccinationCoverage: "vacinacao"
+      };
+      return {
+        title: `Saude - cidades de ${uf}`,
+        caption: `${metricTitles[metric] || "indicador"} municipal quando disponivel; fallback UF`,
+        value: (row) => row[healthMetricField()] || 0,
+        format: (v) => metric === "vaccinationCoverage" ? `${v.toFixed(1)}%` : `${v.toFixed(1)}`
       };
     }
     if (activeAnalysis === "education") {
@@ -4171,6 +4863,7 @@
         className: "hover-popup"
       }).setLngLat(lngLat).setHTML(html).addTo(map);
       hoveredFeatureKey = key;
+      applySseBarStyles();
       return;
     }
 
@@ -4178,6 +4871,7 @@
     if (hoveredFeatureKey !== key) {
       hoverPopup.setHTML(html);
       hoveredFeatureKey = key;
+      applySseBarStyles();
     }
   }
 
@@ -4198,6 +4892,7 @@
         className: "hover-popup"
       }).setLngLat(lngLat).setHTML(html).addTo(map);
       hoveredFeatureKey = key;
+      applySseBarStyles();
       return;
     }
 
@@ -4205,6 +4900,7 @@
     if (hoveredFeatureKey !== key) {
       hoverPopup.setHTML(html);
       hoveredFeatureKey = key;
+      applySseBarStyles();
     }
   }
 
@@ -4227,6 +4923,7 @@
         className: "hover-popup"
       }).setLngLat(lngLat).setHTML(html).addTo(map);
       hoveredFeatureKey = key;
+      applySseBarStyles();
       return;
     }
 
@@ -4235,6 +4932,7 @@
       hoverPopup.setHTML(html);
       hoveredFeatureKey = key;
       if (window.lucide) window.lucide.createIcons();
+      applySseBarStyles();
     }
   }
 
@@ -4250,6 +4948,8 @@
     if (activeAnalysis === "politics") return politicsCards("brazil");
     if (activeAnalysis === "education") return educationCards("brazil");
     if (activeAnalysis === "security") return securityCards("brazil");
+    if (activeAnalysis === "health") return healthCards("brazil");
+    if (activeAnalysis === "sse") return sseCards("brazil");
     if (activeAnalysis === "travel") return travelCards("brazil");
     const politics = brazilPoliticalSummary();
     const gdpPerCapita = perCapita(brazilGdp, totalPopulation);
@@ -4275,6 +4975,8 @@
     if (activeAnalysis === "politics") return politicsCards("state", stateForCards);
     if (activeAnalysis === "education") return educationCards("state", stateForCards);
     if (activeAnalysis === "security") return securityCards("state", stateForCards);
+    if (activeAnalysis === "health") return healthCards("state", stateForCards);
+    if (activeAnalysis === "sse") return sseCards("state", stateForCards);
     if (activeAnalysis === "travel") return travelCards("state", stateForCards);
     const pop = Number(props.pop || 0);
     const gdpPerCapita = perCapita(props.gdp, pop);
@@ -4303,6 +5005,8 @@
     if (activeAnalysis === "politics") return politicsCards("city", props);
     if (activeAnalysis === "education") return educationCards("city", props);
     if (activeAnalysis === "security") return securityCards("city", props);
+    if (activeAnalysis === "health") return healthCards("city", props);
+    if (activeAnalysis === "sse") return sseCards("city", props);
     if (activeAnalysis === "travel") return travelCards("city", props);
     const pop = Number(props.pop || 0);
     const state = stateById.get(String(props.stateId || ""));
@@ -4335,6 +5039,7 @@
 
     applyGdpHistoryStyles("gdp-history-chart");
     applyGdpHistoryStyles("hdi-history-chart");
+    applySseBarStyles();
 
     if (window.lucide) window.lucide.createIcons();
     if (map && window.innerWidth > 1040) {
@@ -4584,6 +5289,7 @@
         gdpSubMetric: activeGdpSubMetric,
         hdiYear: activeHdiYear,
         securitySubMetric: activeSecuritySubMetric,
+        healthSubMetric: activeHealthSubMetric,
         sourceSelections: activeSourceSelections,
         worldMetric: activeWorldMetric,
         view: activeView,
@@ -4636,6 +5342,7 @@
       if (validAnalysisMetric("gdp", parsed.gdpSubMetric)) safe.gdpSubMetric = String(parsed.gdpSubMetric);
       if (parsed.hdiYear) safe.hdiYear = String(parsed.hdiYear);
       if (validAnalysisMetric("security", parsed.securitySubMetric)) safe.securitySubMetric = String(parsed.securitySubMetric);
+      if (validAnalysisMetric("health", parsed.healthSubMetric)) safe.healthSubMetric = String(parsed.healthSubMetric);
       if (parsed.sourceSelections && typeof parsed.sourceSelections === "object") {
         safe.sourceSelections = {};
         Object.entries(parsed.sourceSelections).forEach(([analysis, value]) => {
@@ -5105,10 +5812,12 @@
     const globalHdiDataset = activeGlobalHdiDataset();
     const globalHdiYears = hdiYearsForActiveView("world");
     const securityWorldSourceIds = activeAnalysis === "security" ? activeDataSourceIds() : ["securityGlobalUnodc"];
-    updateSourceDisplays(activeAnalysis === "hdi" ? worldHdiSourceIds : (activeAnalysis === "security" ? securityWorldSourceIds : ["localWorldJson"]));
+    const healthWorldSourceIds = activeAnalysis === "health" ? activeDataSourceIds() : ["healthGlobalWho"];
+    updateSourceDisplays(activeAnalysis === "hdi" ? worldHdiSourceIds : (activeAnalysis === "security" ? securityWorldSourceIds : (activeAnalysis === "health" ? healthWorldSourceIds : ["localWorldJson"])));
     const hdiYear = resolveHdiYear("world");
     const globalHdiCount = globalHdiDataset && globalHdiDataset.countries ? Object.keys(globalHdiDataset.countries).length : 0;
     const globalSecurityCount = securityGlobalData && securityGlobalData.countries ? Object.keys(securityGlobalData.countries).length : 0;
+    const globalHealthCount = healthGlobalData && healthGlobalData.countries ? Object.keys(healthGlobalData.countries).length : 0;
     elements["selected-code"].textContent = "GLOBO";
     elements["selected-type"].textContent = "Mundo";
     elements["selected-name"].textContent = "Visão Global";
@@ -5139,14 +5848,21 @@
             { label: "Fonte", value: "UNODC" }
           ];
         })() : []),
-        { label: "Arquivo local", value: activeAnalysis === "hdi" ? (activeSourceOptionId("hdi", "world") === "owid" ? "data/hdi_owid.json" : "data/hdi_global.json") : (activeAnalysis === "security" ? "data/security_global.json" : "data/world_data.geojson") },
-        { label: "Origem original", value: activeAnalysis === "hdi" ? upstreamSourceLine(sourceRecords(worldHdiSourceIds)[0]) : (activeAnalysis === "security" ? upstreamSourceLine(DATA_SOURCE_CATALOG.securityGlobalUnodc) : upstreamSourceLine(DATA_SOURCE_CATALOG.localWorldJson)) }
+        ...(activeAnalysis === "health" ? [
+          { label: "Saúde global", value: globalHealthCount ? `${formatNumber(globalHealthCount)} países na base` : "carregando" },
+          { label: "Indicador ativo", value: healthMetricsForActiveView()[activeHealthSubMetric]?.label || "UHC" },
+          { label: "Fonte", value: compactSourceLine(healthWorldSourceIds) }
+        ] : []),
+        { label: "Arquivo local", value: activeAnalysis === "hdi" ? (activeSourceOptionId("hdi", "world") === "owid" ? "data/hdi_owid.json" : "data/hdi_global.json") : (activeAnalysis === "security" ? "data/security_global.json" : (activeAnalysis === "health" ? "data/health_global.json" : "data/world_data.geojson")) },
+        { label: "Origem original", value: activeAnalysis === "hdi" ? upstreamSourceLine(sourceRecords(worldHdiSourceIds)[0]) : (activeAnalysis === "security" ? upstreamSourceLine(DATA_SOURCE_CATALOG.securityGlobalUnodc) : (activeAnalysis === "health" ? upstreamSourceLine(DATA_SOURCE_CATALOG.healthGlobalWho) : upstreamSourceLine(DATA_SOURCE_CATALOG.localWorldJson))) }
     ]);
     elements["general-note"].textContent = activeAnalysis === "hdi"
       ? `IDH global carregado de JSON local auditável. Fonte/procedência: ${sourceDetailsLine(worldHdiSourceIds)}.`
       : (activeAnalysis === "security"
         ? `Dados de segurança global carregados de JSON local. Fonte/procedência: ${sourceDetailsLine(["securityGlobalUnodc"])}.`
-        : `Dados globais carregados de base JSON local. Fonte/procedência: ${sourceDetailsLine(["localWorldJson"])}.`);
+        : (activeAnalysis === "health"
+          ? `Dados globais de saúde carregados de JSON local compilado. Fonte/procedência: ${sourceDetailsLine(healthWorldSourceIds)}.`
+          : `Dados globais carregados de base JSON local. Fonte/procedência: ${sourceDetailsLine(["localWorldJson"])}.`));
   }
 
   async function enterWorldMode(options = {}) {
@@ -5164,6 +5880,7 @@
             worldFeatureCollection = data;
             hydrateWorldHdi(worldFeatureCollection);
             hydrateWorldSecurity(worldFeatureCollection);
+            hydrateWorldHealth(worldFeatureCollection);
             
             map.addSource("world-fill-source", { type: "geojson", data: worldFeatureCollection });
             map.addSource("selected-country-source", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
@@ -5274,7 +5991,8 @@
     props = feature && feature.properties ? { ...props, ...feature.properties } : props;
     const worldHdiSourceIds = activeDataSourceIds();
     const securityWorldSourceIds = activeAnalysis === "security" ? activeDataSourceIds() : ["securityGlobalUnodc"];
-    updateSourceDisplays(activeAnalysis === "hdi" ? worldHdiSourceIds : (activeAnalysis === "security" ? securityWorldSourceIds : ["localWorldJson"]));
+    const healthWorldSourceIds = activeAnalysis === "health" ? activeDataSourceIds() : ["healthGlobalWho"];
+    updateSourceDisplays(activeAnalysis === "hdi" ? worldHdiSourceIds : (activeAnalysis === "security" ? securityWorldSourceIds : (activeAnalysis === "health" ? healthWorldSourceIds : ["localWorldJson"])));
     if (map.getSource("selected-country-source")) {
        setSourceData("selected-country-source", {
          type: "FeatureCollection",
@@ -5317,16 +6035,26 @@
             { label: "Fonte", value: props.securitySource || "UNODC" }
           ];
         })() : []),
+        ...(activeAnalysis === "health" ? [
+          { label: `UHC ${props.healthYear || 2022}`, value: props.uhcIndex ? `${props.uhcIndex.toFixed(1)}` : "sem dado" },
+          { label: "Expectativa de vida", value: props.lifeExpectancy ? `${props.lifeExpectancy.toFixed(1)} anos` : "sem dado" },
+          { label: "Leitos hospitalares", value: props.hospitalBedsPer10000 ? `${props.hospitalBedsPer10000.toFixed(1)} por 10k` : "sem dado" },
+          { label: "Médicos", value: props.physiciansPer10000 ? `${props.physiciansPer10000.toFixed(1)} por 10k` : "sem dado" },
+          { label: "Gasto em saúde", value: props.healthExpPctGdp ? `${props.healthExpPctGdp.toFixed(1)}% do PIB` : "sem dado" },
+          { label: "Fonte", value: props.healthSource || "WHO/WDI/IHME" }
+        ] : []),
         { label: "PIB (2024)", value: formatCurrencyShortUSD(props.gdp) },
         { label: "PIB por habitante", value: formatCurrencyUSD(perCapita(props.gdp, props.pop)) },
         { label: "Região", value: props.region || "Global" },
-        { label: "Origem do JSON", value: activeAnalysis === "hdi" ? upstreamSourceLine(sourceRecords(worldHdiSourceIds)[0]) : (activeAnalysis === "security" ? upstreamSourceLine(sourceRecords(securityWorldSourceIds)[0]) : upstreamSourceLine(DATA_SOURCE_CATALOG.localWorldJson)) }
+        { label: "Origem do JSON", value: activeAnalysis === "hdi" ? upstreamSourceLine(sourceRecords(worldHdiSourceIds)[0]) : (activeAnalysis === "security" ? upstreamSourceLine(sourceRecords(securityWorldSourceIds)[0]) : (activeAnalysis === "health" ? upstreamSourceLine(sourceRecords(healthWorldSourceIds)[0]) : upstreamSourceLine(DATA_SOURCE_CATALOG.localWorldJson))) }
     ]);
     elements["general-note"].textContent = activeAnalysis === "hdi"
       ? `IDH global. Fonte/procedência: ${sourceDetailsLine(worldHdiSourceIds)}.`
       : (activeAnalysis === "security"
         ? `Dados de segurança global. Fonte/procedência: ${sourceDetailsLine(securityWorldSourceIds)}.`
-        : `Dados globais carregados de base JSON local. Fonte/procedência: ${sourceDetailsLine(["localWorldJson"])}.`);
+        : (activeAnalysis === "health"
+          ? `Dados globais de saúde. Fonte/procedência: ${sourceDetailsLine(healthWorldSourceIds)}.`
+          : `Dados globais carregados de base JSON local. Fonte/procedência: ${sourceDetailsLine(["localWorldJson"])}.`));
   }
 
   function showCountryHover(lngLat, props) {
@@ -5363,6 +6091,14 @@
             <span class="text-right font-medium text-white">${props.homicideRate ? props.homicideRate.toFixed(1) + " /100k" : "-"}</span>
           `;
         })() : ""}
+        ${activeAnalysis === "health" ? `
+          <span class="text-gray-400">UHC</span>
+          <span class="text-right font-medium text-white">${props.uhcIndex ? props.uhcIndex.toFixed(1) : "-"}</span>
+          <span class="text-gray-400">Expect. vida</span>
+          <span class="text-right font-medium text-white">${props.lifeExpectancy ? props.lifeExpectancy.toFixed(1) + " anos" : "-"}</span>
+          <span class="text-gray-400">Leitos</span>
+          <span class="text-right font-medium text-white">${props.hospitalBedsPer10000 ? props.hospitalBedsPer10000.toFixed(1) + " /10k" : "-"}</span>
+        ` : ""}
       </div>`;
     
     hoverPopup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, className: "atlas-popup", maxWidth: "260px" })
@@ -5407,6 +6143,14 @@
           { label: "Fonte", value: props.securitySource || "UNODC" }
         ];
       })() : []),
+      ...(activeAnalysis === "health" ? [
+        { label: `UHC ${props.healthYear || 2022}`, value: props.uhcIndex ? `${props.uhcIndex.toFixed(1)}` : "sem dado" },
+        { label: "Expectativa de vida", value: props.lifeExpectancy ? `${props.lifeExpectancy.toFixed(1)} anos` : "sem dado" },
+        { label: "HALE", value: props.healthyLifeExpectancy ? `${props.healthyLifeExpectancy.toFixed(1)} anos saudáveis` : "sem dado" },
+        { label: "Leitos hospitalares", value: props.hospitalBedsPer10000 ? `${props.hospitalBedsPer10000.toFixed(1)} por 10k` : "sem dado" },
+        { label: "Médicos", value: props.physiciansPer10000 ? `${props.physiciansPer10000.toFixed(1)} por 10k` : "sem dado" },
+        { label: "Fonte", value: props.healthSource || "WHO/WDI/IHME" }
+      ] : []),
       { label: "Região", value: props.region || "Global" }
     ];
     showFixedDetailCard("País", `${name} (${props.ISO_A3 || "-"})`, rows, props);
@@ -5497,6 +6241,46 @@
           15, "#a0522d",
           30, "#ef7d60",
           50, "#ff3b3b"
+        ];
+      }
+    }
+    if (activeAnalysis === "health") {
+      const metric = healthMetricField();
+      if (activeHealthSubMetric === "lifeExpectancy") {
+        colorExpr = [
+          "interpolate", ["linear"], ["to-number", ["get", metric], 0],
+          55, "#17212b",
+          65, "#1a5f8a",
+          72, "#4f8f70",
+          78, "#a9d65c",
+          84, "#f2c14e"
+        ];
+      } else if (activeHealthSubMetric === "hospitalBedsPer10000") {
+        colorExpr = [
+          "interpolate", ["linear"], ["to-number", ["get", metric], 0],
+          5, "#17212b",
+          15, "#1a5f8a",
+          30, "#4f8f70",
+          60, "#a9d65c",
+          100, "#f2c14e"
+        ];
+      } else if (activeHealthSubMetric === "doctorsPer1000") {
+        colorExpr = [
+          "interpolate", ["linear"], ["to-number", ["get", metric], 0],
+          5, "#17212b",
+          15, "#1a5f8a",
+          25, "#4f8f70",
+          40, "#a9d65c",
+          55, "#f2c14e"
+        ];
+      } else {
+        colorExpr = [
+          "interpolate", ["linear"], ["to-number", ["get", metric], 0],
+          40, "#17212b",
+          60, "#1a5f8a",
+          75, "#4f8f70",
+          85, "#a9d65c",
+          92, "#f2c14e"
         ];
       }
     }
