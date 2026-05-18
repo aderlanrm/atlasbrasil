@@ -61,6 +61,39 @@ Se algum desses itens faltar, prefira `provenance: "estimado"`, `"curado"`, `"co
 
 Na interface, o botão `i` ao lado da fonte abre os detalhes e links de auditoria cadastrados nesses campos.
 
+## Fonte alternativa para o mesmo dado
+
+Quando houver mais de uma fonte para a mesma métrica, use `sourceOptions` dentro da análise. Isso cria um seletor padrão de fonte na legenda e mantém a explicação da diferença junto do botão `i`.
+
+```js
+idh: {
+  label: "IDH",
+  sourceOptions: [
+    {
+      id: "undp",
+      label: "UNDP/HDR",
+      scope: ["world"],
+      sourceIds: ["hdiGlobalUndp"],
+      difference: "Fonte primária oficial do Human Development Report."
+    },
+    {
+      id: "owid",
+      label: "Our World in Data",
+      scope: ["world"],
+      sourceIds: ["hdiGlobalOwid"],
+      difference: "Redistribuição do OWID com processamento menor; a fonte original citada continua sendo UNDP/HDR."
+    }
+  ]
+}
+```
+
+Regras:
+
+- Use `sourceOptions` somente quando as fontes medem essencialmente o mesmo dado no mesmo escopo.
+- Use `scope` para evitar mostrar uma fonte onde ela não se aplica. Exemplo: OWID vale para IDH global, mas não para IDHM municipal/estadual brasileiro.
+- Escreva `difference` em linguagem simples: fonte primária, redistribuição, projeção, cobertura, ano, metodologia ou limitação relevante.
+- Cada opção deve apontar para `sourceIds`; cada fonte continua precisando de URL, campos, metodologia e limitações.
+
 ## 2. Coloque o dado em uma análise
 
 Cada análise fica em `ANALYSIS_CATALOG`. Para adicionar uma opção ao dropdown de PIB, por exemplo, inclua uma nova métrica em `ANALYSIS_CATALOG.gdp.metrics`:
@@ -82,6 +115,48 @@ Depois ajuste as funções que calculam a cor, bolha, cards e ranking para saber
 - `stateChartConfig()` e `cityChartConfig()`, se precisar aparecer no ranking
 
 Para o dropdown do Globo, use `WORLD_METRIC_CATALOG` e ajuste `window.updateWorldLayerColor()` para pintar o mapa com a nova propriedade.
+
+## Exemplo: dados de IDH/IDHM
+
+A aba `IDH` usa três fontes cadastradas:
+
+- `hdiGlobalUndp`: IDH global real/oficial do UNDP Human Development Report. O app carrega `data/hdi_global.json`, gerado a partir do CSV oficial `HDR25_Composite_indices_complete_time_series.csv`. Campos usados: `iso3`, `country`, `hdi_1990` a `hdi_2023` e `hdi_rank_2023`.
+- `hdiGlobalOwid`: IDH global via Our World in Data. O app carrega `data/hdi_owid.json`, gerado a partir de `human-development-index.csv` e `human-development-index.metadata.json`. O OWID cita UNDP Human Development Report 2025 como fonte original e aplica processamento menor.
+- `idhmPnudBrazil`: IDHM real/oficial do Painel IDHM/PNUD Brasil, IPEA, FJP e IBGE/PNAD Contínua. O app carrega `data/idhm_brazil.json`, gerado a partir de `data/idhm_pnud_brazil.xlsx`. Campos usados: `ANO`, `AGREGACAO`, `CODIGO`, `NOME`, `IDHM`, `IDHM_L`, `IDHM_E`, `IDHM_R`, `IDHMAD`, `ESPVIDA`, `RDPC` e `GINI`.
+- `idhmCityProxy`: proxy calculado. Como a planilha anual carregada cobre Brasil e UFs, mas não municípios, as cidades recebem temporariamente o IDHM da UF. Isso aparece na fonte e nos cards como `proxy UF`; não trate como IDHM municipal real.
+
+No escopo `Globo`, a análise IDH declara `sourceOptions` para permitir alternar entre `UNDP/HDR` e `Our World in Data`. A diferença aparece abaixo da fonte e nos detalhes do botão `i`.
+
+Para atualizar o IDH global:
+
+1. Baixe o CSV mais recente no HDR Data Center do UNDP.
+2. Substitua ou mantenha o bruto em `data/`.
+3. Regenere `data/hdi_global.json` mantendo `latestYear`, `years` e `countries[ISO3].history`.
+4. Confira se os códigos ISO3 batem com `data/world_data.geojson`.
+5. Atualize `DATA_SOURCE_CATALOG.hdiGlobalUndp.freshness`, `url`, `fields`, `methodology` e `limitations`.
+
+Para atualizar a versão OWID do IDH global:
+
+1. Baixe `https://ourworldindata.org/grapher/human-development-index.csv`.
+2. Baixe `https://ourworldindata.org/grapher/human-development-index.metadata.json`.
+3. Regenere `data/hdi_owid.json` mantendo `latestYear`, `years`, `countries[ISO3].history` e região OWID.
+4. Atualize `DATA_SOURCE_CATALOG.hdiGlobalOwid`, especialmente `freshness`, `methodology`, `limitations` e metadados de atualização.
+
+Para atualizar o IDHM do Brasil:
+
+1. Baixe a planilha mais recente no Painel IDHM/PNUD Brasil.
+2. Substitua `data/idhm_pnud_brazil.xlsx`.
+3. Regenere `data/idhm_brazil.json` com `latestYear`, `years`, `brazil.history` e `states[CODIGO].history`.
+4. Confira uma UF manualmente, comparando ano, `IDHM`, `IDHM_L`, `IDHM_E` e `IDHM_R` com a planilha.
+5. Atualize `DATA_SOURCE_CATALOG.idhmPnudBrazil`.
+
+Para trocar o proxy de cidades por IDHM municipal real:
+
+1. Integre uma base municipal auditável, preferencialmente Atlas Brasil/PNUD/IPEA/FJP para anos censitários.
+2. Crie um JSON municipal por código IBGE de 7 dígitos, por exemplo `data/idhm_municipios.json`.
+3. Cadastre uma nova fonte, por exemplo `idhmMunicipalAtlas`, com `provenance: "real"`, URL pública, campos, metodologia e limitações.
+4. Ajuste `cityMapProperties()` para ler o IDHM municipal real antes de cair no proxy da UF.
+5. Remova `idhmCityProxy` dos `sourceIds` quando a cidade tiver dado municipal real.
 
 ## 3. Crie uma nova análise
 

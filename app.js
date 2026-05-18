@@ -23,6 +23,9 @@
     municipalityGdpHistory: (cityId) => `https://apisidra.ibge.gov.br/values/t/5938/n6/${cityId}/v/37/p/all`,
     states: "https://servicodados.ibge.gov.br/api/v1/localidades/estados?orderBy=nome",
     cities: "https://servicodados.ibge.gov.br/api/v1/localidades/municipios?orderBy=nome",
+    hdiGlobal: "./data/hdi_global.json?v=" + Date.now(),
+    hdiOwid: "./data/hdi_owid.json?v=" + Date.now(),
+    idhmBrazil: "./data/idhm_brazil.json?v=" + Date.now(),
     worldMesh: "./data/world_data.geojson?v=" + Date.now()
   };
 
@@ -108,6 +111,122 @@
       updatePolicy: "Reexecutar fetch_world_data.py e revisar o diff do GeoJSON quando quiser atualizar a base global.",
       note: "GeoJSON local gerado por fetch_world_data.py a partir de fontes externas consolidadas."
     },
+    hdiGlobalUndp: {
+      label: "IDH global",
+      shortLabel: "UNDP HDR",
+      provider: "UNDP Human Development Report Data Center",
+      type: "json",
+      provenance: "real",
+      freshness: "IDH 2023; série histórica 1990-2023",
+      url: "https://hdr.undp.org/sites/default/files/2025_HDR/HDR25_Composite_indices_complete_time_series.csv",
+      upstreamLabel: "UNDP Human Development Report 2025",
+      upstreamSources: [
+        {
+          label: "UNDP HDR Data Center",
+          url: "https://hdr.undp.org/data-center/human-development-index",
+          fields: "IDH, ranking, ISO3 e série histórica por país",
+          usage: "base oficial do IDH global"
+        },
+        {
+          label: "CSV oficial HDR25",
+          url: "https://hdr.undp.org/sites/default/files/2025_HDR/HDR25_Composite_indices_complete_time_series.csv",
+          fields: "hdi_1990 a hdi_2023 e hdi_rank_2023",
+          usage: "arquivo bruto compactado em data/hdi_global.json"
+        }
+      ],
+      quality: "Oficial",
+      fields: ["ISO3", "país", "IDH anual 1990-2023", "ranking IDH 2023", "categoria HDR"],
+      methodology: "O arquivo data/hdi_global.json foi gerado a partir do CSV oficial de séries temporais do HDR, mantendo apenas os campos de IDH necessários para mapa, ranking e gráfico.",
+      limitations: ["A comparação global usa países com ISO3 compatível no GeoJSON local.", "O ano mais recente disponível nessa base é 2023.", "IDH global e IDHM brasileiro são métricas relacionadas, mas não idênticas metodologicamente."],
+      updatePolicy: "Baixar o CSV mais recente do HDR Data Center, regenerar data/hdi_global.json e conferir ano, ranking e cobertura por ISO3.",
+      note: "Dado real oficial do UNDP/HDR, carregado no site por JSON local versionado."
+    },
+    hdiGlobalOwid: {
+      label: "IDH global via OWID",
+      shortLabel: "OWID/UNDP",
+      provider: "Our World in Data",
+      type: "json",
+      provenance: "compilado",
+      freshness: "IDH 2023; série histórica 1990-2023; OWID atualizado em 2025-05-07",
+      url: "https://ourworldindata.org/grapher/human-development-index",
+      upstreamLabel: "Our World in Data + UNDP Human Development Report 2025",
+      upstreamSources: [
+        {
+          label: "Our World in Data Grapher",
+          url: "https://ourworldindata.org/grapher/human-development-index",
+          fields: "Entity, Code, Year, Human Development Index e região OWID",
+          usage: "CSV processado para data/hdi_owid.json"
+        },
+        {
+          label: "Metadados OWID",
+          url: "https://ourworldindata.org/grapher/human-development-index.metadata.json",
+          fields: "citação, descrição, atualização e metodologia resumida",
+          usage: "auditoria da fonte e explicação da diferença"
+        },
+        {
+          label: "UNDP Human Development Report 2025",
+          url: "https://hdr.undp.org/data-center/human-development-index",
+          fields: "IDH original",
+          usage: "fonte original citada pelo OWID"
+        }
+      ],
+      quality: "Compilado a partir de fonte oficial",
+      fields: ["Entity", "Code", "Year", "Human Development Index", "World region according to OWID"],
+      methodology: "O arquivo data/hdi_owid.json foi gerado a partir do CSV do Grapher do OWID. O OWID cita UNDP/HDR 2025 como fonte original e aplica processamento menor para padronizar a série no ecossistema OWID.",
+      limitations: ["Não é a fonte primária; é uma redistribuição/processamento do OWID sobre dados UNDP.", "Pode ter cobertura ou metadados ligeiramente diferentes do CSV oficial HDR.", "Use UNDP/HDR quando a prioridade for fonte primária; use OWID quando a prioridade for documentação editorial e integração com séries OWID."],
+      updatePolicy: "Baixar human-development-index.csv e metadata.json do OWID, regenerar data/hdi_owid.json e revisar latestYear/cobertura.",
+      note: "Dado compilado pelo OWID a partir do UNDP/HDR 2025, com metadados editoriais."
+    },
+    idhmPnudBrazil: {
+      label: "IDHM Brasil e UFs",
+      shortLabel: "PNUD IDHM",
+      provider: "PNUD Brasil, IPEA, FJP e IBGE/PNAD Contínua",
+      type: "json",
+      provenance: "real",
+      freshness: "IDHM anual 2012-2021 para Brasil e UFs",
+      url: "https://www.undp.org/pt/brazil/desenvolvimento-humano/painel-idhm",
+      upstreamLabel: "Painel IDHM/PNUD + base_de_dados.xlsx",
+      upstreamSources: [
+        {
+          label: "Painel IDHM - PNUD Brasil",
+          url: "https://www.undp.org/pt/brazil/desenvolvimento-humano/painel-idhm",
+          fields: "metodologia, escopo territorial e base anual",
+          usage: "referência metodológica e página pública da fonte"
+        },
+        {
+          label: "base_de_dados.xlsx",
+          url: "https://www.undp.org/sites/g/files/zskgke326/files/2023-07/base_de_dados.xlsx",
+          fields: "ANO, AGREGACAO, CODIGO, NOME, IDHM, IDHM_L, IDHM_E, IDHM_R, IDHMAD, ESPVIDA, RDPC e GINI",
+          usage: "arquivo bruto compactado em data/idhm_brazil.json"
+        },
+        {
+          label: "PNAD Contínua/IBGE",
+          url: "https://www.ibge.gov.br/estatisticas/sociais/trabalho/9171-pesquisa-nacional-por-amostra-de-domicilios-continua-mensal.html",
+          fields: "insumos demográficos, renda e educação",
+          usage: "base estatística usada pelo painel IDHM"
+        }
+      ],
+      quality: "Oficial",
+      fields: ["IDHM", "IDHM Longevidade", "IDHM Educação", "IDHM Renda", "IDHMAD", "esperança de vida", "renda per capita", "Gini"],
+      methodology: "O arquivo data/idhm_brazil.json foi gerado a partir da planilha oficial do Painel IDHM. O app seleciona o ano ativo e copia IDHM e componentes para Brasil e UFs.",
+      limitations: ["A série anual desta planilha cobre Brasil e UFs de 2012 a 2021.", "Não é uma série municipal anual.", "IDHM brasileiro e IDH global não devem ser misturados em ranking único."],
+      updatePolicy: "Quando o PNUD publicar nova planilha, substituir data/idhm_pnud_brazil.xlsx, regenerar data/idhm_brazil.json e revisar latestYear/years.",
+      note: "Dado real oficial do Painel IDHM, com componentes e série histórica."
+    },
+    idhmCityProxy: {
+      label: "IDHM de cidades",
+      shortLabel: "Proxy UF",
+      provider: "Cálculo local a partir do IDHM da UF",
+      type: "computed",
+      provenance: "estimado",
+      freshness: "Proxy derivado do ano ativo do IDHM estadual",
+      quality: "Proxy transparente",
+      fields: ["IDHM estadual do ano ativo", "código da UF", "cidade selecionada"],
+      methodology: "Como a base anual carregada não traz IDHM municipal, cada cidade recebe temporariamente o IDHM da sua UF para permitir navegação e comparação visual dentro do mapa.",
+      limitations: ["Não é IDHM municipal real.", "Não deve ser usado para ranking municipal, tomada de decisão local ou comparação entre cidades.", "O Atlas Brasil possui IDHM municipal em anos censitários, mas essa base ainda não foi integrada nesta versão."],
+      updatePolicy: "Substituir este proxy por uma base municipal auditável, informando anos censitários, arquivo bruto, campos usados e script de normalização.",
+      note: "Marcado como estimado para evitar falsa precisão em cidades."
+    },
     politicsEstimate: {
       label: "Representação política",
       shortLabel: "Estimativa",
@@ -177,6 +296,32 @@
         perCapita: { label: "PIB/Hab.", metric: "PIB por habitante", sourceIds: ["gdpIbge", "populationIbge"] },
         total: { label: "PIB Total", metric: "PIB total", sourceIds: ["gdpIbge"] }
       }
+    },
+    hdi: {
+      label: "IDH",
+      caption: "IDH e IDHM",
+      icon: "activity",
+      group: "primary",
+      title: "Desenvolvimento humano no mundo, Brasil, estados e cidades",
+      defaultMetric: "hdi",
+      sourceIds: ["hdiGlobalUndp", "idhmPnudBrazil", "idhmCityProxy"],
+      sourceOptions: [
+        {
+          id: "undp",
+          label: "UNDP/HDR",
+          scope: ["world"],
+          sourceIds: ["hdiGlobalUndp"],
+          difference: "Fonte primária oficial do Human Development Report; melhor opção para auditoria direta do IDH global."
+        },
+        {
+          id: "owid",
+          label: "Our World in Data",
+          scope: ["world"],
+          sourceIds: ["hdiGlobalOwid"],
+          difference: "Redistribuição do OWID com processamento menor e metadados editoriais; a fonte original citada continua sendo UNDP/HDR 2025."
+        }
+      ],
+      note: "No Globo, usa IDH global oficial do UNDP/HDR. No Brasil e UFs, usa IDHM anual do Painel IDHM/PNUD. Em cidades, a camada aparece como proxy pela UF até integrar uma base municipal auditável."
     },
     politics: {
       label: "Política",
@@ -333,6 +478,13 @@
   let currentFixedCard = null;
   let availableGdpYears = [];
   let brazilGdpHistory = {};
+  let hdiGlobalData = null;
+  let hdiOwidData = null;
+  let idhmBrazilData = null;
+  let activeHdiYear = savedPreferences.hdiYear || "last";
+  let availableBrazilHdiYears = [];
+  let brazilHdiHistory = {};
+  let activeSourceSelections = { ...(savedPreferences.sourceSelections || {}) };
   let fallbackStyleTried = false;
   let activeBaseMode = validBaseMode(savedPreferences.base) ? savedPreferences.base : "hybrid";
   let activeProjection = validProjection(savedPreferences.projection) ? savedPreferences.projection : "globe";
@@ -443,6 +595,18 @@
       fetchJson(URLS.cityGdpYear("last/1")),
       fetchJson(URLS.states),
       fetchJson(URLS.cities),
+      fetchJson(URLS.hdiGlobal).catch((error) => {
+        console.warn("Falha ao carregar IDH global.", error);
+        return null;
+      }),
+      fetchJson(URLS.hdiOwid).catch((error) => {
+        console.warn("Falha ao carregar IDH OWID.", error);
+        return null;
+      }),
+      fetchJson(URLS.idhmBrazil).catch((error) => {
+        console.warn("Falha ao carregar IDHM Brasil.", error);
+        return null;
+      }),
       fetchJson(URLS.brazilMesh).catch((error) => {
         console.warn("Falha ao carregar malha nacional do Brasil.", error);
         return null;
@@ -450,7 +614,7 @@
       fetchJson(URLS.statesMesh)
     ]);
 
-    const [stateRows, cityRows, gdpBrazilRows, gdpStateRows, gdpCityRows, states, cities, brazilMesh, statesMesh] = requests.map((result) => (
+    const [stateRows, cityRows, gdpBrazilRows, gdpStateRows, gdpCityRows, states, cities, hdiGlobalRows, hdiOwidRows, idhmBrazilRows, brazilMesh, statesMesh] = requests.map((result) => (
       result.status === "fulfilled" ? result.value : null
     ));
 
@@ -461,8 +625,12 @@
     mergeBrazilGdp(gdpBrazilRows);
     mergeGdp(gdpStateRows, stateById);
     mergeGdp(gdpCityRows, cityById);
+    mergeGlobalHdi(hdiGlobalRows);
+    mergeOwidHdi(hdiOwidRows);
+    mergeBrazilHdi(idhmBrazilRows);
     hydrateBrazilMesh(brazilMesh);
     hydrateStatesMesh(statesMesh);
+    syncHdiToActiveYear();
 
     // Apply projections after all data is merged
     mockGdpProjections(brazilGdpHistory);
@@ -651,6 +819,152 @@
     });
   }
 
+  function mergeGlobalHdi(data) {
+    if (!data || !data.countries) return;
+    hdiGlobalData = data;
+    if (worldFeatureCollection) {
+      hydrateWorldHdi(worldFeatureCollection);
+      setSourceData("world-fill-source", worldFeatureCollection);
+    }
+  }
+
+  function mergeOwidHdi(data) {
+    if (!data || !data.countries) return;
+    hdiOwidData = data;
+    if (worldFeatureCollection) {
+      hydrateWorldHdi(worldFeatureCollection);
+      setSourceData("world-fill-source", worldFeatureCollection);
+    }
+  }
+
+  function mergeBrazilHdi(data) {
+    if (!data || !data.brazil || !data.brazil.history) return;
+    idhmBrazilData = data;
+    availableBrazilHdiYears = (data.years || Object.keys(data.brazil.history || {}))
+      .map((year) => String(year))
+      .sort((a, b) => Number(b) - Number(a));
+    brazilHdiHistory = data.brazil.history || {};
+
+    Object.entries(data.states || {}).forEach(([stateId, row]) => {
+      const state = stateById.get(String(stateId));
+      if (!state) return;
+      state.hdiHistory = row.history || {};
+      state.hdiName = row.name || state.nome;
+    });
+
+    syncHdiToActiveYear();
+  }
+
+  function hdiYearsForActiveView(view = activeView) {
+    if (view === "world") {
+      const data = activeGlobalHdiDataset();
+      return (data?.years || []).map((year) => String(year)).sort((a, b) => Number(b) - Number(a));
+    }
+    return availableBrazilHdiYears;
+  }
+
+  function resolveHdiYear(view = activeView) {
+    const years = hdiYearsForActiveView(view);
+    if (!years.length) return "";
+    if (activeHdiYear !== "last" && years.includes(String(activeHdiYear))) return String(activeHdiYear);
+    return years[0];
+  }
+
+  function hdiEntryForYear(history, year = resolveHdiYear()) {
+    if (!history) return null;
+    const entry = history[String(year)];
+    if (entry && typeof entry === "object") return entry;
+    const value = Number(entry);
+    return Number.isFinite(value) && value > 0 ? { idhm: value } : null;
+  }
+
+  function hdiValueForYear(history, year = resolveHdiYear()) {
+    const entry = hdiEntryForYear(history, year);
+    if (!entry) return 0;
+    return Number(entry.idhm ?? entry.hdi ?? entry.value ?? entry) || 0;
+  }
+
+  function activeGlobalHdiDataset() {
+    const optionId = activeSourceOptionId("hdi");
+    if (optionId === "owid") return hdiOwidData || hdiGlobalData;
+    return hdiGlobalData || hdiOwidData;
+  }
+
+  function rankHdiByYear(dataset, iso3, year) {
+    if (!dataset || !dataset.countries || !iso3 || !year) return null;
+    if (!dataset._rankCache) dataset._rankCache = {};
+    if (!dataset._rankCache[year]) {
+      const ranked = Object.values(dataset.countries)
+        .map((row) => ({ iso3: row.iso3, value: hdiValueForYear(row.history, year) }))
+        .filter((row) => row.iso3 && row.value > 0)
+        .sort((a, b) => b.value - a.value);
+      dataset._rankCache[year] = ranked.reduce((acc, row, index) => {
+        acc[row.iso3] = index + 1;
+        return acc;
+      }, {});
+    }
+    return dataset._rankCache[year][iso3] || null;
+  }
+
+  function syncHdiToActiveYear() {
+    const brazilYear = resolveHdiYear("brazil");
+    const brazilEntry = hdiEntryForYear(brazilHdiHistory, brazilYear);
+    if (brazilEntry) {
+      if (brazilMeshFeature) {
+        brazilMeshFeature.properties.hdi = brazilEntry.idhm || 0;
+        brazilMeshFeature.properties.hdiYear = brazilYear;
+        brazilMeshFeature.properties.hdiHistory = brazilHdiHistory;
+        brazilMeshFeature.properties.hdiComponents = brazilEntry;
+      }
+    }
+
+    stateById.forEach((state) => {
+      const entry = hdiEntryForYear(state.hdiHistory, brazilYear);
+      if (!entry) return;
+      state.hdi = entry.idhm || 0;
+      state.hdiYear = brazilYear;
+      state.hdiComponents = entry;
+      state.hdiProxy = false;
+    });
+
+    stateCitiesCache.forEach((collection) => {
+      collection.features.forEach((feature) => {
+        feature.properties = { ...feature.properties, ...cityMapProperties(feature.properties) };
+      });
+    });
+
+    if (worldFeatureCollection) {
+      hydrateWorldHdi(worldFeatureCollection);
+      setSourceData("world-fill-source", worldFeatureCollection);
+    }
+  }
+
+  function hydrateWorldHdi(collection) {
+    const dataset = activeGlobalHdiDataset();
+    if (!collection || !dataset || !dataset.countries) return collection;
+    const year = resolveHdiYear("world");
+    collection.features.forEach((feature) => {
+      const props = feature.properties || {};
+      const iso3 = props.ISO_A3 || props.ADM0_A3 || props.iso3 || props.ISO3;
+      const row = dataset.countries[iso3];
+      if (!row || !row.history) return;
+      const hdi = hdiValueForYear(row.history, year);
+      const rank = String(year) === String(dataset.latestYear) && row.rank2023 ? row.rank2023 : rankHdiByYear(dataset, iso3, year);
+      feature.properties = {
+        ...props,
+        hdi,
+        hdiYear: year,
+        hdiHistory: row.history,
+        hdiRank: rank,
+        hdiRank2023: row.rank2023 || null,
+        hdiCategory: row.category || "",
+        hdiCountry: row.country || props.name || props.ADMIN || "",
+        hdiSourceKey: activeSourceOptionId("hdi")
+      };
+    });
+    return collection;
+  }
+
   function mergeGdp(rows, targetMap) {
     parseSidraRows(rows).forEach((row) => {
       if (String(row.D2C) !== "37") return;
@@ -686,6 +1000,10 @@
         pop: totalPopulation,
         gdp: brazilGdp,
         gdpYear: brazilGdpYear,
+        hdi: hdiValueForYear(brazilHdiHistory, resolveHdiYear("brazil")),
+        hdiYear: resolveHdiYear("brazil"),
+        hdiHistory: brazilHdiHistory,
+        hdiComponents: hdiEntryForYear(brazilHdiHistory, resolveHdiYear("brazil")),
         areaKm2,
         lng: center[0],
         lat: center[1]
@@ -712,6 +1030,10 @@
         areaKm2,
         gdp: state.gdp || 0,
         gdpYear: state.gdpYear || "",
+        hdi: state.hdi || 0,
+        hdiYear: state.hdiYear || "",
+        hdiHistory: state.hdiHistory || {},
+        hdiComponents: state.hdiComponents || null,
         lng: center[0],
         lat: center[1]
       };
@@ -807,6 +1129,11 @@
       gdp: state.gdp || 0,
       gdpYear: state.gdpYear || "",
       gdpPerCapita: perCapita(state.gdp, state.pop),
+      hdi: state.hdi || 0,
+      hdiYear: state.hdiYear || resolveHdiYear("brazil"),
+      hdiHistory: state.hdiHistory || {},
+      hdiComponents: state.hdiComponents || hdiEntryForYear(state.hdiHistory, resolveHdiYear("brazil")),
+      hdiProxy: false,
       politicsTotal: politics.total,
       peoplePerPolitician: inhabitantsPerPolitician(state.pop, politics.total),
       stateDeputies: politics.stateDeputies,
@@ -822,6 +1149,7 @@
 
   function cityMapProperties(props) {
     const politics = cityPoliticalSummary(props);
+    const state = stateById.get(String(props.stateId || ""));
     const scores = ENEM_HISTORY_SCORES[activeEnemYear] || {};
     const baseScore = scores[props.uf] || 0;
     let cityEnemVariation = 0;
@@ -836,6 +1164,11 @@
       politicsTotal: politics.total,
       peoplePerPolitician: inhabitantsPerPolitician(props.pop, politics.total),
       councilorsMax: politics.councilorsMax,
+      hdi: state ? (state.hdi || 0) : 0,
+      hdiYear: state ? (state.hdiYear || resolveHdiYear("brazil")) : resolveHdiYear("brazil"),
+      hdiHistory: state ? (state.hdiHistory || {}) : {},
+      hdiComponents: state ? (state.hdiComponents || null) : null,
+      hdiProxy: true,
       enemScore: baseScore > 0 ? parseFloat((baseScore + cityEnemVariation).toFixed(1)) : 0,
       travelScore: DOCUMENTED_CITIES[props.id] ? 1 : 0
     };
@@ -853,7 +1186,12 @@
             name: "Brasil",
             pop: totalPopulation,
             gdp: brazilGdp,
-            gdpYear: brazilGdpYear
+            gdpYear: brazilGdpYear,
+            hdi: hdiValueForYear(brazilHdiHistory, resolveHdiYear("brazil")),
+            hdiYear: resolveHdiYear("brazil"),
+            hdiHistory: brazilHdiHistory,
+            hdiComponents: hdiEntryForYear(brazilHdiHistory, resolveHdiYear("brazil")),
+            hdiProxy: false
           }
         }]
       };
@@ -883,6 +1221,11 @@
           pop: totalPopulation,
           gdp: brazilGdp,
           gdpYear: brazilGdpYear,
+          hdi: hdiValueForYear(brazilHdiHistory, resolveHdiYear("brazil")),
+          hdiYear: resolveHdiYear("brazil"),
+          hdiHistory: brazilHdiHistory,
+          hdiComponents: hdiEntryForYear(brazilHdiHistory, resolveHdiYear("brazil")),
+          hdiProxy: false,
           lng: BR_CENTER[0],
           lat: BR_CENTER[1]
         }
@@ -1157,6 +1500,8 @@
     let values = [];
     if (metricType === "gdp") {
        values = collection.features.map(f => activeGdpSubMetric === "total" ? (f.properties.gdp || 0) : perCapita(f.properties.gdp, f.properties.pop));
+    } else if (metricType === "hdi") {
+       values = collection.features.map(f => f.properties.hdi || 0);
     } else if (metricType === "politics") {
        values = collection.features.map(f => inhabitantsPerPolitician(f.properties.pop, cityPoliticalSummary(f.properties).total));
     } else if (metricType === "education") {
@@ -1191,6 +1536,9 @@
           stops = isCity ? [0, 20000, 45000, 90000, 200000] : [0, 20000, 45000, 90000, 150000];
         }
       }
+    } else if (activeAnalysis === "hdi") {
+      colors = ["#17212b", "#335c67", "#4f8f70", "#a9d65c", "#f2c14e"];
+      if (!scale || scale.max <= scale.min) stops = [0.45, 0.6, 0.7, 0.8, 0.9];
     } else if (activeAnalysis === "politics") {
       colors = ["#16212b", "#29515d", "#51d1c2", "#f2c14e", "#ef7d60"];
       if (!scale || scale.max <= scale.min) stops = isCity ? [0, 1500, 6000, 25000, 180000] : [0, 1500, 3000, 5000, 8000];
@@ -1237,6 +1585,11 @@
     if (activeAnalysis === "gdp") {
       return ["interpolate", ["sqrt"], metric, 0, 3, 20000, 6, 50000, 11, 100000, 18, 180000, 28];
     }
+    if (activeAnalysis === "hdi") {
+      return scope === "city"
+        ? ["interpolate", ["linear"], metric, 0.45, 3, 0.7, 8, 0.8, 13, 0.9, 20]
+        : ["interpolate", ["linear"], metric, 0.45, 5, 0.7, 10, 0.8, 16, 0.9, 24];
+    }
     if (activeAnalysis === "politics") {
       return scope === "city"
         ? ["interpolate", ["sqrt"], metric, 100, 3, 2000, 7, 8000, 12, 30000, 20, 200000, 34]
@@ -1259,6 +1612,7 @@
     if (activeAnalysis === "gdp") {
        return activeGdpSubMetric === "total" ? ["to-number", ["get", "gdp"], 0] : ["to-number", ["get", "gdpPerCapita"], 0];
     }
+    if (activeAnalysis === "hdi") return ["to-number", ["get", "hdi"], 0];
     if (activeAnalysis === "politics") return ["to-number", ["get", "peoplePerPolitician"], 0];
     if (activeAnalysis === "education") return ["to-number", ["get", "enemScore"], 0];
     if (activeAnalysis === "travel") return ["to-number", ["get", "travelScore"], 0];
@@ -1267,6 +1621,7 @@
 
   function analysisBubbleColor() {
     if (activeAnalysis === "gdp") return "#f2c14e";
+    if (activeAnalysis === "hdi") return "#a9d65c";
     if (activeAnalysis === "politics") return "#51d1c2";
     if (activeAnalysis === "education") return "#b8e8e0";
     if (activeAnalysis === "travel") return "#f2c14e";
@@ -1275,6 +1630,7 @@
 
   function brazilAnalysisColor() {
     if (activeAnalysis === "gdp") return "#f2c14e";
+    if (activeAnalysis === "hdi") return "#a9d65c";
     if (activeAnalysis === "politics") return "#51d1c2";
     if (activeAnalysis === "education") return "#1a5f8a";
     if (activeAnalysis === "travel") return "#f2c14e";
@@ -1292,8 +1648,33 @@
     return config.metrics[key] || config.metrics[config.defaultMetric] || null;
   }
 
+  function activeSourceOptions(analysis = activeAnalysis, view = activeView) {
+    const options = ANALYSIS_CATALOG[analysis]?.sourceOptions || [];
+    return options.filter((option) => !Array.isArray(option.scope) || option.scope.includes(view));
+  }
+
+  function activeSourceOptionId(analysis = activeAnalysis, view = activeView) {
+    const options = activeSourceOptions(analysis, view);
+    if (!options.length) return "";
+    const selected = activeSourceSelections[analysis];
+    return options.some((option) => option.id === selected) ? selected : options[0].id;
+  }
+
+  function activeSourceOption(analysis = activeAnalysis, view = activeView) {
+    const options = activeSourceOptions(analysis, view);
+    const id = activeSourceOptionId(analysis, view);
+    return options.find((option) => option.id === id) || options[0] || null;
+  }
+
   function activeDataSourceIds(sourceIds) {
     if (Array.isArray(sourceIds) && sourceIds.length) return sourceIds;
+    const sourceOption = activeSourceOption();
+    if (sourceOption && Array.isArray(sourceOption.sourceIds)) return sourceOption.sourceIds;
+    if (activeAnalysis === "hdi") {
+      if (activeView === "world") return ["hdiGlobalUndp"];
+      if (activeView === "cities") return ["idhmPnudBrazil", "idhmCityProxy"];
+      return ["idhmPnudBrazil"];
+    }
     if (activeView === "world") {
       const metric = WORLD_METRIC_CATALOG[activeWorldMetric] || WORLD_METRIC_CATALOG.pop;
       return metric.sourceIds || ["localWorldJson"];
@@ -1312,6 +1693,11 @@
   function compactSourceLine(sourceIds) {
     const records = sourceRecords(sourceIds);
     return records.map((source) => source.shortLabel || source.label).join(" + ") || "Fonte pendente";
+  }
+
+  function sourceOptionDifferenceText() {
+    const option = activeSourceOption();
+    return option?.difference || "";
   }
 
   function sourceDetailsLine(sourceIds) {
@@ -1397,6 +1783,7 @@
         </div>
         <strong>${escapeHtml(compactSourceLine(sourceIds))}</strong>
         <small>${escapeHtml(primary.freshness || primary.note || provenance)} | ${escapeHtml(provenance)}${upstream ? ` | Origem: ${escapeHtml(upstream)}` : ""}</small>
+        ${sourceOptionDifferenceText() ? `<small class="source-difference">${escapeHtml(sourceOptionDifferenceText())}</small>` : ""}
         <div class="source-detail-panel" id="source-detail-panel" hidden>
           ${sourceInfoDetailsHtml(sourceIds)}
         </div>
@@ -1416,6 +1803,17 @@
     )).join("");
   }
 
+  function renderSourceOptionSelector() {
+    const options = activeSourceOptions();
+    if (options.length < 2) return "";
+    const selected = activeSourceOptionId();
+    return `
+      <select id="source-option-select" aria-label="Fonte de dados">
+        ${options.map((option) => `<option value="${escapeHtml(option.id)}" ${option.id === selected ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
+      </select>
+    `;
+  }
+
   function updateHeatLegend() {
     const legend = elements["heat-legend"];
     if (!legend) return;
@@ -1431,7 +1829,18 @@
     legend.innerHTML = `
       <div class="legend-head">
         <span>Mapa de calor | ${escapeHtml(config.scope)}</span>
-        ${activeView === "world" ? `
+        ${activeAnalysis === "hdi" ? `
+          <div class="flex-gap-4">
+            ${renderSourceOptionSelector()}
+            <div class="year-stepper">
+              <button type="button" id="hdi-year-minus" title="Ano anterior" aria-label="Ano anterior">-</button>
+              <select id="legend-hdi-year-selector" aria-label="Selecionar ano do IDH">
+                ${hdiYearsForActiveView().map(y => `<option value="${escapeHtml(String(y))}" ${String(y) === resolveHdiYear() ? "selected" : ""}>${activeView === "world" ? "IDH" : "IDHM"} ${escapeHtml(String(y))}</option>`).join("")}
+              </select>
+              <button type="button" id="hdi-year-plus" title="Próximo ano" aria-label="Próximo ano">+</button>
+            </div>
+          </div>
+        ` : (activeView === "world" ? `
           <div class="flex-gap-4">
             <select id="world-metric-select" aria-label="Variável">
               ${renderMetricOptions(WORLD_METRIC_CATALOG, activeWorldMetric)}
@@ -1460,7 +1869,7 @@
               <button type="button" id="enem-year-plus" title="Próximo ano" aria-label="Próximo ano">+</button>
             </div>
           </div>
-        ` : `<strong>${escapeHtml(config.metric)}</strong>`))}
+        ` : `<strong>${escapeHtml(config.metric)}</strong>`)))}
       </div>
       <div class="legend-scale" id="legend-gradient-scale"></div>
       <div class="legend-labels">
@@ -1492,6 +1901,63 @@
         updateHeatLegend();
         savePreferences();
       });
+    }
+
+    const sourceOptionSelector = legend.querySelector("#source-option-select");
+    if (sourceOptionSelector) {
+      sourceOptionSelector.addEventListener("change", (e) => {
+        const options = activeSourceOptions();
+        const selected = options.some((option) => option.id === e.target.value) ? e.target.value : options[0]?.id;
+        if (selected) activeSourceSelections[activeAnalysis] = selected;
+        const years = hdiYearsForActiveView();
+        if (activeHdiYear !== "last" && !years.includes(String(activeHdiYear))) activeHdiYear = "last";
+        syncHdiToActiveYear();
+        updateStateSources();
+        if (selectedStateId && stateCitiesCache.has(selectedStateId)) updateMunicipalitySources(stateCitiesCache.get(selectedStateId));
+        if (window.updateWorldLayerColor) window.updateWorldLayerColor();
+        updateAnalysisPaint();
+        updateHeatLegend();
+        refreshAnalysisContent();
+        refreshFixedDetailCard();
+        savePreferences();
+      });
+    }
+
+    const hdiYearSelector = legend.querySelector("#legend-hdi-year-selector");
+    if (hdiYearSelector) {
+      const handleHdiYearChange = (newYear) => {
+        activeHdiYear = newYear;
+        syncHdiToActiveYear();
+        updateStateSources();
+        if (selectedStateId && stateCitiesCache.has(selectedStateId)) {
+          updateMunicipalitySources(stateCitiesCache.get(selectedStateId));
+        }
+        if (window.updateWorldLayerColor) window.updateWorldLayerColor();
+        updateAnalysisPaint();
+        updateHeatLegend();
+        refreshAnalysisContent();
+        refreshFixedDetailCard();
+        savePreferences();
+      };
+
+      hdiYearSelector.addEventListener("change", (e) => handleHdiYearChange(e.target.value));
+
+      const years = hdiYearsForActiveView();
+      const currentIndex = years.indexOf(resolveHdiYear());
+      const minusBtn = legend.querySelector("#hdi-year-minus");
+      const plusBtn = legend.querySelector("#hdi-year-plus");
+      if (minusBtn) {
+        minusBtn.disabled = currentIndex >= years.length - 1;
+        minusBtn.addEventListener("click", () => {
+          if (currentIndex < years.length - 1) handleHdiYearChange(years[currentIndex + 1]);
+        });
+      }
+      if (plusBtn) {
+        plusBtn.disabled = currentIndex <= 0;
+        plusBtn.addEventListener("click", () => {
+          if (currentIndex > 0) handleHdiYearChange(years[currentIndex - 1]);
+        });
+      }
     }
 
     const selector = legend.querySelector("#legend-gdp-selector");
@@ -1621,6 +2087,20 @@
 
   function heatLegendConfig() {
     if (!["states", "cities", "world"].includes(activeView)) return null;
+
+    if (activeAnalysis === "hdi") {
+      const year = resolveHdiYear();
+      const isWorld = activeView === "world";
+      const isCity = activeView === "cities" && selectedStateId;
+      return {
+        metric: `${isWorld ? "IDH" : "IDHM"} ${year || ""}`,
+        scope: isWorld ? "Global" : (isCity ? "cidades da UF (proxy)" : "estados"),
+        colors: ["#17212b", "#335c67", "#4f8f70", "#a9d65c", "#f2c14e"],
+        labels: ["baixo", "médio", "alto", "muito alto", "topo"],
+        sourceIds: isWorld ? (activeSourceOption("hdi", "world")?.sourceIds || ["hdiGlobalUndp"]) : (isCity ? ["idhmPnudBrazil", "idhmCityProxy"] : ["idhmPnudBrazil"]),
+        isWorld
+      };
+    }
 
     if (activeView === "world") {
       let labels, metricLabel;
@@ -2216,6 +2696,7 @@
     if (elements["analysis-caption"]) elements["analysis-caption"].textContent = analysisLabel(activeAnalysis);
     updateSourceDisplays();
     updateAnalysisPaint();
+    if (window.updateWorldLayerColor) window.updateWorldLayerColor();
     updateHeatLegend();
     syncAtlasLayersForActiveView();
     refreshAnalysisContent();
@@ -2225,6 +2706,13 @@
   }
 
   function refreshAnalysisContent() {
+    if (activeView === "world") {
+      renderSelectedWorld();
+      renderStateChart();
+      renderEmptyRanking("Selecione um país no mapa para ver os detalhes globais.");
+      return;
+    }
+
     if (selectedCityFeature) {
       selectCity(selectedCityFeature.properties.id, selectedCityFeature, { fly: false });
     } else if (selectedStateId && stateById.has(selectedStateId)) {
@@ -2584,6 +3072,41 @@
     `;
   }
 
+  function renderHdiHistoryChart(history, activeYear = resolveHdiYear(), isProxy = false) {
+    if (!history) return "";
+    let years = Object.keys(history).sort((a, b) => Number(a) - Number(b));
+    if (years.length < 2) return "";
+
+    const maxYears = 18;
+    if (years.length > maxYears) {
+      years = years.slice(years.length - maxYears);
+    }
+
+    const values = years.map((year) => hdiValueForYear(history, year)).filter((value) => value > 0);
+    if (!values.length) return "";
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const span = Math.max(max - min, 0.01);
+
+    return `
+      <div class="mt-12 pt-10 border-top-line w-full">
+        <div class="pib-history-header">${isProxy ? "Histórico IDHM da UF usada como proxy" : "Histórico do IDH"}</div>
+        <div class="pib-history-container" id="hdi-history-chart">
+          ${years.map((year) => {
+            const val = hdiValueForYear(history, year);
+            const h = Math.max(8, ((val - min) / span) * 92 + 8);
+            const isActive = String(year) === String(activeYear);
+            return `<div class="pib-history-bar" title="${year}: ${formatHdi(val)}${isProxy ? ' (proxy UF)' : ''}" data-kind="hdi" data-h="${h}" data-active="${isActive}" data-mock="false"></div>`;
+          }).join("")}
+        </div>
+        <div class="pib-history-footer">
+          <span>${escapeHtml(String(years[0]))}</span>
+          <span>${escapeHtml(String(years[years.length-1]))}</span>
+        </div>
+      </div>
+    `;
+  }
+
   function applyGdpHistoryStyles(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -2591,9 +3114,12 @@
       const h = bar.dataset.h;
       const isActive = bar.dataset.active === "true";
       const isMock = bar.dataset.mock === "true";
+      const isHdi = bar.dataset.kind === "hdi";
       bar.style.flex = "1";
       bar.style.height = h + "%";
-      bar.style.background = isActive ? "var(--gold)" : (isMock ? "rgba(242,193,78,0.15)" : "rgba(242,193,78,0.45)");
+      bar.style.background = isActive
+        ? (isHdi ? "#a9d65c" : "var(--gold)")
+        : (isMock ? "rgba(242,193,78,0.15)" : (isHdi ? "rgba(169,214,92,0.45)" : "rgba(242,193,78,0.45)"));
       bar.style.borderRadius = "2px";
       bar.style.transition = "all 0.2s";
     });
@@ -2611,6 +3137,8 @@
         </div>
       `;
     }).join("");
+    applyGdpHistoryStyles("gdp-history-chart");
+    applyGdpHistoryStyles("hdi-history-chart");
     if (window.lucide) window.lucide.createIcons();
   }
 
@@ -2627,6 +3155,8 @@
         </div>
       `;
     }).join("");
+    applyGdpHistoryStyles("gdp-history-chart");
+    applyGdpHistoryStyles("hdi-history-chart");
     if (window.lucide) window.lucide.createIcons();
   }
 
@@ -2694,12 +3224,56 @@
 
   function analysisCards(scope, data) {
     if (activeAnalysis === "gdp") return gdpCards(scope, data);
+    if (activeAnalysis === "hdi") return hdiCards(scope, data);
     if (activeAnalysis === "politics") return politicsCards(scope, data);
     if (activeAnalysis === "education") return educationCards(scope, data);
     if (activeAnalysis === "travel") return travelCards(scope, data);
     if (scope === "state") return stateGeneralCards(data);
     if (scope === "city") return cityGeneralCards(data);
     return brazilGeneralCards();
+  }
+
+  function hdiCards(scope, data) {
+    const year = resolveHdiYear(scope === "world" ? "world" : "brazil");
+    if (scope === "state") {
+      const entry = data.hdiComponents || hdiEntryForYear(data.hdiHistory, year);
+      return [
+        { label: `IDHM ${data.hdiYear || year}`, value: formatHdi(data.hdi) },
+        { label: "Ranking IDHM", value: rankTextByMetric(Array.from(stateById.values()), data.id, (row) => row.hdi || 0, "no Brasil") },
+        { label: "Longevidade", value: formatHdiComponent(entry, "longevity") },
+        { label: "Educação", value: formatHdiComponent(entry, "education") },
+        { label: "Renda", value: formatHdiComponent(entry, "income") },
+        { label: "IDHMAD", value: formatHdiComponent(entry, "adjusted") },
+        { label: "Fonte", value: compactSourceLine(["idhmPnudBrazil"]) },
+        { label: "Histórico", value: renderHdiHistoryChart(data.hdiHistory, data.hdiYear || year), isHtml: true }
+      ];
+    }
+
+    if (scope === "city") {
+      const entry = data.hdiComponents || hdiEntryForYear(data.hdiHistory, year);
+      return [
+        { label: `IDHM ${data.hdiYear || year}`, value: `${formatHdi(data.hdi)} (proxy UF)` },
+        { label: "Nível do dado", value: "UF, não cidade" },
+        { label: "UF usada", value: `${data.stateName || ""} (${data.uf || ""})` },
+        { label: "Longevidade UF", value: formatHdiComponent(entry, "longevity") },
+        { label: "Educação UF", value: formatHdiComponent(entry, "education") },
+        { label: "Renda UF", value: formatHdiComponent(entry, "income") },
+        { label: "Fonte", value: compactSourceLine(["idhmPnudBrazil", "idhmCityProxy"]) },
+        { label: "Histórico", value: renderHdiHistoryChart(data.hdiHistory, data.hdiYear || year, true), isHtml: true }
+      ];
+    }
+
+    const entry = hdiEntryForYear(brazilHdiHistory, year);
+    return [
+      { label: `IDHM Brasil ${year}`, value: formatHdi(entry ? entry.idhm : 0) },
+      { label: "Longevidade", value: formatHdiComponent(entry, "longevity") },
+      { label: "Educação", value: formatHdiComponent(entry, "education") },
+      { label: "Renda", value: formatHdiComponent(entry, "income") },
+      { label: "IDHMAD", value: formatHdiComponent(entry, "adjusted") },
+      { label: "Série histórica", value: `${availableBrazilHdiYears[availableBrazilHdiYears.length - 1] || "-"}-${availableBrazilHdiYears[0] || "-"}` },
+      { label: "Fonte", value: compactSourceLine(["idhmPnudBrazil"]) },
+      { label: "Histórico BR", value: renderHdiHistoryChart(brazilHdiHistory, year), isHtml: true }
+    ];
   }
 
   function gdpCards(scope, data) {
@@ -2872,7 +3446,10 @@
     const projectionWarning = activeAnalysis === "gdp" && parseInt(activeGdpYear, 10) > parseInt(LATEST_OFFICIAL_GDP_YEAR, 10)
       ? ` Ano ${activeGdpYear} marcado como projeção local.`
       : "";
-    return `${config.note}${projectionWarning} Fonte/procedência: ${sourceDetailsLine()}.`;
+    const hdiWarning = activeAnalysis === "hdi"
+      ? ` Ano ativo: ${resolveHdiYear() || "N/D"}.${activeView === "cities" ? " Em cidades, o valor é proxy por UF, não IDHM municipal real." : ""}`
+      : "";
+    return `${config.note}${projectionWarning}${hdiWarning} Fonte/procedência: ${sourceDetailsLine()}.`;
   }
 
   function renderStateChart() {
@@ -2947,6 +3524,14 @@
         format: formatCurrencyShort
       };
     }
+    if (activeAnalysis === "hdi") {
+      return {
+        title: `Estados por IDHM ${resolveHdiYear("brazil")}`,
+        caption: "maior desenvolvimento humano | top 10",
+        value: (row) => row.hdi || 0,
+        format: formatHdi
+      };
+    }
     if (activeAnalysis === "politics") {
       return {
         title: "Estados por habitantes por político",
@@ -2987,6 +3572,14 @@
         caption: "mais ricas | top 10",
         value: (row) => perCapita(row.gdp, row.pop),
         format: formatCurrencyShort
+      };
+    }
+    if (activeAnalysis === "hdi") {
+      return {
+        title: `Cidades por IDHM de ${uf}`,
+        caption: "proxy pela UF; não é ranking municipal real",
+        value: (row) => row.hdi || 0,
+        format: (v) => `${formatHdi(v)} proxy`
       };
     }
     if (activeAnalysis === "politics") {
@@ -3172,6 +3765,7 @@
 
   function brazilPopupRows() {
     if (activeAnalysis === "gdp") return gdpCards("brazil");
+    if (activeAnalysis === "hdi") return hdiCards("brazil");
     if (activeAnalysis === "politics") return politicsCards("brazil");
     if (activeAnalysis === "education") return educationCards("brazil");
     if (activeAnalysis === "travel") return travelCards("brazil");
@@ -3195,6 +3789,7 @@
   function statePopupRows(props) {
     const stateForCards = stateById.get(String(props.id || "")) || { id: String(props.id || ""), sigla: props.uf || "", nome: props.name || "", pop: props.pop || 0, gdp: props.gdp || 0, gdpYear: props.gdpYear || "" };
     if (activeAnalysis === "gdp") return gdpCards("state", stateForCards);
+    if (activeAnalysis === "hdi") return hdiCards("state", stateForCards);
     if (activeAnalysis === "politics") return politicsCards("state", stateForCards);
     if (activeAnalysis === "education") return educationCards("state", stateForCards);
     if (activeAnalysis === "travel") return travelCards("state", stateForCards);
@@ -3221,6 +3816,7 @@
 
   function municipalityPopupRows(props) {
     if (activeAnalysis === "gdp") return gdpCards("city", props);
+    if (activeAnalysis === "hdi") return hdiCards("city", props);
     if (activeAnalysis === "politics") return politicsCards("city", props);
     if (activeAnalysis === "education") return educationCards("city", props);
     if (activeAnalysis === "travel") return travelCards("city", props);
@@ -3254,6 +3850,7 @@
     fixedPopup = { remove: hideFixedDetailCard };
 
     applyGdpHistoryStyles("gdp-history-chart");
+    applyGdpHistoryStyles("hdi-history-chart");
 
     if (window.lucide) window.lucide.createIcons();
     if (map && window.innerWidth > 1040) {
@@ -3277,6 +3874,12 @@
         }
         const updatedProps = { ...context, ...cityMapProperties(context) };
         showMunicipalityPopup(null, updatedProps);
+      }
+    } else if (kind === "País") {
+      if (context && context.ISO_A3) {
+        showCountryPopup(null, context);
+      } else {
+        showBrazilPopup(null);
       }
     }
   }
@@ -3495,6 +4098,8 @@
         projection: activeProjection,
         analysis: activeAnalysis,
         gdpSubMetric: activeGdpSubMetric,
+        hdiYear: activeHdiYear,
+        sourceSelections: activeSourceSelections,
         worldMetric: activeWorldMetric,
         view: activeView,
         selectedStateId,
@@ -3544,6 +4149,13 @@
       if (parsed.selectedStateId) safe.selectedStateId = normalizeCode(parsed.selectedStateId);
       if (parsed.selectedCityId) safe.selectedCityId = normalizeCode(parsed.selectedCityId);
       if (validAnalysisMetric("gdp", parsed.gdpSubMetric)) safe.gdpSubMetric = String(parsed.gdpSubMetric);
+      if (parsed.hdiYear) safe.hdiYear = String(parsed.hdiYear);
+      if (parsed.sourceSelections && typeof parsed.sourceSelections === "object") {
+        safe.sourceSelections = {};
+        Object.entries(parsed.sourceSelections).forEach(([analysis, value]) => {
+          if (validAnalysis(analysis)) safe.sourceSelections[analysis] = String(value);
+        });
+      }
 
       safe.camera = normalizeCamera(parsed.camera);
       return safe;
@@ -3882,6 +4494,31 @@
     return formatNumber(number);
   }
 
+  function formatHdi(value) {
+    const number = Number(value || 0);
+    return number ? number.toLocaleString("pt-BR", { minimumFractionDigits: 3, maximumFractionDigits: 3 }) : "-";
+  }
+
+  function formatHdiComponent(entry, key) {
+    if (!entry) return "-";
+    return formatHdi(entry[key]);
+  }
+
+  function hdiCountryCount() {
+    const dataset = activeGlobalHdiDataset();
+    return dataset && dataset.countries ? Object.keys(dataset.countries).length : "-";
+  }
+
+  function hdiCategoryLabel(category) {
+    const map = {
+      "Low": "baixo",
+      "Medium": "médio",
+      "High": "alto",
+      "Very High": "muito alto"
+    };
+    return map[category] || category || "-";
+  }
+
   function formatPeoplePerPolitician(value) {
     const number = Number(value || 0);
     return number ? `${formatShort(Math.round(number))} hab./político` : "não se aplica";
@@ -3978,7 +4615,12 @@
   }
 
   function renderSelectedWorld() {
-    updateSourceDisplays(["localWorldJson"]);
+    const worldHdiSourceIds = activeDataSourceIds();
+    const globalHdiDataset = activeGlobalHdiDataset();
+    const globalHdiYears = hdiYearsForActiveView("world");
+    updateSourceDisplays(activeAnalysis === "hdi" ? worldHdiSourceIds : ["localWorldJson"]);
+    const hdiYear = resolveHdiYear("world");
+    const globalHdiCount = globalHdiDataset && globalHdiDataset.countries ? Object.keys(globalHdiDataset.countries).length : 0;
     elements["selected-code"].textContent = "GLOBO";
     elements["selected-type"].textContent = "Mundo";
     elements["selected-name"].textContent = "Visão Global";
@@ -3991,10 +4633,17 @@
     renderGeneralCards("Mundo", [
         { label: "Países", value: "~195" },
         { label: "População estimada", value: "8 bilhões" },
-        { label: "Arquivo local", value: "data/world_data.geojson" },
-        { label: "Origem original", value: upstreamSourceLine(DATA_SOURCE_CATALOG.localWorldJson) }
+        ...(activeAnalysis === "hdi" ? [
+          { label: `IDH ${hdiYear}`, value: globalHdiCount ? `${formatNumber(globalHdiCount)} países na base` : "carregando" },
+          { label: "Série histórica", value: `${globalHdiYears[globalHdiYears.length - 1] || "-"}-${globalHdiYears[0] || "-"}` },
+          { label: "Fonte selecionada", value: activeSourceOption("hdi", "world")?.label || "UNDP/HDR" }
+        ] : []),
+        { label: "Arquivo local", value: activeAnalysis === "hdi" ? (activeSourceOptionId("hdi", "world") === "owid" ? "data/hdi_owid.json" : "data/hdi_global.json") : "data/world_data.geojson" },
+        { label: "Origem original", value: activeAnalysis === "hdi" ? upstreamSourceLine(sourceRecords(worldHdiSourceIds)[0]) : upstreamSourceLine(DATA_SOURCE_CATALOG.localWorldJson) }
     ]);
-    elements["general-note"].textContent = `Dados globais carregados de base JSON local. Fonte/procedência: ${sourceDetailsLine(["localWorldJson"])}.`;
+    elements["general-note"].textContent = activeAnalysis === "hdi"
+      ? `IDH global carregado de JSON local auditável. Fonte/procedência: ${sourceDetailsLine(worldHdiSourceIds)}.`
+      : `Dados globais carregados de base JSON local. Fonte/procedência: ${sourceDetailsLine(["localWorldJson"])}.`;
   }
 
   async function enterWorldMode(options = {}) {
@@ -4010,6 +4659,7 @@
         try {
             const data = await fetchJson(URLS.worldMesh);
             worldFeatureCollection = data;
+            hydrateWorldHdi(worldFeatureCollection);
             
             map.addSource("world-fill-source", { type: "geojson", data: worldFeatureCollection });
             map.addSource("selected-country-source", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
@@ -4082,7 +4732,7 @@
                    if (found) fullFeature = found;
                }
                selectCountry(props, fullFeature);
-               showCountryPopup(event.lngLat, props);
+               showCountryPopup(event.lngLat, fullFeature.properties || props);
             });
             map.on("mousemove", "world-fill", (event) => {
                if (activeView !== "world") return;
@@ -4117,7 +4767,9 @@
   }
 
   function selectCountry(props, feature) {
-    updateSourceDisplays(["localWorldJson"]);
+    props = feature && feature.properties ? { ...props, ...feature.properties } : props;
+    const worldHdiSourceIds = activeDataSourceIds();
+    updateSourceDisplays(activeAnalysis === "hdi" ? worldHdiSourceIds : ["localWorldJson"]);
     if (map.getSource("selected-country-source")) {
        setSourceData("selected-country-source", {
          type: "FeatureCollection",
@@ -4140,12 +4792,20 @@
         { label: "População", value: formatNumber(props.pop || 0) },
         { label: "Área territorial", value: formatArea(props.areaKm2) },
         { label: "Densidade pop.", value: formatDensity(props.areaKm2 ? props.pop / props.areaKm2 : null) },
+        ...(activeAnalysis === "hdi" ? [
+          { label: `IDH ${props.hdiYear || resolveHdiYear("world")}`, value: formatHdi(props.hdi) },
+          { label: "Ranking HDR", value: props.hdiRank ? `${props.hdiRank} de ${hdiCountryCount()}` : "ranking disponível em 2023" },
+          { label: "Categoria", value: hdiCategoryLabel(props.hdiCategory) },
+          { label: "Histórico IDH", value: renderHdiHistoryChart(props.hdiHistory, resolveHdiYear("world"), false), isHtml: true }
+        ] : []),
         { label: "PIB (2024)", value: formatCurrencyShortUSD(props.gdp) },
         { label: "PIB por habitante", value: formatCurrencyUSD(perCapita(props.gdp, props.pop)) },
         { label: "Região", value: props.region || "Global" },
-        { label: "Origem do JSON", value: upstreamSourceLine(DATA_SOURCE_CATALOG.localWorldJson) }
+        { label: "Origem do JSON", value: activeAnalysis === "hdi" ? upstreamSourceLine(sourceRecords(worldHdiSourceIds)[0]) : upstreamSourceLine(DATA_SOURCE_CATALOG.localWorldJson) }
     ]);
-    elements["general-note"].textContent = `Dados globais carregados de base JSON local. Fonte/procedência: ${sourceDetailsLine(["localWorldJson"])}.`;
+    elements["general-note"].textContent = activeAnalysis === "hdi"
+      ? `IDH global. Fonte/procedência: ${sourceDetailsLine(worldHdiSourceIds)}.`
+      : `Dados globais carregados de base JSON local. Fonte/procedência: ${sourceDetailsLine(["localWorldJson"])}.`;
   }
 
   function showCountryHover(lngLat, props) {
@@ -4163,6 +4823,10 @@
         <span class="text-right font-medium text-white">${formatCurrencyShortUSD(props.gdp)}</span>
         <span class="text-gray-400">PIB/Hab</span>
         <span class="text-right font-medium text-white">${formatCurrencyUSD(perCapita(props.gdp, props.pop))}</span>
+        ${activeAnalysis === "hdi" ? `
+          <span class="text-gray-400">IDH ${escapeHtml(props.hdiYear || resolveHdiYear("world"))}</span>
+          <span class="text-right font-medium text-white">${formatHdi(props.hdi)}</span>
+        ` : ""}
       </div>`;
     
     hoverPopup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, className: "atlas-popup", maxWidth: "260px" })
@@ -4172,6 +4836,15 @@
   }
 
   function showCountryPopup(lngLat, props) {
+    if (activeAnalysis === "hdi" && props && props.hdiHistory) {
+      const year = resolveHdiYear("world");
+      props = {
+        ...props,
+        hdi: hdiValueForYear(props.hdiHistory, year),
+        hdiYear: year,
+        hdiRank: rankHdiByYear(activeGlobalHdiDataset(), props.ISO_A3, year)
+      };
+    }
     const name = props.name_pt || props.ADMIN || props.name || "Desconhecido";
     const rows = [
       { label: "População", value: formatNumber(props.pop || 0) },
@@ -4179,6 +4852,11 @@
       { label: "Densidade pop.", value: formatDensity(props.areaKm2 ? props.pop / props.areaKm2 : null) },
       { label: "PIB (2024)", value: formatCurrencyShortUSD(props.gdp) },
       { label: "PIB por hab.", value: formatCurrencyUSD(perCapita(props.gdp, props.pop)) },
+      ...(activeAnalysis === "hdi" ? [
+        { label: `IDH ${props.hdiYear || resolveHdiYear("world")}`, value: formatHdi(props.hdi) },
+        { label: "Ranking HDR", value: props.hdiRank ? `${props.hdiRank} de ${hdiCountryCount()}` : "ranking disponível em 2023" },
+        { label: "Categoria", value: hdiCategoryLabel(props.hdiCategory) }
+      ] : []),
       { label: "Região", value: props.region || "Global" }
     ];
     showFixedDetailCard("País", `${name} (${props.ISO_A3 || "-"})`, rows, props);
@@ -4187,7 +4865,16 @@
   window.updateWorldLayerColor = function updateWorldLayerColor() {
     if (!map.getLayer("world-fill")) return;
     let colorExpr;
-    if (activeWorldMetric === "pop") {
+    if (activeAnalysis === "hdi") {
+      colorExpr = [
+        "interpolate", ["linear"], ["to-number", ["get", "hdi"], 0],
+        0.35, "#17212b",
+        0.55, "#335c67",
+        0.7, "#4f8f70",
+        0.8, "#a9d65c",
+        0.9, "#f2c14e"
+      ];
+    } else if (activeWorldMetric === "pop") {
       colorExpr = [
         "interpolate", ["linear"], ["to-number", ["get", "pop"], 0],
         0, "#17212b",
