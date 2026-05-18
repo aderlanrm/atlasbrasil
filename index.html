@@ -27,7 +27,7 @@
     </div>
 
     <div class="map-hud hud-bottom">
-      <div class="chip">Fonte <strong>IBGE/SIDRA 2022</strong></div>
+      <div class="chip">Fonte <strong id="hud-source">IBGE/SIDRA 2022</strong></div>
       <div class="chip">Coordenadas <strong id="hud-coords">0.000, 0.000</strong></div>
     </div>
 
@@ -81,12 +81,7 @@
           <h2>Análise</h2>
           <span class="tiny" id="analysis-caption">Visão geral</span>
         </div>
-        <div class="segmented cols-4">
-          <button type="button" data-analysis="general" class="active" title="População e leitura territorial geral"><i data-lucide="layout-dashboard"></i>Geral</button>
-          <button type="button" data-analysis="gdp" title="Mapa de calor de PIB e PIB por habitante"><i data-lucide="landmark"></i>PIB</button>
-          <button type="button" data-analysis="politics" title="Representação política e folha pública em preparação"><i data-lucide="scale"></i>Política</button>
-          <button type="button" data-analysis="education" title="Escolas e formação em preparação"><i data-lucide="graduation-cap"></i>Educação</button>
-        </div>
+        <div class="segmented cols-4" id="analysis-primary-nav" data-analysis-nav="primary"></div>
       </section>
 
       <section class="section">
@@ -94,9 +89,7 @@
           <h2>Exploração</h2>
           <span class="tiny">Atlas imersivo</span>
         </div>
-        <div class="segmented cols-1">
-          <button type="button" data-analysis="travel" title="Cidades e estados documentados em vídeo"><i data-lucide="map-pin"></i>Viajando o Brasil</button>
-        </div>
+        <div class="segmented cols-1" id="analysis-explore-nav" data-analysis-nav="explore"></div>
       </section>
 
       <section class="section">

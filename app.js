@@ -26,6 +26,198 @@
     worldMesh: "./data/world_data.geojson?v=" + Date.now()
   };
 
+  const DATA_SOURCE_CATALOG = {
+    populationIbge: {
+      label: "População",
+      shortLabel: "IBGE 2022",
+      provider: "IBGE/SIDRA 4714",
+      type: "api",
+      provenance: "real",
+      freshness: "Censo Demográfico 2022",
+      url: "https://sidra.ibge.gov.br/tabela/4714",
+      quality: "Oficial",
+      fields: ["população residente", "UF", "município", "ano 2022"],
+      methodology: "Consulta SIDRA tabela 4714, variável 93, nos níveis territoriais N3 (UF) e N6 (município).",
+      limitations: ["Retrata a população do Censo 2022; não é estimativa anual corrente.", "Quando a API falha, o app pode usar fallback estadual local para manter a navegação."],
+      updatePolicy: "Atualizar tabela, variável ou ano quando o IBGE publicar uma nova base oficial compatível.",
+      note: "Dado oficial carregado da API SIDRA, com fallback local para UF."
+    },
+    gdpIbge: {
+      label: "PIB territorial",
+      shortLabel: "SIDRA 5938",
+      provider: "IBGE/SIDRA 5938",
+      type: "api",
+      provenance: "real",
+      freshness: `Oficial até ${LATEST_OFFICIAL_GDP_YEAR}; anos posteriores são projeções locais`,
+      url: "https://sidra.ibge.gov.br/tabela/5938",
+      quality: "Oficial com projeção sinalizada",
+      fields: ["PIB a preços correntes", "UF", "município", "série histórica"],
+      methodology: "Consulta SIDRA tabela 5938, variável 37. O valor vem em mil reais e o app converte para reais.",
+      limitations: ["PIB municipal tem defasagem natural de publicação.", "Anos posteriores ao último ano oficial são projeções locais e aparecem marcados como proj."],
+      updatePolicy: "Manter LATEST_OFFICIAL_GDP_YEAR alinhado ao último ano publicado pelo SIDRA.",
+      note: "Valores oficiais em mil reais convertidos para reais; projeções usam crescimento local estimado."
+    },
+    ibgeMeshes: {
+      label: "Malhas territoriais",
+      shortLabel: "Malhas IBGE",
+      provider: "IBGE Malhas",
+      type: "api",
+      provenance: "real",
+      freshness: "Geometrias oficiais do IBGE",
+      url: "https://servicodados.ibge.gov.br/api/docs/malhas?versao=3",
+      quality: "Oficial",
+      fields: ["geometria do Brasil", "geometria de UF", "geometria de municípios", "códigos territoriais"],
+      methodology: "Consulta à API de Malhas do IBGE, em GeoJSON e qualidade mínima para desempenho no navegador.",
+      limitations: ["Qualidade mínima reduz detalhe cartográfico para carregar mais rápido.", "Não deve ser usada como base jurídica/cartorial de limite territorial."],
+      updatePolicy: "Usar a versão mais recente da API de Malhas quando houver mudança territorial relevante.",
+      note: "Geometrias do Brasil, UF e municípios."
+    },
+    localWorldJson: {
+      label: "Indicadores globais",
+      shortLabel: "JSON local",
+      provider: "data/world_data.geojson",
+      type: "json",
+      provenance: "compilado",
+      freshness: "Base local versionada no repositório",
+      url: "./data/world_data.geojson",
+      upstreamLabel: "datasets/geo-countries + RestCountries + World Bank",
+      upstreamSources: [
+        {
+          label: "datasets/geo-countries",
+          url: "https://github.com/datasets/geo-countries",
+          fields: "geometria e códigos ISO",
+          usage: "base geométrica dos países"
+        },
+        {
+          label: "RestCountries",
+          url: "https://restcountries.com/",
+          fields: "população, área, região e nomes em português",
+          usage: "enriquecimento descritivo por país"
+        },
+        {
+          label: "World Bank API",
+          url: "https://api.worldbank.org/v2/country/all/indicator/NY.GDP.MKTP.CD",
+          fields: "PIB nominal em US$",
+          usage: "indicador econômico global"
+        }
+      ],
+      quality: "Compilado",
+      fields: ["geometria", "ISO_A3", "população", "área", "região", "nome em português", "PIB nominal em US$"],
+      methodology: "Arquivo gerado por fetch_world_data.py, que baixa a geometria, consulta RestCountries, consulta World Bank e faz merge por código ISO_A3.",
+      limitations: ["A precisão depende da atualização de cada fonte original.", "Países sem ISO_A3 compatível podem ficar sem enriquecimento completo.", "O arquivo é local: precisa ser regerado para refletir mudanças nas fontes upstream."],
+      updatePolicy: "Reexecutar fetch_world_data.py e revisar o diff do GeoJSON quando quiser atualizar a base global.",
+      note: "GeoJSON local gerado por fetch_world_data.py a partir de fontes externas consolidadas."
+    },
+    politicsEstimate: {
+      label: "Representação política",
+      shortLabel: "Estimativa",
+      provider: "Regras constitucionais e cálculos locais",
+      type: "computed",
+      provenance: "estimado",
+      freshness: "Calculado no navegador",
+      quality: "Estimativa transparente",
+      fields: ["cargos executivos", "deputados federais", "senadores", "deputados estaduais/distritais", "teto estimado de vereadores"],
+      methodology: "Cálculos locais combinam população, regras fixas de representação e tetos constitucionais por faixa populacional.",
+      limitations: ["Não substitui base oficial de mandato, folha pública ou composição atualizada por eleição.", "Folha pública está marcada como fonte pendente."],
+      updatePolicy: "Trocar por fonte oficial quando houver endpoint confiável para cargos, mandatos e folha por ente federativo.",
+      note: "Cargos e tetos por população; folha pública ainda depende de fonte oficial por ente."
+    },
+    enemLocal: {
+      label: "Educação/ENEM",
+      shortLabel: "ENEM local",
+      provider: "Tabela local em app.js",
+      type: "json",
+      provenance: "misto",
+      freshness: "Estados em tabela local; municípios projetados",
+      quality: "Misto/provisório",
+      fields: ["média ENEM por UF", "áreas nacionais", "estimativa municipal projetada"],
+      methodology: "Estados usam série local em app.js. Municípios são estimados a partir da média estadual e fatores simplificados.",
+      limitations: ["Municípios não são microdados oficiais nesta versão.", "Usar apenas como leitura exploratória até integrar microdados oficiais auditáveis."],
+      updatePolicy: "Ao importar microdados oficiais do INEP, registrar arquivo, ano, filtro, agregação e script de processamento.",
+      note: "Use como série local. Ao importar microdados oficiais, marque os novos datasets como real."
+    },
+    travelCurated: {
+      label: "Viajando o Brasil",
+      shortLabel: "Curadoria",
+      provider: "Curadoria manual",
+      type: "manual",
+      provenance: "curado",
+      freshness: "Atualizado por edição do catálogo",
+      quality: "Curadoria manual",
+      fields: ["cidade", "URL do vídeo", "título", "canal"],
+      methodology: "Lista manual mantida em DOCUMENTED_CITIES, usada para destacar cidades com documentários.",
+      limitations: ["Cobertura depende de curadoria; ausência de vídeo não significa ausência de conteúdo público sobre a cidade."],
+      updatePolicy: "Adicionar novas cidades com URL, título, canal e checagem manual do link.",
+      note: "Lista manual de cidades com documentário e metadados de vídeo."
+    }
+  };
+
+  const ANALYSIS_CATALOG = {
+    general: {
+      label: "Geral",
+      caption: "Visão geral",
+      icon: "layout-dashboard",
+      group: "primary",
+      title: "População e leitura territorial geral",
+      defaultMetric: "population",
+      sourceIds: ["populationIbge", "gdpIbge", "politicsEstimate", "ibgeMeshes"],
+      note: "Visão geral combina população oficial, PIB oficial/projetado e indicadores calculados."
+    },
+    gdp: {
+      label: "PIB",
+      caption: "PIB e riqueza",
+      icon: "landmark",
+      group: "primary",
+      title: "Mapa de calor de PIB e PIB por habitante",
+      defaultMetric: "perCapita",
+      metricStateKey: "gdpSubMetric",
+      sourceIds: ["gdpIbge", "populationIbge"],
+      note: "PIB territorial vem do SIDRA/IBGE 5938. PIB por habitante divide o PIB pela população do território.",
+      metrics: {
+        perCapita: { label: "PIB/Hab.", metric: "PIB por habitante", sourceIds: ["gdpIbge", "populationIbge"] },
+        total: { label: "PIB Total", metric: "PIB total", sourceIds: ["gdpIbge"] }
+      }
+    },
+    politics: {
+      label: "Política",
+      caption: "Política",
+      icon: "scale",
+      group: "primary",
+      title: "Representação política e folha pública em preparação",
+      defaultMetric: "peoplePerPolitician",
+      sourceIds: ["politicsEstimate", "populationIbge"],
+      note: "Dados políticos são estimados por cargos e tetos constitucionais. Folha pública depende de fonte oficial por ente."
+    },
+    education: {
+      label: "Educação",
+      caption: "Educação",
+      icon: "graduation-cap",
+      group: "primary",
+      title: "Escolas e formação em preparação",
+      defaultMetric: "enemScore",
+      sourceIds: ["enemLocal"],
+      note: "Estados usam tabela local de ENEM. Municípios mostram estimativa projetada a partir da média estadual e fatores socioeconômicos."
+    },
+    travel: {
+      label: "Viajando o Brasil",
+      caption: "Viajando o Brasil",
+      icon: "map-pin",
+      group: "explore",
+      title: "Cidades e estados documentados em vídeo",
+      defaultMetric: "documentedCities",
+      sourceIds: ["travelCurated"],
+      note: "Camada curada manualmente para cidades e estados com documentários em vídeo."
+    }
+  };
+
+  const WORLD_METRIC_CATALOG = {
+    pop: { label: "População", metric: "População", sourceIds: ["localWorldJson"], labels: ["<1mi", "10mi", "50mi", "200mi", "1bi+"] },
+    area: { label: "Área territorial", metric: "Área territorial", sourceIds: ["localWorldJson"], labels: ["Pequeno", "Médio", "Grande", "Gigante", "Continental"] },
+    density: { label: "Densidade pop.", metric: "Densidade pop.", sourceIds: ["localWorldJson"], labels: ["<10", "50", "150", "500", "1000+"] },
+    gdp: { label: "PIB", metric: "PIB US$ (2024)", sourceIds: ["localWorldJson"], labels: ["<10bi", "100bi", "500bi", "2tri", "10tri+"] },
+    gdpPerCapita: { label: "PIB per capita", metric: "PIB per capita US$ (24)", sourceIds: ["localWorldJson"], labels: ["<2k", "5k", "15k", "35k", "60k+"] }
+  };
+
   const STORAGE_KEY = "atlas-brasil-preferences-v1";
   const DATA_CACHE_NAME = "atlas-brasil-official-data-2023-v1";
   const savedPreferences = readStoredPreferences();
@@ -147,7 +339,7 @@
   let activeView = validView(savedPreferences.view) ? savedPreferences.view : "brazil";
   let activeAnalysis = validAnalysis(savedPreferences.analysis) ? savedPreferences.analysis : "general";
   let activeGdpSubMetric = savedPreferences.gdpSubMetric || "perCapita";
-  let activeWorldMetric = "pop";
+  let activeWorldMetric = validWorldMetric(savedPreferences.worldMetric) ? savedPreferences.worldMetric : "pop";
   let dataCacheStats = createDataCacheStats();
   let basePaintByLayer = new Map();
   let worldFeatureCollection = null;
@@ -155,6 +347,7 @@
 
   function init() {
     cacheElements();
+    renderAnalysisControls();
     if (window.lucide) window.lucide.createIcons();
 
     if (typeof maplibregl === "undefined") {
@@ -170,14 +363,27 @@
 
   function cacheElements() {
     [
-      "status", "status-spinner", "status-title", "status-text", "fixed-detail-card", "hud-layer", "hud-zoom", "hud-coords",
+      "status", "status-spinner", "status-title", "status-text", "fixed-detail-card", "hud-layer", "hud-source", "hud-zoom", "hud-coords",
       "heat-legend",
       "metric-br-pop", "metric-city-count", "metric-state", "metric-state-pop", "metric-city", "metric-city-pop",
       "analysis-caption", "data-state-label", "search", "search-results", "selected-code", "selected-type", "selected-name",
       "selected-pop", "selected-share", "selected-area", "selected-density", "selected-rank", "selected-context", "hover-cards-toggle", "population-chart", "chart-title",
-      "chart-caption", "ranking", "ranking-title", "ranking-caption", "general-caption", "general-grid", "general-note"
+      "chart-caption", "ranking", "ranking-title", "ranking-caption", "general-caption", "general-grid", "general-note",
+      "analysis-primary-nav", "analysis-explore-nav"
     ].forEach((id) => {
       elements[id] = document.getElementById(id);
+    });
+  }
+
+  function renderAnalysisControls() {
+    document.querySelectorAll("[data-analysis-nav]").forEach((container) => {
+      const group = container.dataset.analysisNav;
+      const analyses = Object.entries(ANALYSIS_CATALOG).filter(([, config]) => config.group === group);
+      container.innerHTML = analyses.map(([id, config]) => `
+        <button type="button" data-analysis="${escapeHtml(id)}" ${id === activeAnalysis ? "class=\"active\"" : ""} title="${escapeHtml(config.title || config.label)}">
+          <i data-lucide="${escapeHtml(config.icon || "circle")}"></i>${escapeHtml(config.label)}
+        </button>
+      `).join("");
     });
   }
 
@@ -1075,6 +1281,141 @@
     return "#18b978";
   }
 
+  function activeAnalysisConfig() {
+    return ANALYSIS_CATALOG[activeAnalysis] || ANALYSIS_CATALOG.general;
+  }
+
+  function activeMetricConfig() {
+    const config = activeAnalysisConfig();
+    if (!config.metrics) return null;
+    const key = activeAnalysis === "gdp" ? activeGdpSubMetric : config.defaultMetric;
+    return config.metrics[key] || config.metrics[config.defaultMetric] || null;
+  }
+
+  function activeDataSourceIds(sourceIds) {
+    if (Array.isArray(sourceIds) && sourceIds.length) return sourceIds;
+    if (activeView === "world") {
+      const metric = WORLD_METRIC_CATALOG[activeWorldMetric] || WORLD_METRIC_CATALOG.pop;
+      return metric.sourceIds || ["localWorldJson"];
+    }
+    const metric = activeMetricConfig();
+    if (metric && metric.sourceIds) return metric.sourceIds;
+    return activeAnalysisConfig().sourceIds || [];
+  }
+
+  function sourceRecords(sourceIds) {
+    return activeDataSourceIds(sourceIds)
+      .map((id) => DATA_SOURCE_CATALOG[id])
+      .filter(Boolean);
+  }
+
+  function compactSourceLine(sourceIds) {
+    const records = sourceRecords(sourceIds);
+    return records.map((source) => source.shortLabel || source.label).join(" + ") || "Fonte pendente";
+  }
+
+  function sourceDetailsLine(sourceIds) {
+    const records = sourceRecords(sourceIds);
+    return records.map((source) => {
+      const upstream = upstreamSourceLine(source);
+      return `${source.provider} (${source.provenance})${upstream ? `; origem original: ${upstream}` : ""}`;
+    }).join("; ") || "fonte não cadastrada";
+  }
+
+  function upstreamSourceLine(source) {
+    if (!source) return "";
+    if (source.upstreamLabel) return source.upstreamLabel;
+    if (Array.isArray(source.upstreamSources) && source.upstreamSources.length) {
+      return source.upstreamSources.map((item) => item.label).join(" + ");
+    }
+    return "";
+  }
+
+  function sourceInfoDetailsHtml(sourceIds) {
+    const records = sourceRecords(sourceIds);
+    if (!records.length) return `<div class="source-empty">Fonte não cadastrada.</div>`;
+    return records.map((source) => {
+      const upstream = Array.isArray(source.upstreamSources) ? source.upstreamSources : [];
+      const fields = Array.isArray(source.fields) ? source.fields : [];
+      const limitations = Array.isArray(source.limitations) ? source.limitations : [];
+      return `
+        <article class="source-detail-card">
+          <div class="source-detail-title">
+            <strong>${escapeHtml(source.label || source.provider || "Fonte")}</strong>
+            <span>${escapeHtml(source.quality || source.provenance || "sem classificação")}</span>
+          </div>
+          <dl class="source-detail-meta">
+            <dt>Carregado de</dt>
+            <dd>${sourceLinkHtml(source.url, source.provider || source.url || "fonte")}</dd>
+            <dt>Tipo</dt>
+            <dd>${escapeHtml(source.type || "-")} | ${escapeHtml(source.provenance || "-")}</dd>
+            <dt>Atualização</dt>
+            <dd>${escapeHtml(source.freshness || "-")}</dd>
+            ${source.methodology ? `<dt>Método</dt><dd>${escapeHtml(source.methodology)}</dd>` : ""}
+            ${fields.length ? `<dt>Campos usados</dt><dd>${escapeHtml(fields.join("; "))}</dd>` : ""}
+          </dl>
+          ${upstream.length ? `
+            <div class="source-upstream">
+              <strong>Origens originais</strong>
+              ${upstream.map((item) => `
+                <div class="source-upstream-item">
+                  ${sourceLinkHtml(item.url, item.label)}
+                  <span>${escapeHtml([item.fields, item.usage].filter(Boolean).join(" | "))}</span>
+                </div>
+              `).join("")}
+            </div>
+          ` : ""}
+          ${limitations.length ? `
+            <div class="source-limitations">
+              <strong>Limitações</strong>
+              <ul>${limitations.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+            </div>
+          ` : ""}
+          ${source.updatePolicy ? `<p class="source-update-policy"><strong>Atualização:</strong> ${escapeHtml(source.updatePolicy)}</p>` : ""}
+          ${source.note ? `<p class="source-note">${escapeHtml(source.note)}</p>` : ""}
+        </article>
+      `;
+    }).join("");
+  }
+
+  function sourceLinkHtml(url, label) {
+    if (!url) return escapeHtml(label || "-");
+    return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label || url)}</a>`;
+  }
+
+  function legendSourceHtml(sourceIds) {
+    const records = sourceRecords(sourceIds);
+    if (!records.length) return "";
+    const primary = records[0];
+    const provenance = [...new Set(records.map((source) => source.provenance))].join(" + ");
+    const upstream = upstreamSourceLine(primary);
+    return `
+      <div class="legend-source">
+        <div class="legend-source-top">
+          <span>Fonte</span>
+          <button type="button" class="source-info-button" id="source-info-button" aria-expanded="false" aria-controls="source-detail-panel" title="Ver detalhes e links das fontes">i</button>
+        </div>
+        <strong>${escapeHtml(compactSourceLine(sourceIds))}</strong>
+        <small>${escapeHtml(primary.freshness || primary.note || provenance)} | ${escapeHtml(provenance)}${upstream ? ` | Origem: ${escapeHtml(upstream)}` : ""}</small>
+        <div class="source-detail-panel" id="source-detail-panel" hidden>
+          ${sourceInfoDetailsHtml(sourceIds)}
+        </div>
+      </div>
+    `;
+  }
+
+  function updateSourceDisplays(sourceIds) {
+    if (elements["hud-source"]) {
+      elements["hud-source"].textContent = compactSourceLine(sourceIds);
+    }
+  }
+
+  function renderMetricOptions(metrics, activeKey) {
+    return Object.entries(metrics).map(([key, config]) => (
+      `<option value="${escapeHtml(key)}" ${key === activeKey ? "selected" : ""}>${escapeHtml(config.label)}</option>`
+    )).join("");
+  }
+
   function updateHeatLegend() {
     const legend = elements["heat-legend"];
     if (!legend) return;
@@ -1083,6 +1424,7 @@
     if (!config) {
       legend.classList.remove("visible");
       legend.innerHTML = "";
+      updateSourceDisplays();
       return;
     }
 
@@ -1092,11 +1434,7 @@
         ${activeView === "world" ? `
           <div class="flex-gap-4">
             <select id="world-metric-select" aria-label="Variável">
-              <option value="pop" ${activeWorldMetric==="pop"?"selected":""}>População</option>
-              <option value="area" ${activeWorldMetric==="area"?"selected":""}>Área territorial</option>
-              <option value="density" ${activeWorldMetric==="density"?"selected":""}>Densidade pop.</option>
-              <option value="gdp" ${activeWorldMetric==="gdp"?"selected":""}>PIB</option>
-              <option value="gdpPerCapita" ${activeWorldMetric==="gdpPerCapita"?"selected":""}>PIB per capita</option>
+              ${renderMetricOptions(WORLD_METRIC_CATALOG, activeWorldMetric)}
             </select>
           </div>
         ` : (activeAnalysis === "gdp" ? `
@@ -1109,8 +1447,7 @@
               <button type="button" id="gdp-year-plus" title="Próximo ano" aria-label="Próximo ano">+</button>
             </div>
             <select id="legend-gdp-selector">
-              <option value="perCapita" ${activeGdpSubMetric === "perCapita" ? "selected" : ""}>PIB/Hab.</option>
-              <option value="total" ${activeGdpSubMetric === "total" ? "selected" : ""}>PIB Total</option>
+              ${renderMetricOptions(ANALYSIS_CATALOG.gdp.metrics, activeGdpSubMetric)}
             </select>
           </div>
         ` : (activeAnalysis === "education" ? `
@@ -1129,6 +1466,7 @@
       <div class="legend-labels">
         ${config.labels.map((label) => `<span>${escapeHtml(label)}</span>`).join("")}
       </div>
+      ${legendSourceHtml(config.sourceIds)}
     `;
 
     const gradScale = legend.querySelector("#legend-gradient-scale");
@@ -1136,21 +1474,34 @@
       gradScale.style.background = `linear-gradient(90deg, ${config.colors.join(", ")})`;
     }
 
+    const sourceInfoButton = legend.querySelector("#source-info-button");
+    const sourceDetailPanel = legend.querySelector("#source-detail-panel");
+    if (sourceInfoButton && sourceDetailPanel) {
+      sourceInfoButton.addEventListener("click", () => {
+        const nextExpanded = sourceInfoButton.getAttribute("aria-expanded") !== "true";
+        sourceInfoButton.setAttribute("aria-expanded", String(nextExpanded));
+        sourceDetailPanel.hidden = !nextExpanded;
+      });
+    }
+
     const worldSelector = legend.querySelector("#world-metric-select");
     if (worldSelector) {
       worldSelector.addEventListener("change", (e) => {
-        activeWorldMetric = e.target.value;
+        activeWorldMetric = validWorldMetric(e.target.value) ? e.target.value : "pop";
         if (window.updateWorldLayerColor) window.updateWorldLayerColor();
         updateHeatLegend();
+        savePreferences();
       });
     }
 
     const selector = legend.querySelector("#legend-gdp-selector");
     if (selector) {
       selector.addEventListener("change", (e) => {
-        activeGdpSubMetric = e.target.value;
+        activeGdpSubMetric = validAnalysisMetric("gdp", e.target.value) ? e.target.value : ANALYSIS_CATALOG.gdp.defaultMetric;
         updateAnalysisPaint();
         updateHeatLegend();
+        refreshAnalysisContent();
+        refreshFixedDetailCard();
         savePreferences();
       });
     }
@@ -1265,6 +1616,7 @@
     }
 
     legend.classList.add("visible");
+    updateSourceDisplays(config.sourceIds);
   }
 
   function heatLegendConfig() {
@@ -1283,6 +1635,7 @@
         scope: "Global",
         colors: ["#17212b", "#25534e", "#5b8e54", "#c59b3f", "#ef7d60", "#b799ff"],
         labels: labels,
+        sourceIds: (WORLD_METRIC_CATALOG[activeWorldMetric] || WORLD_METRIC_CATALOG.pop).sourceIds,
         isWorld: true
       };
     }
@@ -1854,9 +2207,14 @@
 
   function setActiveAnalysis(analysis) {
     activeAnalysis = validAnalysis(analysis) ? analysis : "general";
+    const config = activeAnalysisConfig();
+    if (config.metrics && !validAnalysisMetric(activeAnalysis, activeGdpSubMetric)) {
+      activeGdpSubMetric = config.defaultMetric || Object.keys(config.metrics)[0];
+    }
     const button = document.querySelector(`[data-analysis="${activeAnalysis}"]`);
     if (button) setActiveButton("[data-analysis]", button);
     if (elements["analysis-caption"]) elements["analysis-caption"].textContent = analysisLabel(activeAnalysis);
+    updateSourceDisplays();
     updateAnalysisPaint();
     updateHeatLegend();
     syncAtlasLayersForActiveView();
@@ -2175,6 +2533,7 @@
   }
 
   function renderGeneralPanel(scope, data) {
+    updateSourceDisplays();
     if (scope === "state") {
       renderGeneralCards(`${data.nome} | ${data.sigla}`, analysisCards("state", data));
       elements["general-note"].textContent = analysisNote();
@@ -2440,7 +2799,7 @@
         { label: `Média Brasil ${activeEnemYear}`, value: `${BRAZIL_ENEM_SCORE} pts` },
         { label: "Desempenho relativo", value: diff !== null ? (diff > 0 ? `+${diff.toFixed(1)} pts acima do BR` : `${diff.toFixed(1)} pts abaixo do BR`) : "-" },
         { label: "Mapa de calor", value: `nota média ENEM ${activeEnemYear}` },
-        { label: "Fonte", value: `INEP/microdados ${activeEnemYear}` }
+        { label: "Fonte", value: `${compactSourceLine(["enemLocal"])} | misto` }
       ];
     }
     if (scope === "city") {
@@ -2509,11 +2868,11 @@
   }
 
   function analysisNote() {
-    if (activeAnalysis === "gdp") return "PIB territorial: SIDRA/IBGE 5938. Mapa de calor usa PIB por habitante para comparar riqueza relativa.";
-    if (activeAnalysis === "politics") return "Dados políticos estimados por cargos e tetos constitucionais. Mapa de calor usa habitantes por político; folha pública depende de fonte oficial por ente federativo.";
-    if (activeAnalysis === "education") return `ENEM ${ENEM_AREAS_YEAR}: média nacional ${BRAZIL_ENEM_SCORE} pts (INEP oficial). Por estado: ENEM ${ENEM_STATES_YEAR}, análise dos microdados por UF. Os municípios da camada Cidades apresentam uma estimativa projetada a partir da média estadual e fatores socioeconômicos.`;
-    if (activeAnalysis === "travel") return "Camada Viajando o Brasil mapeia cidades e estados que receberam documentários em vídeo sobre sua história e cultura.";
-    return "PIB territorial: SIDRA/IBGE 2023. Vereadores municipais: teto constitucional estimado por faixa populacional.";
+    const config = activeAnalysisConfig();
+    const projectionWarning = activeAnalysis === "gdp" && parseInt(activeGdpYear, 10) > parseInt(LATEST_OFFICIAL_GDP_YEAR, 10)
+      ? ` Ano ${activeGdpYear} marcado como projeção local.`
+      : "";
+    return `${config.note}${projectionWarning} Fonte/procedência: ${sourceDetailsLine()}.`;
   }
 
   function renderStateChart() {
@@ -3136,6 +3495,7 @@
         projection: activeProjection,
         analysis: activeAnalysis,
         gdpSubMetric: activeGdpSubMetric,
+        worldMetric: activeWorldMetric,
         view: activeView,
         selectedStateId,
         selectedCityId,
@@ -3179,10 +3539,11 @@
       if (validProjection(parsed.projection)) safe.projection = parsed.projection;
       if (validAnalysis(parsed.analysis)) safe.analysis = parsed.analysis;
       if (validView(parsed.view)) safe.view = parsed.view;
+      if (validWorldMetric(parsed.worldMetric)) safe.worldMetric = parsed.worldMetric;
 
       if (parsed.selectedStateId) safe.selectedStateId = normalizeCode(parsed.selectedStateId);
       if (parsed.selectedCityId) safe.selectedCityId = normalizeCode(parsed.selectedCityId);
-      if (parsed.gdpSubMetric) safe.gdpSubMetric = escapeHtml(String(parsed.gdpSubMetric));
+      if (validAnalysisMetric("gdp", parsed.gdpSubMetric)) safe.gdpSubMetric = String(parsed.gdpSubMetric);
 
       safe.camera = normalizeCamera(parsed.camera);
       return safe;
@@ -3218,18 +3579,21 @@
   }
 
   function validAnalysis(analysis) {
-    return ["general", "gdp", "politics", "education", "travel"].includes(analysis);
+    return Object.prototype.hasOwnProperty.call(ANALYSIS_CATALOG, analysis);
+  }
+
+  function validAnalysisMetric(analysis, metric) {
+    const config = ANALYSIS_CATALOG[analysis];
+    return Boolean(config && config.metrics && Object.prototype.hasOwnProperty.call(config.metrics, metric));
+  }
+
+  function validWorldMetric(metric) {
+    return Object.prototype.hasOwnProperty.call(WORLD_METRIC_CATALOG, metric);
   }
 
   function analysisLabel(analysis) {
-    const labels = {
-      general: "Visão geral",
-      gdp: "PIB e riqueza",
-      politics: "Política",
-      education: "Educação",
-      travel: "Viajando o Brasil"
-    };
-    return labels[analysis] || labels.general;
+    const config = ANALYSIS_CATALOG[analysis] || ANALYSIS_CATALOG.general;
+    return config.caption || config.label;
   }
 
   function clampNumber(value, min, max, fallback) {
@@ -3614,6 +3978,7 @@
   }
 
   function renderSelectedWorld() {
+    updateSourceDisplays(["localWorldJson"]);
     elements["selected-code"].textContent = "GLOBO";
     elements["selected-type"].textContent = "Mundo";
     elements["selected-name"].textContent = "Visão Global";
@@ -3626,9 +3991,10 @@
     renderGeneralCards("Mundo", [
         { label: "Países", value: "~195" },
         { label: "População estimada", value: "8 bilhões" },
-        { label: "Base de dados", value: "World Bank / RestCountries" }
+        { label: "Arquivo local", value: "data/world_data.geojson" },
+        { label: "Origem original", value: upstreamSourceLine(DATA_SOURCE_CATALOG.localWorldJson) }
     ]);
-    elements["general-note"].textContent = "Dados Globais de PIB e População.";
+    elements["general-note"].textContent = `Dados globais carregados de base JSON local. Fonte/procedência: ${sourceDetailsLine(["localWorldJson"])}.`;
   }
 
   async function enterWorldMode(options = {}) {
@@ -3751,6 +4117,7 @@
   }
 
   function selectCountry(props, feature) {
+    updateSourceDisplays(["localWorldJson"]);
     if (map.getSource("selected-country-source")) {
        setSourceData("selected-country-source", {
          type: "FeatureCollection",
@@ -3775,9 +4142,10 @@
         { label: "Densidade pop.", value: formatDensity(props.areaKm2 ? props.pop / props.areaKm2 : null) },
         { label: "PIB (2024)", value: formatCurrencyShortUSD(props.gdp) },
         { label: "PIB por habitante", value: formatCurrencyUSD(perCapita(props.gdp, props.pop)) },
-        { label: "Região", value: props.region || "Global" }
+        { label: "Região", value: props.region || "Global" },
+        { label: "Origem do JSON", value: upstreamSourceLine(DATA_SOURCE_CATALOG.localWorldJson) }
     ]);
-    elements["general-note"].textContent = "Dados do Banco Mundial (2024) e RestCountries.";
+    elements["general-note"].textContent = `Dados globais carregados de base JSON local. Fonte/procedência: ${sourceDetailsLine(["localWorldJson"])}.`;
   }
 
   function showCountryHover(lngLat, props) {
