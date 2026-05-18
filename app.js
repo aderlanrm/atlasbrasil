@@ -281,17 +281,17 @@
     securityBrazilIPEACities: {
       label: "Homicídios municipais",
       shortLabel: "IPEA Atlas",
-      provider: "IPEA Atlas da Violência / SIM-SUS",
+      provider: "IPEA Atlas da Violência 2024 / FBSP / SIM-MS / IBGE",
       type: "json",
-      provenance: "real",
-      freshness: "Atlas da Violência 2022",
-      url: "https://ipea.gov.br/atlasviolencia",
-      quality: "Oficial com cobertura parcial",
-      fields: ["código IBGE", "homicídios por 100k", "ano"],
-      methodology: "Taxa de homicídios por 100 mil habitantes calculada a partir do Sistema de Informações sobre Mortalidade (SIM) do Ministério da Saúde, via IPEA Atlas da Violência.",
-      limitations: ["Cobertura parcial: ~100 municípios principais e capitais.", "Municípios sem dado usam proxy pela UF.", "Divergências esperadas entre FBSP (polícia) e Atlas (SUS/óbito)."],
-      updatePolicy: "Baixar tabelas oficiais do IPEA Atlas e regenerar data/security_brazil_cities.json.",
-      note: "Dado real do IPEA; cobertura parcial no MVP."
+      provenance: "official_extracted_pdf",
+      freshness: "Atlas da Violência 2024, ano-base 2022",
+      url: "https://repositorio.ipea.gov.br/bitstream/11058/14031/5/AtlasViolencia2024_Retrato_dos_municipios_brasileros.pdf",
+      quality: "Oficial, extraído da Tabela 2 do PDF",
+      fields: ["código IBGE", "homicídios estimados", "homicídios por 100k", "ano"],
+      methodology: "Taxa de homicídios estimados por 100 mil habitantes. Soma homicídios registrados e homicídios ocultos estimados, conforme metodologia do Atlas.",
+      limitations: ["Cobertura restrita aos 319 municípios com mais de 100 mil habitantes em 2022.", "Municípios sem dado usam proxy pela UF.", "Os demais indicadores municipais da aba continuam sendo proxy estadual."],
+      updatePolicy: "Atualizar data/security_brazil_cities_atlas2024.csv pela Tabela 2 do Atlas municipal mais recente e regenerar data/security_brazil_cities.json.",
+      note: "Dado oficial do IPEA/FBSP para 319 municípios; demais cidades usam proxy UF."
     },
     securityBrazilCityProxy: {
       label: "Segurança de cidades (Proxy)",
@@ -549,7 +549,7 @@
         femicideRate: { label: "Feminicídio", metric: "Feminicídio por 100k", sourceIds: ["securityBrazilFBSP"] },
         domesticViolenceRate: { label: "Violência Doméstica", metric: "Violência doméstica por 100k", sourceIds: ["securityBrazilFBSP"] }
       },
-      note: "No Globo, alterna entre homicídios (UNODC) e Global Peace Index. No Brasil e UFs, alterna entre MVI, roubos de veículos, feminicídio e violência doméstica (FBSP). Em cidades, prioriza dados reais do IPEA Atlas; quando ausente, usa proxy pela UF."
+      note: "No Globo, alterna entre homicídios (UNODC) e Global Peace Index. No Brasil e UFs, alterna entre MVI, roubos de veículos, feminicídio e violência doméstica (FBSP). Em cidades, MVI usa homicídios estimados do Atlas para 319 municípios com mais de 100 mil habitantes; quando ausente, usa proxy pela UF."
     },
     health: {
       label: "Saude",
@@ -1663,6 +1663,12 @@
       hdiProxy: true,
       // Security: use IPEA real data for homicide/MVI when available, fallback to state proxy
       mviRate: hasRealData ? cityHomicideRate : (state ? (state.mviRate || 0) : 0),
+      homicideRate: hasRealData ? cityHomicideRate : 0,
+      estimatedHomicides: hasRealData ? (cityRealData.estimatedHomicides || 0) : 0,
+      registeredHomicides: hasRealData ? (cityRealData.registeredHomicides || 0) : 0,
+      hiddenHomicides: hasRealData ? (cityRealData.hiddenHomicides || 0) : 0,
+      securityRank: hasRealData ? (cityRealData.rank || 0) : 0,
+      securityPopulation2022: hasRealData ? (cityRealData.population2022 || 0) : 0,
       vehicleTheftRate: state ? (state.vehicleTheftRate || 0) : 0,
       femicideRate: state ? (state.femicideRate || 0) : 0,
       domesticViolenceRate: state ? (state.domesticViolenceRate || 0) : 0,
@@ -4308,16 +4314,19 @@
     }
     if (scope === "city") {
       const isReal = data.securityReal;
-      const sourceIds = isReal ? ["securityBrazilIPEACities"] : ["securityBrazilFBSP", "securityBrazilCityProxy"];
+      const metricHasMunicipalData = metric === "mviRate" && isReal;
+      const sourceIds = metricHasMunicipalData ? ["securityBrazilIPEACities"] : ["securityBrazilFBSP", "securityBrazilCityProxy"];
       const cards = [
-        { label: `${metricLabel} ${data.securityYear || 2023}${isReal ? "" : " (Proxy UF)"}`, value: `${valueForMetric(data).toFixed(1)} por 100k` },
-        { label: "Nível do dado", value: isReal ? "IPEA Atlas municipal" : "Proxy pela UF" },
+        { label: `${metricLabel} ${data.securityYear || 2023}${metricHasMunicipalData ? "" : " (Proxy UF)"}`, value: `${valueForMetric(data).toFixed(1)} por 100k` },
+        { label: "Nível do dado", value: metricHasMunicipalData ? "IPEA Atlas municipal" : "Proxy pela UF" },
         { label: "UF", value: `${data.stateName || ""} (${data.uf || ""})` },
         { label: "População", value: formatNumber(data.pop || 0) },
         { label: "Fonte", value: compactSourceLine(sourceIds) }
       ];
-      if (isReal && data.homicideRate) {
+      if (metricHasMunicipalData && data.homicideRate) {
         cards.splice(1, 0, { label: `Homicídios IPEA ${data.securityYear || 2022}`, value: `${data.homicideRate.toFixed(1)} por 100k` });
+        if (data.estimatedHomicides) cards.splice(2, 0, { label: "Homicídios estimados", value: formatNumber(data.estimatedHomicides) });
+        if (data.securityRank) cards.splice(3, 0, { label: "Ranking Atlas", value: `${formatNumber(data.securityRank)} de 319` });
       }
       return cards;
     }
