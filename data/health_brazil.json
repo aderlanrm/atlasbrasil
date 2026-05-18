@@ -1,0 +1,59 @@
+{
+  "metadata": {
+    "title": "Indicadores de saude e capacidade hospitalar por UF",
+    "source": "DATASUS/CNES/SIM/SINASC/SIH + IBGE",
+    "sourceUrl": "https://datasus.saude.gov.br/informacoes-de-saude-tabnet/",
+    "provenance": "compilado",
+    "freshness": "Base inicial 2022-2024, conforme indicador",
+    "quality": "Base inicial compilada para visualizacao",
+    "methodology": "Indicadores estaduais normalizados por populacao para leitura comparativa. A fonte-alvo para atualizacao e o DATASUS/CNES para capacidade instalada, SIM/SINASC para mortalidade e nascidos vivos, SIH/SUS para internacoes e IBGE para denominadores.",
+    "limitations": [
+      "Primeira versao de visualizacao, com dados estaduais compilados e arredondados.",
+      "Municipios usam proxy transparente pela UF ate a integracao completa do CNES/DATASUS por codigo IBGE.",
+      "Leitos, profissionais e mortalidade usam anos de referencia diferentes; cada campo deve preservar seu ano na proxima carga automatizada."
+    ],
+    "updatePolicy": "Gerar este arquivo automaticamente a partir de CNES, SIM, SINASC, SIH/SUS e IBGE, mantendo ano e competencia de cada indicador."
+  },
+  "brazil": {
+    "bedsPer1000": 2.1,
+    "susBedsPer1000": 1.4,
+    "icuBedsPer100k": 22.0,
+    "doctorsPer1000": 2.3,
+    "nursesPer1000": 3.4,
+    "infantMortality": 12.4,
+    "maternalMortality": 57.0,
+    "vaccinationCoverage": 84.0,
+    "privateCoverage": 25.0,
+    "year": 2023,
+    "source": "DATASUS/CNES/SIM/SINASC/IBGE compiled"
+  },
+  "states": {
+    "AC": { "uf": "AC", "bedsPer1000": 1.6, "susBedsPer1000": 1.3, "icuBedsPer100k": 13.0, "doctorsPer1000": 1.1, "nursesPer1000": 2.7, "infantMortality": 14.9, "maternalMortality": 72.0, "vaccinationCoverage": 78.0, "privateCoverage": 7.0, "year": 2023, "source": "DATASUS/CNES/SIM/SINASC/IBGE compiled" },
+    "AL": { "uf": "AL", "bedsPer1000": 1.8, "susBedsPer1000": 1.4, "icuBedsPer100k": 15.0, "doctorsPer1000": 1.5, "nursesPer1000": 3.0, "infantMortality": 13.8, "maternalMortality": 68.0, "vaccinationCoverage": 82.0, "privateCoverage": 12.0, "year": 2023, "source": "DATASUS/CNES/SIM/SINASC/IBGE compiled" },
+    "AP": { "uf": "AP", "bedsPer1000": 1.4, "susBedsPer1000": 1.2, "icuBedsPer100k": 12.0, "doctorsPer1000": 1.2, "nursesPer1000": 2.8, "infantMortality": 16.0, "maternalMortality": 75.0, "vaccinationCoverage": 76.0, "privateCoverage": 8.0, "year": 2023, "source": "DATASUS/CNES/SIM/SINASC/IBGE compiled" },
+    "AM": { "uf": "AM", "bedsPer1000": 1.5, "susBedsPer1000": 1.2, "icuBedsPer100k": 14.0, "doctorsPer1000": 1.3, "nursesPer1000": 2.9, "infantMortality": 15.8, "maternalMortality": 82.0, "vaccinationCoverage": 75.0, "privateCoverage": 10.0, "year": 2023, "source": "DATASUS/CNES/SIM/SINASC/IBGE compiled" },
+    "BA": { "uf": "BA", "bedsPer1000": 1.9, "susBedsPer1000": 1.4, "icuBedsPer100k": 16.0, "doctorsPer1000": 1.6, "nursesPer1000": 3.1, "infantMortality": 13.4, "maternalMortality": 66.0, "vaccinationCoverage": 81.0, "privateCoverage": 12.0, "year": 2023, "source": "DATASUS/CNES/SIM/SINASC/IBGE compiled" },
+    "CE": { "uf": "CE", "bedsPer1000": 2.0, "susBedsPer1000": 1.5, "icuBedsPer100k": 18.0, "doctorsPer1000": 1.8, "nursesPer1000": 3.2, "infantMortality": 12.7, "maternalMortality": 60.0, "vaccinationCoverage": 85.0, "privateCoverage": 15.0, "year": 2023, "source": "DATASUS/CNES/SIM/SINASC/IBGE compiled" },
+    "DF": { "uf": "DF", "bedsPer1000": 2.8, "susBedsPer1000": 1.3, "icuBedsPer100k": 36.0, "doctorsPer1000": 5.6, "nursesPer1000": 5.2, "infantMortality": 10.5, "maternalMortality": 45.0, "vaccinationCoverage": 86.0, "privateCoverage": 38.0, "year": 2023, "source": "DATASUS/CNES/SIM/SINASC/IBGE compiled" },
+    "ES": { "uf": "ES", "bedsPer1000": 2.0, "susBedsPer1000": 1.3, "icuBedsPer100k": 23.0, "doctorsPer1000": 2.5, "nursesPer1000": 3.6, "infantMortality": 10.7, "maternalMortality": 48.0, "vaccinationCoverage": 86.0, "privateCoverage": 32.0, "year": 2023, "source": "DATASUS/CNES/SIM/SINASC/IBGE compiled" },
+    "GO": { "uf": "GO", "bedsPer1000": 2.1, "susBedsPer1000": 1.3, "icuBedsPer100k": 22.0, "doctorsPer1000": 2.2, "nursesPer1000": 3.4, "infantMortality": 11.4, "maternalMortality": 52.0, "vaccinationCoverage": 84.0, "privateCoverage": 24.0, "year": 2023, "source": "DATASUS/CNES/SIM/SINASC/IBGE compiled" },
+    "MA": { "uf": "MA", "bedsPer1000": 1.5, "susBedsPer1000": 1.3, "icuBedsPer100k": 11.0, "doctorsPer1000": 1.0, "nursesPer1000": 2.8, "infantMortality": 15.1, "maternalMortality": 73.0, "vaccinationCoverage": 79.0, "privateCoverage": 7.0, "year": 2023, "source": "DATASUS/CNES/SIM/SINASC/IBGE compiled" },
+    "MG": { "uf": "MG", "bedsPer1000": 2.2, "susBedsPer1000": 1.5, "icuBedsPer100k": 24.0, "doctorsPer1000": 2.6, "nursesPer1000": 3.6, "infantMortality": 10.8, "maternalMortality": 44.0, "vaccinationCoverage": 87.0, "privateCoverage": 27.0, "year": 2023, "source": "DATASUS/CNES/SIM/SINASC/IBGE compiled" },
+    "MS": { "uf": "MS", "bedsPer1000": 2.3, "susBedsPer1000": 1.5, "icuBedsPer100k": 25.0, "doctorsPer1000": 2.3, "nursesPer1000": 3.5, "infantMortality": 11.9, "maternalMortality": 55.0, "vaccinationCoverage": 83.0, "privateCoverage": 22.0, "year": 2023, "source": "DATASUS/CNES/SIM/SINASC/IBGE compiled" },
+    "MT": { "uf": "MT", "bedsPer1000": 2.0, "susBedsPer1000": 1.3, "icuBedsPer100k": 22.0, "doctorsPer1000": 2.0, "nursesPer1000": 3.3, "infantMortality": 12.2, "maternalMortality": 58.0, "vaccinationCoverage": 82.0, "privateCoverage": 20.0, "year": 2023, "source": "DATASUS/CNES/SIM/SINASC/IBGE compiled" },
+    "PA": { "uf": "PA", "bedsPer1000": 1.4, "susBedsPer1000": 1.2, "icuBedsPer100k": 11.0, "doctorsPer1000": 1.1, "nursesPer1000": 2.7, "infantMortality": 15.5, "maternalMortality": 78.0, "vaccinationCoverage": 77.0, "privateCoverage": 8.0, "year": 2023, "source": "DATASUS/CNES/SIM/SINASC/IBGE compiled" },
+    "PB": { "uf": "PB", "bedsPer1000": 2.2, "susBedsPer1000": 1.6, "icuBedsPer100k": 18.0, "doctorsPer1000": 1.9, "nursesPer1000": 3.2, "infantMortality": 12.8, "maternalMortality": 60.0, "vaccinationCoverage": 84.0, "privateCoverage": 14.0, "year": 2023, "source": "DATASUS/CNES/SIM/SINASC/IBGE compiled" },
+    "PE": { "uf": "PE", "bedsPer1000": 2.1, "susBedsPer1000": 1.5, "icuBedsPer100k": 20.0, "doctorsPer1000": 2.1, "nursesPer1000": 3.4, "infantMortality": 12.3, "maternalMortality": 57.0, "vaccinationCoverage": 84.0, "privateCoverage": 18.0, "year": 2023, "source": "DATASUS/CNES/SIM/SINASC/IBGE compiled" },
+    "PI": { "uf": "PI", "bedsPer1000": 1.9, "susBedsPer1000": 1.5, "icuBedsPer100k": 15.0, "doctorsPer1000": 1.4, "nursesPer1000": 3.0, "infantMortality": 13.9, "maternalMortality": 69.0, "vaccinationCoverage": 82.0, "privateCoverage": 10.0, "year": 2023, "source": "DATASUS/CNES/SIM/SINASC/IBGE compiled" },
+    "PR": { "uf": "PR", "bedsPer1000": 2.4, "susBedsPer1000": 1.5, "icuBedsPer100k": 28.0, "doctorsPer1000": 2.9, "nursesPer1000": 3.8, "infantMortality": 9.8, "maternalMortality": 42.0, "vaccinationCoverage": 88.0, "privateCoverage": 31.0, "year": 2023, "source": "DATASUS/CNES/SIM/SINASC/IBGE compiled" },
+    "RJ": { "uf": "RJ", "bedsPer1000": 2.5, "susBedsPer1000": 1.2, "icuBedsPer100k": 30.0, "doctorsPer1000": 3.7, "nursesPer1000": 4.0, "infantMortality": 11.2, "maternalMortality": 54.0, "vaccinationCoverage": 81.0, "privateCoverage": 36.0, "year": 2023, "source": "DATASUS/CNES/SIM/SINASC/IBGE compiled" },
+    "RN": { "uf": "RN", "bedsPer1000": 2.0, "susBedsPer1000": 1.5, "icuBedsPer100k": 17.0, "doctorsPer1000": 1.8, "nursesPer1000": 3.2, "infantMortality": 12.5, "maternalMortality": 58.0, "vaccinationCoverage": 83.0, "privateCoverage": 13.0, "year": 2023, "source": "DATASUS/CNES/SIM/SINASC/IBGE compiled" },
+    "RO": { "uf": "RO", "bedsPer1000": 1.8, "susBedsPer1000": 1.3, "icuBedsPer100k": 18.0, "doctorsPer1000": 1.6, "nursesPer1000": 3.1, "infantMortality": 13.0, "maternalMortality": 62.0, "vaccinationCoverage": 81.0, "privateCoverage": 13.0, "year": 2023, "source": "DATASUS/CNES/SIM/SINASC/IBGE compiled" },
+    "RR": { "uf": "RR", "bedsPer1000": 1.7, "susBedsPer1000": 1.4, "icuBedsPer100k": 15.0, "doctorsPer1000": 1.5, "nursesPer1000": 3.0, "infantMortality": 17.0, "maternalMortality": 84.0, "vaccinationCoverage": 75.0, "privateCoverage": 8.0, "year": 2023, "source": "DATASUS/CNES/SIM/SINASC/IBGE compiled" },
+    "RS": { "uf": "RS", "bedsPer1000": 2.7, "susBedsPer1000": 1.7, "icuBedsPer100k": 31.0, "doctorsPer1000": 3.2, "nursesPer1000": 4.0, "infantMortality": 9.9, "maternalMortality": 40.0, "vaccinationCoverage": 88.0, "privateCoverage": 30.0, "year": 2023, "source": "DATASUS/CNES/SIM/SINASC/IBGE compiled" },
+    "SC": { "uf": "SC", "bedsPer1000": 2.5, "susBedsPer1000": 1.5, "icuBedsPer100k": 29.0, "doctorsPer1000": 3.0, "nursesPer1000": 3.9, "infantMortality": 9.3, "maternalMortality": 38.0, "vaccinationCoverage": 89.0, "privateCoverage": 32.0, "year": 2023, "source": "DATASUS/CNES/SIM/SINASC/IBGE compiled" },
+    "SE": { "uf": "SE", "bedsPer1000": 1.9, "susBedsPer1000": 1.4, "icuBedsPer100k": 17.0, "doctorsPer1000": 1.7, "nursesPer1000": 3.1, "infantMortality": 13.1, "maternalMortality": 63.0, "vaccinationCoverage": 82.0, "privateCoverage": 13.0, "year": 2023, "source": "DATASUS/CNES/SIM/SINASC/IBGE compiled" },
+    "SP": { "uf": "SP", "bedsPer1000": 2.3, "susBedsPer1000": 1.2, "icuBedsPer100k": 32.0, "doctorsPer1000": 3.6, "nursesPer1000": 4.2, "infantMortality": 9.7, "maternalMortality": 39.0, "vaccinationCoverage": 87.0, "privateCoverage": 40.0, "year": 2023, "source": "DATASUS/CNES/SIM/SINASC/IBGE compiled" },
+    "TO": { "uf": "TO", "bedsPer1000": 1.8, "susBedsPer1000": 1.4, "icuBedsPer100k": 16.0, "doctorsPer1000": 1.5, "nursesPer1000": 3.0, "infantMortality": 13.7, "maternalMortality": 66.0, "vaccinationCoverage": 81.0, "privateCoverage": 11.0, "year": 2023, "source": "DATASUS/CNES/SIM/SINASC/IBGE compiled" }
+  }
+}

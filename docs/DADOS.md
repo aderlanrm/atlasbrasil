@@ -2,6 +2,8 @@
 
 Este projeto usa um catálogo simples em `app.js` para manter análises, dropdowns, legenda e fonte seguindo o mesmo padrão.
 
+Para a nova frente de saúde/hospitais, consulte o briefing de fontes e variáveis em [SAUDE_HOSPITAIS_DADOS.md](SAUDE_HOSPITAIS_DADOS.md).
+
 ## 1. Cadastre a fonte
 
 Adicione uma entrada em `DATA_SOURCE_CATALOG`.

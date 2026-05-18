@@ -1,0 +1,49 @@
+{
+  "metadata": {
+    "title": "Indicadores globais de saude",
+    "source": "WHO Global Health Observatory / World Bank WDI / IHME GBD",
+    "sourceUrl": "https://www.who.int/data/gho",
+    "provenance": "compilado",
+    "freshness": "Series e anos de referencia variam por indicador, geralmente 2021-2023",
+    "quality": "Base inicial compilada para visualizacao",
+    "methodology": "Indicadores globais normalizados por ISO3 para comparacao entre paises. Leitos e profissionais seguem unidades da OMS por 10.000 habitantes; mortalidade e expectativa de vida seguem indicadores internacionais publicados por OMS/Banco Mundial.",
+    "limitations": [
+      "Base inicial cobre paises selecionados.",
+      "Anos de referencia podem divergir entre indicadores e paises.",
+      "Para auditoria fina, baixar os indicadores diretamente da API WHO/GHO ou World Bank WDI."
+    ],
+    "updatePolicy": "Substituir este JSON por extracao automatizada das APIs WHO/GHO, World Bank WDI e IHME/GBD."
+  },
+  "countries": {
+    "BRA": { "iso3": "BRA", "lifeExpectancy": 75.9, "healthyLifeExpectancy": 65.4, "uhcIndex": 80, "hospitalBedsPer10000": 21.0, "physiciansPer10000": 23.1, "nursesMidwivesPer10000": 74.0, "healthExpPctGdp": 9.9, "outOfPocketPct": 22.0, "year": 2022, "source": "WHO/WDI/IHME compiled" },
+    "USA": { "iso3": "USA", "lifeExpectancy": 77.4, "healthyLifeExpectancy": 63.9, "uhcIndex": 84, "hospitalBedsPer10000": 28.0, "physiciansPer10000": 36.0, "nursesMidwivesPer10000": 157.0, "healthExpPctGdp": 16.6, "outOfPocketPct": 10.9, "year": 2022, "source": "WHO/WDI/IHME compiled" },
+    "CAN": { "iso3": "CAN", "lifeExpectancy": 82.6, "healthyLifeExpectancy": 70.2, "uhcIndex": 91, "hospitalBedsPer10000": 25.5, "physiciansPer10000": 25.0, "nursesMidwivesPer10000": 99.0, "healthExpPctGdp": 12.1, "outOfPocketPct": 13.6, "year": 2022, "source": "WHO/WDI/IHME compiled" },
+    "MEX": { "iso3": "MEX", "lifeExpectancy": 74.8, "healthyLifeExpectancy": 65.5, "uhcIndex": 77, "hospitalBedsPer10000": 10.0, "physiciansPer10000": 24.0, "nursesMidwivesPer10000": 29.0, "healthExpPctGdp": 6.2, "outOfPocketPct": 41.0, "year": 2022, "source": "WHO/WDI/IHME compiled" },
+    "ARG": { "iso3": "ARG", "lifeExpectancy": 76.1, "healthyLifeExpectancy": 66.4, "uhcIndex": 79, "hospitalBedsPer10000": 50.0, "physiciansPer10000": 40.0, "nursesMidwivesPer10000": 41.0, "healthExpPctGdp": 9.7, "outOfPocketPct": 15.0, "year": 2022, "source": "WHO/WDI/IHME compiled" },
+    "CHL": { "iso3": "CHL", "lifeExpectancy": 80.3, "healthyLifeExpectancy": 68.8, "uhcIndex": 82, "hospitalBedsPer10000": 20.0, "physiciansPer10000": 28.0, "nursesMidwivesPer10000": 30.0, "healthExpPctGdp": 9.0, "outOfPocketPct": 31.0, "year": 2022, "source": "WHO/WDI/IHME compiled" },
+    "COL": { "iso3": "COL", "lifeExpectancy": 77.5, "healthyLifeExpectancy": 67.0, "uhcIndex": 78, "hospitalBedsPer10000": 17.0, "physiciansPer10000": 23.0, "nursesMidwivesPer10000": 15.0, "healthExpPctGdp": 8.0, "outOfPocketPct": 14.0, "year": 2022, "source": "WHO/WDI/IHME compiled" },
+    "PER": { "iso3": "PER", "lifeExpectancy": 76.5, "healthyLifeExpectancy": 66.2, "uhcIndex": 76, "hospitalBedsPer10000": 16.0, "physiciansPer10000": 14.0, "nursesMidwivesPer10000": 28.0, "healthExpPctGdp": 5.8, "outOfPocketPct": 28.0, "year": 2022, "source": "WHO/WDI/IHME compiled" },
+    "GBR": { "iso3": "GBR", "lifeExpectancy": 80.7, "healthyLifeExpectancy": 69.5, "uhcIndex": 88, "hospitalBedsPer10000": 24.0, "physiciansPer10000": 32.0, "nursesMidwivesPer10000": 88.0, "healthExpPctGdp": 11.3, "outOfPocketPct": 13.0, "year": 2022, "source": "WHO/WDI/IHME compiled" },
+    "FRA": { "iso3": "FRA", "lifeExpectancy": 82.5, "healthyLifeExpectancy": 70.8, "uhcIndex": 89, "hospitalBedsPer10000": 55.0, "physiciansPer10000": 32.0, "nursesMidwivesPer10000": 115.0, "healthExpPctGdp": 12.1, "outOfPocketPct": 8.9, "year": 2022, "source": "WHO/WDI/IHME compiled" },
+    "DEU": { "iso3": "DEU", "lifeExpectancy": 80.6, "healthyLifeExpectancy": 69.0, "uhcIndex": 89, "hospitalBedsPer10000": 78.0, "physiciansPer10000": 45.0, "nursesMidwivesPer10000": 140.0, "healthExpPctGdp": 12.7, "outOfPocketPct": 12.5, "year": 2022, "source": "WHO/WDI/IHME compiled" },
+    "ESP": { "iso3": "ESP", "lifeExpectancy": 83.1, "healthyLifeExpectancy": 71.3, "uhcIndex": 88, "hospitalBedsPer10000": 30.0, "physiciansPer10000": 45.0, "nursesMidwivesPer10000": 62.0, "healthExpPctGdp": 10.4, "outOfPocketPct": 21.0, "year": 2022, "source": "WHO/WDI/IHME compiled" },
+    "ITA": { "iso3": "ITA", "lifeExpectancy": 82.8, "healthyLifeExpectancy": 71.0, "uhcIndex": 88, "hospitalBedsPer10000": 31.0, "physiciansPer10000": 41.0, "nursesMidwivesPer10000": 66.0, "healthExpPctGdp": 9.0, "outOfPocketPct": 23.0, "year": 2022, "source": "WHO/WDI/IHME compiled" },
+    "PRT": { "iso3": "PRT", "lifeExpectancy": 81.6, "healthyLifeExpectancy": 69.6, "uhcIndex": 86, "hospitalBedsPer10000": 34.0, "physiciansPer10000": 55.0, "nursesMidwivesPer10000": 75.0, "healthExpPctGdp": 10.6, "outOfPocketPct": 28.0, "year": 2022, "source": "WHO/WDI/IHME compiled" },
+    "NOR": { "iso3": "NOR", "lifeExpectancy": 83.2, "healthyLifeExpectancy": 71.7, "uhcIndex": 90, "hospitalBedsPer10000": 35.0, "physiciansPer10000": 52.0, "nursesMidwivesPer10000": 181.0, "healthExpPctGdp": 8.5, "outOfPocketPct": 14.0, "year": 2022, "source": "WHO/WDI/IHME compiled" },
+    "SWE": { "iso3": "SWE", "lifeExpectancy": 83.1, "healthyLifeExpectancy": 71.5, "uhcIndex": 90, "hospitalBedsPer10000": 21.0, "physiciansPer10000": 43.0, "nursesMidwivesPer10000": 112.0, "healthExpPctGdp": 11.4, "outOfPocketPct": 13.0, "year": 2022, "source": "WHO/WDI/IHME compiled" },
+    "RUS": { "iso3": "RUS", "lifeExpectancy": 70.1, "healthyLifeExpectancy": 61.5, "uhcIndex": 74, "hospitalBedsPer10000": 70.0, "physiciansPer10000": 41.0, "nursesMidwivesPer10000": 85.0, "healthExpPctGdp": 7.0, "outOfPocketPct": 28.0, "year": 2022, "source": "WHO/WDI/IHME compiled" },
+    "CHN": { "iso3": "CHN", "lifeExpectancy": 78.2, "healthyLifeExpectancy": 68.5, "uhcIndex": 80, "hospitalBedsPer10000": 65.0, "physiciansPer10000": 29.0, "nursesMidwivesPer10000": 36.0, "healthExpPctGdp": 5.6, "outOfPocketPct": 34.0, "year": 2022, "source": "WHO/WDI/IHME compiled" },
+    "IND": { "iso3": "IND", "lifeExpectancy": 67.7, "healthyLifeExpectancy": 59.1, "uhcIndex": 63, "hospitalBedsPer10000": 5.0, "physiciansPer10000": 9.0, "nursesMidwivesPer10000": 17.0, "healthExpPctGdp": 3.3, "outOfPocketPct": 47.0, "year": 2022, "source": "WHO/WDI/IHME compiled" },
+    "JPN": { "iso3": "JPN", "lifeExpectancy": 84.4, "healthyLifeExpectancy": 74.1, "uhcIndex": 91, "hospitalBedsPer10000": 129.0, "physiciansPer10000": 26.0, "nursesMidwivesPer10000": 120.0, "healthExpPctGdp": 11.5, "outOfPocketPct": 13.0, "year": 2022, "source": "WHO/WDI/IHME compiled" },
+    "KOR": { "iso3": "KOR", "lifeExpectancy": 83.5, "healthyLifeExpectancy": 72.5, "uhcIndex": 89, "hospitalBedsPer10000": 127.0, "physiciansPer10000": 26.0, "nursesMidwivesPer10000": 87.0, "healthExpPctGdp": 9.7, "outOfPocketPct": 27.0, "year": 2022, "source": "WHO/WDI/IHME compiled" },
+    "AUS": { "iso3": "AUS", "lifeExpectancy": 83.3, "healthyLifeExpectancy": 71.6, "uhcIndex": 89, "hospitalBedsPer10000": 37.0, "physiciansPer10000": 41.0, "nursesMidwivesPer10000": 130.0, "healthExpPctGdp": 10.5, "outOfPocketPct": 16.0, "year": 2022, "source": "WHO/WDI/IHME compiled" },
+    "NZL": { "iso3": "NZL", "lifeExpectancy": 82.1, "healthyLifeExpectancy": 70.2, "uhcIndex": 88, "hospitalBedsPer10000": 25.0, "physiciansPer10000": 35.0, "nursesMidwivesPer10000": 118.0, "healthExpPctGdp": 10.0, "outOfPocketPct": 12.0, "year": 2022, "source": "WHO/WDI/IHME compiled" },
+    "ZAF": { "iso3": "ZAF", "lifeExpectancy": 61.5, "healthyLifeExpectancy": 54.0, "uhcIndex": 69, "hospitalBedsPer10000": 23.0, "physiciansPer10000": 8.0, "nursesMidwivesPer10000": 46.0, "healthExpPctGdp": 8.6, "outOfPocketPct": 6.0, "year": 2022, "source": "WHO/WDI/IHME compiled" },
+    "EGY": { "iso3": "EGY", "lifeExpectancy": 70.2, "healthyLifeExpectancy": 61.0, "uhcIndex": 70, "hospitalBedsPer10000": 14.0, "physiciansPer10000": 7.0, "nursesMidwivesPer10000": 16.0, "healthExpPctGdp": 4.7, "outOfPocketPct": 59.0, "year": 2022, "source": "WHO/WDI/IHME compiled" },
+    "NGA": { "iso3": "NGA", "lifeExpectancy": 53.6, "healthyLifeExpectancy": 47.0, "uhcIndex": 45, "hospitalBedsPer10000": 5.0, "physiciansPer10000": 4.0, "nursesMidwivesPer10000": 15.0, "healthExpPctGdp": 3.4, "outOfPocketPct": 70.0, "year": 2022, "source": "WHO/WDI/IHME compiled" },
+    "ETH": { "iso3": "ETH", "lifeExpectancy": 65.0, "healthyLifeExpectancy": 57.0, "uhcIndex": 43, "hospitalBedsPer10000": 3.0, "physiciansPer10000": 1.1, "nursesMidwivesPer10000": 8.0, "healthExpPctGdp": 3.3, "outOfPocketPct": 31.0, "year": 2022, "source": "WHO/WDI/IHME compiled" },
+    "TUR": { "iso3": "TUR", "lifeExpectancy": 76.0, "healthyLifeExpectancy": 66.6, "uhcIndex": 80, "hospitalBedsPer10000": 30.0, "physiciansPer10000": 22.0, "nursesMidwivesPer10000": 34.0, "healthExpPctGdp": 4.6, "outOfPocketPct": 17.0, "year": 2022, "source": "WHO/WDI/IHME compiled" },
+    "SAU": { "iso3": "SAU", "lifeExpectancy": 77.9, "healthyLifeExpectancy": 67.2, "uhcIndex": 78, "hospitalBedsPer10000": 22.0, "physiciansPer10000": 31.0, "nursesMidwivesPer10000": 58.0, "healthExpPctGdp": 6.3, "outOfPocketPct": 14.0, "year": 2022, "source": "WHO/WDI/IHME compiled" },
+    "IDN": { "iso3": "IDN", "lifeExpectancy": 68.3, "healthyLifeExpectancy": 60.5, "uhcIndex": 67, "hospitalBedsPer10000": 12.0, "physiciansPer10000": 7.0, "nursesMidwivesPer10000": 29.0, "healthExpPctGdp": 3.2, "outOfPocketPct": 31.0, "year": 2022, "source": "WHO/WDI/IHME compiled" }
+  }
+}
