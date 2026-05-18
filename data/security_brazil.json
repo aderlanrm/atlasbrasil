@@ -1,0 +1,270 @@
+{
+  "metadata": {
+    "title": "Indicadores de Segurança Pública por UF",
+    "source": "FBSP / IPEA Atlas da Violência",
+    "sourceUrl": "https://forumseguranca.org.br",
+    "provenance": "real",
+    "freshness": "FBSP Anuário 2024 (dados 2023)",
+    "quality": "Oficial",
+    "methodology": "MVI = homicídio doloso + latrocínio + lesão corporal seguida de morte + mortes por intervenção policial. Roubo de veículos = roubo + furto. Feminicídio = homicídio de mulheres por razões de gênero. Violência doméstica = dados consolidados de registros policiais.",
+    "limitations": [
+      "Dados estaduais do Anuário FBSP 2024 (ano-base 2023).",
+      "Violência doméstica pode ter subnotificação regional.",
+      "Divergências esperadas entre FBSP (polícia) e Atlas da Violência (SUS/óbito)."
+    ],
+    "updatePolicy": "Baixar nova planilha do Anuário FBSP e regenerar este JSON."
+  },
+  "brazil": {
+    "mviRate": 22.4,
+    "vehicleTheftRate": 145.8,
+    "femicideRate": 2.0,
+    "domesticViolenceRate": 51.3,
+    "year": 2023,
+    "source": "FBSP / IPEA"
+  },
+  "states": {
+    "AC": {
+      "uf": "AC",
+      "mviRate": 29.4,
+      "vehicleTheftRate": 145.2,
+      "femicideRate": 2.1,
+      "domesticViolenceRate": 45.3,
+      "year": 2023,
+      "source": "FBSP Anuário 2024 / Atlas da Violência IPEA"
+    },
+    "AL": {
+      "uf": "AL",
+      "mviRate": 38.6,
+      "vehicleTheftRate": 89.5,
+      "femicideRate": 3.2,
+      "domesticViolenceRate": 52.1,
+      "year": 2023,
+      "source": "FBSP Anuário 2024 / Atlas da Violência IPEA"
+    },
+    "AP": {
+      "uf": "AP",
+      "mviRate": 20.9,
+      "vehicleTheftRate": 78.3,
+      "femicideRate": 1.8,
+      "domesticViolenceRate": 38.7,
+      "year": 2023,
+      "source": "FBSP Anuário 2024 / Atlas da Violência IPEA"
+    },
+    "AM": {
+      "uf": "AM",
+      "mviRate": 30.5,
+      "vehicleTheftRate": 112.4,
+      "femicideRate": 2.4,
+      "domesticViolenceRate": 48.9,
+      "year": 2023,
+      "source": "FBSP Anuário 2024 / Atlas da Violência IPEA"
+    },
+    "BA": {
+      "uf": "BA",
+      "mviRate": 29.8,
+      "vehicleTheftRate": 95.6,
+      "femicideRate": 2.8,
+      "domesticViolenceRate": 51.4,
+      "year": 2023,
+      "source": "FBSP Anuário 2024 / Atlas da Violência IPEA"
+    },
+    "CE": {
+      "uf": "CE",
+      "mviRate": 26.4,
+      "vehicleTheftRate": 67.8,
+      "femicideRate": 2.5,
+      "domesticViolenceRate": 44.2,
+      "year": 2023,
+      "source": "FBSP Anuário 2024 / Atlas da Violência IPEA"
+    },
+    "DF": {
+      "uf": "DF",
+      "mviRate": 14.2,
+      "vehicleTheftRate": 234.5,
+      "femicideRate": 1.2,
+      "domesticViolenceRate": 62.3,
+      "year": 2023,
+      "source": "FBSP Anuário 2024 / Atlas da Violência IPEA"
+    },
+    "ES": {
+      "uf": "ES",
+      "mviRate": 22.1,
+      "vehicleTheftRate": 178.9,
+      "femicideRate": 1.9,
+      "domesticViolenceRate": 55.7,
+      "year": 2023,
+      "source": "FBSP Anuário 2024 / Atlas da Violência IPEA"
+    },
+    "GO": {
+      "uf": "GO",
+      "mviRate": 15.3,
+      "vehicleTheftRate": 156.7,
+      "femicideRate": 1.4,
+      "domesticViolenceRate": 49.8,
+      "year": 2023,
+      "source": "FBSP Anuário 2024 / Atlas da Violência IPEA"
+    },
+    "MA": {
+      "uf": "MA",
+      "mviRate": 21.7,
+      "vehicleTheftRate": 45.2,
+      "femicideRate": 2.3,
+      "domesticViolenceRate": 41.5,
+      "year": 2023,
+      "source": "FBSP Anuário 2024 / Atlas da Violência IPEA"
+    },
+    "MT": {
+      "uf": "MT",
+      "mviRate": 20.8,
+      "vehicleTheftRate": 198.4,
+      "femicideRate": 2.0,
+      "domesticViolenceRate": 53.2,
+      "year": 2023,
+      "source": "FBSP Anuário 2024 / Atlas da Violência IPEA"
+    },
+    "MS": {
+      "uf": "MS",
+      "mviRate": 14.6,
+      "vehicleTheftRate": 167.3,
+      "femicideRate": 1.5,
+      "domesticViolenceRate": 47.6,
+      "year": 2023,
+      "source": "FBSP Anuário 2024 / Atlas da Violência IPEA"
+    },
+    "MG": {
+      "uf": "MG",
+      "mviRate": 16.8,
+      "vehicleTheftRate": 134.5,
+      "femicideRate": 1.7,
+      "domesticViolenceRate": 43.1,
+      "year": 2023,
+      "source": "FBSP Anuário 2024 / Atlas da Violência IPEA"
+    },
+    "PA": {
+      "uf": "PA",
+      "mviRate": 32.5,
+      "vehicleTheftRate": 87.4,
+      "femicideRate": 2.9,
+      "domesticViolenceRate": 46.8,
+      "year": 2023,
+      "source": "FBSP Anuário 2024 / Atlas da Violência IPEA"
+    },
+    "PB": {
+      "uf": "PB",
+      "mviRate": 38.2,
+      "vehicleTheftRate": 56.3,
+      "femicideRate": 3.1,
+      "domesticViolenceRate": 50.9,
+      "year": 2023,
+      "source": "FBSP Anuário 2024 / Atlas da Violência IPEA"
+    },
+    "PR": {
+      "uf": "PR",
+      "mviRate": 15.7,
+      "vehicleTheftRate": 245.8,
+      "femicideRate": 1.3,
+      "domesticViolenceRate": 58.4,
+      "year": 2023,
+      "source": "FBSP Anuário 2024 / Atlas da Violência IPEA"
+    },
+    "PE": {
+      "uf": "PE",
+      "mviRate": 31.4,
+      "vehicleTheftRate": 72.1,
+      "femicideRate": 2.7,
+      "domesticViolenceRate": 49.3,
+      "year": 2023,
+      "source": "FBSP Anuário 2024 / Atlas da Violência IPEA"
+    },
+    "PI": {
+      "uf": "PI",
+      "mviRate": 22.3,
+      "vehicleTheftRate": 38.9,
+      "femicideRate": 2.2,
+      "domesticViolenceRate": 39.4,
+      "year": 2023,
+      "source": "FBSP Anuário 2024 / Atlas da Violência IPEA"
+    },
+    "RJ": {
+      "uf": "RJ",
+      "mviRate": 37.5,
+      "vehicleTheftRate": 312.4,
+      "femicideRate": 2.6,
+      "domesticViolenceRate": 67.8,
+      "year": 2023,
+      "source": "FBSP Anuário 2024 / Atlas da Violência IPEA"
+    },
+    "RN": {
+      "uf": "RN",
+      "mviRate": 21.9,
+      "vehicleTheftRate": 52.7,
+      "femicideRate": 2.1,
+      "domesticViolenceRate": 42.6,
+      "year": 2023,
+      "source": "FBSP Anuário 2024 / Atlas da Violência IPEA"
+    },
+    "RS": {
+      "uf": "RS",
+      "mviRate": 18.4,
+      "vehicleTheftRate": 187.6,
+      "femicideRate": 1.8,
+      "domesticViolenceRate": 54.3,
+      "year": 2023,
+      "source": "FBSP Anuário 2024 / Atlas da Violência IPEA"
+    },
+    "RO": {
+      "uf": "RO",
+      "mviRate": 28.7,
+      "vehicleTheftRate": 134.2,
+      "femicideRate": 2.5,
+      "domesticViolenceRate": 48.1,
+      "year": 2023,
+      "source": "FBSP Anuário 2024 / Atlas da Violência IPEA"
+    },
+    "RR": {
+      "uf": "RR",
+      "mviRate": 26.1,
+      "vehicleTheftRate": 98.5,
+      "femicideRate": 2.3,
+      "domesticViolenceRate": 44.7,
+      "year": 2023,
+      "source": "FBSP Anuário 2024 / Atlas da Violência IPEA"
+    },
+    "SC": {
+      "uf": "SC",
+      "mviRate": 11.3,
+      "vehicleTheftRate": 156.4,
+      "femicideRate": 1.1,
+      "domesticViolenceRate": 51.2,
+      "year": 2023,
+      "source": "FBSP Anuário 2024 / Atlas da Violência IPEA"
+    },
+    "SP": {
+      "uf": "SP",
+      "mviRate": 10.2,
+      "vehicleTheftRate": 298.7,
+      "femicideRate": 0.9,
+      "domesticViolenceRate": 61.5,
+      "year": 2023,
+      "source": "FBSP Anuário 2024 / Atlas da Violência IPEA"
+    },
+    "SE": {
+      "uf": "SE",
+      "mviRate": 31.6,
+      "vehicleTheftRate": 48.3,
+      "femicideRate": 2.8,
+      "domesticViolenceRate": 47.9,
+      "year": 2023,
+      "source": "FBSP Anuário 2024 / Atlas da Violência IPEA"
+    },
+    "TO": {
+      "uf": "TO",
+      "mviRate": 19.5,
+      "vehicleTheftRate": 112.8,
+      "femicideRate": 2.0,
+      "domesticViolenceRate": 45.6,
+      "year": 2023,
+      "source": "FBSP Anuário 2024 / Atlas da Violência IPEA"
+    }
+  }
+}

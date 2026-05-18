@@ -26,6 +26,9 @@
     hdiGlobal: "./data/hdi_global.json?v=" + Date.now(),
     hdiOwid: "./data/hdi_owid.json?v=" + Date.now(),
     idhmBrazil: "./data/idhm_brazil.json?v=" + Date.now(),
+    securityGlobal: "./data/security_global.json?v=" + Date.now(),
+    securityBrazil: "./data/security_brazil.json?v=" + Date.now(),
+    securityBrazilCities: "./data/security_brazil_cities.json?v=" + Date.now(),
     worldMesh: "./data/world_data.geojson?v=" + Date.now()
   };
 
@@ -227,6 +230,80 @@
       updatePolicy: "Substituir este proxy por uma base municipal auditável, informando anos censitários, arquivo bruto, campos usados e script de normalização.",
       note: "Marcado como estimado para evitar falsa precisão em cidades."
     },
+    securityGlobalUnodc: {
+      label: "Homicídios globais",
+      shortLabel: "UNODC",
+      provider: "UNODC / Global Study on Homicide",
+      type: "json",
+      provenance: "real",
+      freshness: "UNODC 2022-2023 consolidated",
+      url: "https://dataunodc.un.org/data/crime/cts-intentional-homicide",
+      quality: "Oficial com fallback local",
+      fields: ["ISO3", "homicide rate per 100k", "ano de referência"],
+      methodology: "Taxa de homicídios intencionais por 100 mil habitantes compilada do UNODC Global Study on Homicide.",
+      limitations: ["Conjunto fallback com países selecionados.", "Algumas taxas refletem anos de referência diferentes (2021-2023).", "Países sem dados ficam sem valor no mapa."],
+      updatePolicy: "Baixar CSV oficial do UNODC Data Portal e regenerar data/security_global.json.",
+      note: "Dado real oficial do UNODC; fallback local usado para cobertura inicial."
+    },
+    securityGlobalGpi: {
+      label: "Global Peace Index",
+      shortLabel: "GPI",
+      provider: "Vision of Humanity / IEP",
+      type: "json",
+      provenance: "real",
+      freshness: "GPI 2024",
+      url: "https://visionofhumanity.org",
+      quality: "Oficial com fallback local",
+      fields: ["ISO3", "GPI Score", "GPI Rank"],
+      methodology: "Global Peace Index (GPI) mede a paz relativa de nações usando indicadores de criminalidade, terrorismo, militarização e conflitos. Escala 1-5 (1 = mais pacífico, 5 = menos pacífico).",
+      limitations: ["Conjunto fallback com países selecionados.", "GPI é composto por múltiplos indicadores, não apenas violência letal.", "Países sem dados ficam sem valor no mapa."],
+      updatePolicy: "Baixar planilha oficial do Vision of Humanity e regenerar data/security_global.json.",
+      note: "Dado real do Institute for Economics & Peace."
+    },
+    securityBrazilFBSP: {
+      label: "Segurança Pública Brasil",
+      shortLabel: "FBSP/IPEA",
+      provider: "FBSP Anuário Brasileiro / IPEA Atlas da Violência",
+      type: "json",
+      provenance: "real",
+      freshness: "FBSP Anuário 2024 (dados 2023)",
+      url: "https://forumseguranca.org.br",
+      quality: "Oficial",
+      fields: ["UF", "MVI por 100k", "Roubo Veículos por 100k", "Feminicídio por 100k", "Violência Doméstica por 100k", "ano-base"],
+      methodology: "MVI = homicídio doloso + latrocínio + lesão corporal seguida de morte + mortes por intervenção policial. Roubo de veículos = roubo + furto. Feminicídio e violência doméstica baseados em registros policiais e consolidados oficiais.",
+      limitations: ["Dados estaduais do Anuário FBSP 2024 (ano-base 2023).", "Violência doméstica pode ter subnotificação regional.", "Divergências esperadas entre FBSP (polícia) e Atlas da Violência (SUS/óbito)."],
+      updatePolicy: "Baixar nova planilha do Anuário FBSP e regenerar data/security_brazil.json.",
+      note: "Dado real oficial do FBSP e IPEA."
+    },
+    securityBrazilIPEACities: {
+      label: "Homicídios municipais",
+      shortLabel: "IPEA Atlas",
+      provider: "IPEA Atlas da Violência / SIM-SUS",
+      type: "json",
+      provenance: "real",
+      freshness: "Atlas da Violência 2022",
+      url: "https://ipea.gov.br/atlasviolencia",
+      quality: "Oficial com cobertura parcial",
+      fields: ["código IBGE", "homicídios por 100k", "ano"],
+      methodology: "Taxa de homicídios por 100 mil habitantes calculada a partir do Sistema de Informações sobre Mortalidade (SIM) do Ministério da Saúde, via IPEA Atlas da Violência.",
+      limitations: ["Cobertura parcial: ~100 municípios principais e capitais.", "Municípios sem dado usam proxy pela UF.", "Divergências esperadas entre FBSP (polícia) e Atlas (SUS/óbito)."],
+      updatePolicy: "Baixar tabelas oficiais do IPEA Atlas e regenerar data/security_brazil_cities.json.",
+      note: "Dado real do IPEA; cobertura parcial no MVP."
+    },
+    securityBrazilCityProxy: {
+      label: "Segurança de cidades (Proxy)",
+      shortLabel: "Proxy UF",
+      provider: "Cálculo local a partir do estado",
+      type: "computed",
+      provenance: "estimado",
+      freshness: "Proxy derivado da UF",
+      quality: "Proxy transparente",
+      fields: ["indicador estadual ativo", "código da UF", "cidade selecionada"],
+      methodology: "Quando não há dado municipal real do IPEA, a cidade recebe o indicador da sua UF para permitir navegação visual.",
+      limitations: ["Não é dado municipal real.", "Não deve ser usado para ranking municipal ou tomada de decisão local.", "Prioridade é dada ao dado IPEA quando disponível."],
+      updatePolicy: "Substituir por base municipal auditável quando disponível.",
+      note: "Fallback transparente quando IPEA não cobre o município."
+    },
     politicsEstimate: {
       label: "Representação política",
       shortLabel: "Estimativa",
@@ -342,6 +419,39 @@
       defaultMetric: "enemScore",
       sourceIds: ["enemLocal"],
       note: "Estados usam tabela local de ENEM. Municípios mostram estimativa projetada a partir da média estadual e fatores socioeconômicos."
+    },
+    security: {
+      label: "Segurança",
+      caption: "Segurança pública",
+      icon: "shield",
+      group: "primary",
+      title: "Violência letal e indicadores de segurança pública",
+      defaultMetric: "mviRate",
+      metricStateKey: "securitySubMetric",
+      sourceIds: ["securityGlobalUnodc", "securityBrazilFBSP"],
+      sourceOptions: [
+        {
+          id: "unodc",
+          label: "UNODC",
+          scope: ["world"],
+          sourceIds: ["securityGlobalUnodc"],
+          difference: "Taxa de homicídios intencionais por 100k habitantes. Métrica universal de violência letal."
+        },
+        {
+          id: "gpi",
+          label: "GPI",
+          scope: ["world"],
+          sourceIds: ["securityGlobalGpi"],
+          difference: "Global Peace Index mede paz multidimensional (criminalidade, terrorismo, militarização). Escala 1-5; menor = mais pacífico."
+        }
+      ],
+      metrics: {
+        mviRate: { label: "MVI", metric: "MVI por 100k", sourceIds: ["securityBrazilFBSP"] },
+        vehicleTheftRate: { label: "Roubo Veículos", metric: "Roubo veículos por 100k", sourceIds: ["securityBrazilFBSP"] },
+        femicideRate: { label: "Feminicídio", metric: "Feminicídio por 100k", sourceIds: ["securityBrazilFBSP"] },
+        domesticViolenceRate: { label: "Violência Doméstica", metric: "Violência doméstica por 100k", sourceIds: ["securityBrazilFBSP"] }
+      },
+      note: "No Globo, alterna entre homicídios (UNODC) e Global Peace Index. No Brasil e UFs, alterna entre MVI, roubos de veículos, feminicídio e violência doméstica (FBSP). Em cidades, prioriza dados reais do IPEA Atlas; quando ausente, usa proxy pela UF."
     },
     travel: {
       label: "Viajando o Brasil",
@@ -484,6 +594,10 @@
   let activeHdiYear = savedPreferences.hdiYear || "last";
   let availableBrazilHdiYears = [];
   let brazilHdiHistory = {};
+  let securityGlobalData = null;
+  let securityBrazilData = null;
+  let securityBrazilCitiesData = null;
+  let activeSecuritySubMetric = savedPreferences.securitySubMetric || "mviRate";
   let activeSourceSelections = { ...(savedPreferences.sourceSelections || {}) };
   let fallbackStyleTried = false;
   let activeBaseMode = validBaseMode(savedPreferences.base) ? savedPreferences.base : "hybrid";
@@ -607,6 +721,18 @@
         console.warn("Falha ao carregar IDHM Brasil.", error);
         return null;
       }),
+      fetchJson(URLS.securityGlobal).catch((error) => {
+        console.warn("Falha ao carregar dados globais de segurança.", error);
+        return null;
+      }),
+      fetchJson(URLS.securityBrazil).catch((error) => {
+        console.warn("Falha ao carregar dados de segurança do Brasil.", error);
+        return null;
+      }),
+      fetchJson(URLS.securityBrazilCities).catch((error) => {
+        console.warn("Falha ao carregar dados municipais de segurança.", error);
+        return null;
+      }),
       fetchJson(URLS.brazilMesh).catch((error) => {
         console.warn("Falha ao carregar malha nacional do Brasil.", error);
         return null;
@@ -614,7 +740,7 @@
       fetchJson(URLS.statesMesh)
     ]);
 
-    const [stateRows, cityRows, gdpBrazilRows, gdpStateRows, gdpCityRows, states, cities, hdiGlobalRows, hdiOwidRows, idhmBrazilRows, brazilMesh, statesMesh] = requests.map((result) => (
+    const [stateRows, cityRows, gdpBrazilRows, gdpStateRows, gdpCityRows, states, cities, hdiGlobalRows, hdiOwidRows, idhmBrazilRows, securityGlobalRows, securityBrazilRows, securityBrazilCitiesRows, brazilMesh, statesMesh] = requests.map((result) => (
       result.status === "fulfilled" ? result.value : null
     ));
 
@@ -628,9 +754,13 @@
     mergeGlobalHdi(hdiGlobalRows);
     mergeOwidHdi(hdiOwidRows);
     mergeBrazilHdi(idhmBrazilRows);
+    mergeSecurityGlobal(securityGlobalRows);
+    mergeSecurityBrazil(securityBrazilRows);
+    mergeSecurityBrazilCities(securityBrazilCitiesRows);
     hydrateBrazilMesh(brazilMesh);
     hydrateStatesMesh(statesMesh);
     syncHdiToActiveYear();
+    syncSecurityData();
 
     // Apply projections after all data is merged
     mockGdpProjections(brazilGdpHistory);
@@ -853,6 +983,98 @@
     });
 
     syncHdiToActiveYear();
+  }
+
+  function mergeSecurityGlobal(data) {
+    if (!data || !data.countries) return;
+    securityGlobalData = data;
+    if (worldFeatureCollection) {
+      hydrateWorldSecurity(worldFeatureCollection);
+      setSourceData("world-fill-source", worldFeatureCollection);
+    }
+  }
+
+  function mergeSecurityBrazil(data) {
+    if (!data || !data.states) return;
+    securityBrazilData = data;
+    Object.entries(data.states || {}).forEach(([uf, row]) => {
+      const state = Array.from(stateById.values()).find((s) => s.sigla === uf);
+      if (!state) return;
+      state.mviRate = row.mviRate || 0;
+      state.vehicleTheftRate = row.vehicleTheftRate || 0;
+      state.femicideRate = row.femicideRate || 0;
+      state.domesticViolenceRate = row.domesticViolenceRate || 0;
+      state.mvi = row.mvi || 0;
+      state.securityYear = row.year || 2023;
+    });
+    syncSecurityData();
+  }
+
+  function mergeSecurityBrazilCities(data) {
+    if (!data || !data.cities) return;
+    securityBrazilCitiesData = data;
+    Object.entries(data.cities || {}).forEach(([cityId, row]) => {
+      const city = cityById.get(String(cityId));
+      if (!city) return;
+      city.homicideRate = row.homicideRate || 0;
+      city.securityYear = row.year || 2022;
+      city.securitySource = "IPEA Atlas";
+      city.securityReal = true;
+    });
+    syncSecurityData();
+  }
+
+  function syncSecurityData() {
+    if (!securityBrazilData && !securityBrazilCitiesData) return;
+    if (securityBrazilData) {
+      const brData = securityBrazilData.brazil || {};
+      if (brazilMeshFeature) {
+        brazilMeshFeature.properties.mviRate = brData.mviRate || 0;
+        brazilMeshFeature.properties.vehicleTheftRate = brData.vehicleTheftRate || 0;
+        brazilMeshFeature.properties.femicideRate = brData.femicideRate || 0;
+        brazilMeshFeature.properties.domesticViolenceRate = brData.domesticViolenceRate || 0;
+        brazilMeshFeature.properties.mvi = brData.mvi || 0;
+        brazilMeshFeature.properties.securityYear = brData.year || 2023;
+      }
+      stateById.forEach((state) => {
+        state.mviRate = state.mviRate || 0;
+        state.vehicleTheftRate = state.vehicleTheftRate || 0;
+        state.femicideRate = state.femicideRate || 0;
+        state.domesticViolenceRate = state.domesticViolenceRate || 0;
+        state.mvi = state.mvi || 0;
+      });
+    }
+    stateCitiesCache.forEach((collection, cachedStateId) => {
+      collection.features.forEach((feature) => {
+        feature.properties = { ...feature.properties, ...cityMapProperties(feature.properties) };
+      });
+      if (selectedStateId && String(selectedStateId) === String(cachedStateId)) {
+        updateMunicipalitySources(collection);
+      }
+    });
+    if (worldFeatureCollection) {
+      hydrateWorldSecurity(worldFeatureCollection);
+      setSourceData("world-fill-source", worldFeatureCollection);
+    }
+  }
+
+  function hydrateWorldSecurity(collection) {
+    if (!collection || !securityGlobalData || !securityGlobalData.countries) return collection;
+    collection.features.forEach((feature) => {
+      const props = feature.properties || {};
+      const iso3 = props.ISO_A3 || props.ADM0_A3 || props.iso3 || props.ISO3;
+      const row = securityGlobalData.countries[iso3];
+      if (!row) return;
+      feature.properties = {
+        ...props,
+        homicideRate: row.homicideRate || 0,
+        gpiScore: row.gpiScore || 0,
+        gpiRank: row.gpiRank || 0,
+        securityYear: row.year || 2023,
+        securitySource: row.source || "UNODC/GPI"
+      };
+    });
+    return collection;
   }
 
   function hdiYearsForActiveView(view = activeView) {
@@ -1134,6 +1356,12 @@
       hdiHistory: state.hdiHistory || {},
       hdiComponents: state.hdiComponents || hdiEntryForYear(state.hdiHistory, resolveHdiYear("brazil")),
       hdiProxy: false,
+      mviRate: state.mviRate || 0,
+      vehicleTheftRate: state.vehicleTheftRate || 0,
+      femicideRate: state.femicideRate || 0,
+      domesticViolenceRate: state.domesticViolenceRate || 0,
+      mvi: state.mvi || 0,
+      securityYear: state.securityYear || 2023,
       politicsTotal: politics.total,
       peoplePerPolitician: inhabitantsPerPolitician(state.pop, politics.total),
       stateDeputies: politics.stateDeputies,
@@ -1159,6 +1387,11 @@
        const pseudoRandom = (nameLen * 3.14) % 15 - 7.5;
        cityEnemVariation = popFactor + pseudoRandom;
     }
+    // Check for real municipal data from IPEA Atlas
+    const cityRealData = securityBrazilCitiesData && securityBrazilCitiesData.cities ? securityBrazilCitiesData.cities[props.id] : null;
+    const hasRealData = !!cityRealData;
+    const cityHomicideRate = cityRealData ? (cityRealData.homicideRate || 0) : 0;
+    const citySecurityYear = cityRealData ? (cityRealData.year || 2022) : (state ? (state.securityYear || 2023) : 2023);
     return {
       gdpPerCapita: perCapita(props.gdp, props.pop),
       politicsTotal: politics.total,
@@ -1169,6 +1402,14 @@
       hdiHistory: state ? (state.hdiHistory || {}) : {},
       hdiComponents: state ? (state.hdiComponents || null) : null,
       hdiProxy: true,
+      // Security: use IPEA real data for homicide/MVI when available, fallback to state proxy
+      mviRate: hasRealData ? cityHomicideRate : (state ? (state.mviRate || 0) : 0),
+      vehicleTheftRate: state ? (state.vehicleTheftRate || 0) : 0,
+      femicideRate: state ? (state.femicideRate || 0) : 0,
+      domesticViolenceRate: state ? (state.domesticViolenceRate || 0) : 0,
+      mvi: state ? (state.mvi || 0) : 0,
+      securityYear: citySecurityYear,
+      securityReal: hasRealData,
       enemScore: baseScore > 0 ? parseFloat((baseScore + cityEnemVariation).toFixed(1)) : 0,
       travelScore: DOCUMENTED_CITIES[props.id] ? 1 : 0
     };
@@ -1508,6 +1749,15 @@
        values = collection.features.map(f => f.properties.enemScore || 0);
     } else if (metricType === "travel") {
        values = collection.features.map(f => f.properties.travelScore || 0);
+    } else if (metricType === "security") {
+       const metricMap = {
+         mviRate: "mviRate",
+         vehicleTheftRate: "vehicleTheftRate",
+         femicideRate: "femicideRate",
+         domesticViolenceRate: "domesticViolenceRate"
+       };
+       const field = metricMap[activeSecuritySubMetric] || "mviRate";
+       values = collection.features.map(f => f.properties[field] || 0);
     } else {
        values = collection.features.map(f => f.properties.pop || 0);
     }
@@ -1549,6 +1799,27 @@
       colors = ["#17212b", "#f2c14e"];
       stops = [0, 1];
       scale = null; // force fixed stops for travel
+    } else if (activeAnalysis === "security") {
+      if (activeView === "world") {
+        const sourceId = activeSourceOptionId("security", "world");
+        if (sourceId === "gpi") {
+          colors = ["#1a5f8a", "#4f8f70", "#a9d65c", "#f2c14e", "#ef7d60", "#ff3b3b"];
+          if (!scale || scale.max <= scale.min) stops = [1.0, 1.5, 2.0, 2.5, 3.0, 3.5];
+        } else {
+          colors = ["#17212b", "#5c3a1e", "#a0522d", "#ef7d60", "#ff3b3b"];
+          if (!scale || scale.max <= scale.min) stops = [0, 5, 15, 30, 50];
+        }
+      } else {
+        const metric = activeSecuritySubMetric || "mviRate";
+        const metricStops = {
+          mviRate: isCity ? [0, 10, 25, 40, 60] : [0, 10, 20, 35, 55],
+          vehicleTheftRate: isCity ? [0, 80, 160, 240, 320] : [0, 60, 120, 180, 260],
+          femicideRate: isCity ? [0, 1, 2, 3, 5] : [0, 1, 1.5, 2.5, 4],
+          domesticViolenceRate: isCity ? [0, 25, 45, 60, 75] : [0, 20, 35, 50, 65]
+        };
+        colors = ["#17212b", "#5c3a1e", "#a0522d", "#ef7d60", "#ff3b3b"];
+        if (!scale || scale.max <= scale.min) stops = metricStops[metric] || metricStops.mviRate;
+      }
     } else {
       colors = ["#17212b", "#25534e", "#5b8e54", "#c59b3f", "#ef7d60"];
       if (isCity) colors.push("#b799ff");
@@ -1603,6 +1874,39 @@
     if (activeAnalysis === "travel") {
       return ["interpolate", ["linear"], metric, 0, 0, 1, 15];
     }
+    if (activeAnalysis === "security") {
+      if (activeView === "world") {
+        const sourceId = activeSourceOptionId("security", "world");
+        if (sourceId === "gpi") {
+          return ["interpolate", ["linear"], metric, 1.0, 3, 1.5, 6, 2.0, 10, 2.5, 14, 3.0, 20, 3.5, 28];
+        }
+        return ["interpolate", ["sqrt"], metric, 0, 3, 5, 6, 15, 11, 30, 18, 50, 28];
+      }
+      const secMetric = activeSecuritySubMetric || "mviRate";
+      const cityStops = {
+        mviRate: [0, 3, 10, 6, 25, 11, 40, 18, 60, 28],
+        vehicleTheftRate: [0, 3, 80, 6, 160, 11, 240, 18, 320, 28],
+        femicideRate: [0, 3, 1, 6, 2, 11, 3, 18, 5, 28],
+        domesticViolenceRate: [0, 3, 25, 6, 45, 11, 60, 18, 75, 28]
+      };
+      const stateStops = {
+        mviRate: [0, 5, 10, 10, 20, 16, 35, 24, 55, 34],
+        vehicleTheftRate: [0, 5, 60, 10, 120, 16, 180, 24, 260, 34],
+        femicideRate: [0, 5, 1, 10, 1.5, 16, 2.5, 24, 4, 34],
+        domesticViolenceRate: [0, 5, 20, 10, 35, 16, 50, 24, 65, 34]
+      };
+      const stops = scope === "city" ? cityStops[secMetric] : stateStops[secMetric];
+      if (!stops) {
+        return scope === "city"
+          ? ["interpolate", ["sqrt"], metric, 0, 3, 10, 6, 25, 11, 40, 18, 60, 28]
+          : ["interpolate", ["sqrt"], metric, 0, 5, 10, 10, 20, 16, 35, 24, 55, 34];
+      }
+      const expr = ["interpolate", ["sqrt"], metric];
+      for (let i = 0; i < stops.length; i += 2) {
+        expr.push(stops[i], stops[i + 1]);
+      }
+      return expr;
+    }
     return scope === "city"
       ? ["interpolate", ["sqrt"], metric, 1000, 3, 10000, 5, 100000, 8, 500000, 13, 2000000, 22, 11000000, 36]
       : ["interpolate", ["sqrt"], metric, 600000, 5, 3000000, 9, 9000000, 15, 44000000, 28];
@@ -1616,6 +1920,20 @@
     if (activeAnalysis === "politics") return ["to-number", ["get", "peoplePerPolitician"], 0];
     if (activeAnalysis === "education") return ["to-number", ["get", "enemScore"], 0];
     if (activeAnalysis === "travel") return ["to-number", ["get", "travelScore"], 0];
+    if (activeAnalysis === "security") {
+      if (activeView === "world") {
+        const sourceId = activeSourceOptionId("security", "world");
+        if (sourceId === "gpi") return ["to-number", ["get", "gpiScore"], 0];
+        return ["to-number", ["get", "homicideRate"], 0];
+      }
+      const metricMap = {
+        mviRate: "mviRate",
+        vehicleTheftRate: "vehicleTheftRate",
+        femicideRate: "femicideRate",
+        domesticViolenceRate: "domesticViolenceRate"
+      };
+      return ["to-number", ["get", metricMap[activeSecuritySubMetric] || "mviRate"], 0];
+    }
     return ["to-number", ["get", "pop"], 0];
   }
 
@@ -1625,6 +1943,7 @@
     if (activeAnalysis === "politics") return "#51d1c2";
     if (activeAnalysis === "education") return "#b8e8e0";
     if (activeAnalysis === "travel") return "#f2c14e";
+    if (activeAnalysis === "security") return "#ef7d60";
     return "#51d1c2";
   }
 
@@ -1634,6 +1953,7 @@
     if (activeAnalysis === "politics") return "#51d1c2";
     if (activeAnalysis === "education") return "#1a5f8a";
     if (activeAnalysis === "travel") return "#f2c14e";
+    if (activeAnalysis === "security") return "#ef7d60";
     return "#18b978";
   }
 
@@ -1840,11 +2160,14 @@
               <button type="button" id="hdi-year-plus" title="Próximo ano" aria-label="Próximo ano">+</button>
             </div>
           </div>
-        ` : (activeView === "world" ? `
+        ` : (activeAnalysis === "security" ? `
           <div class="flex-gap-4">
-            <select id="world-metric-select" aria-label="Variável">
-              ${renderMetricOptions(WORLD_METRIC_CATALOG, activeWorldMetric)}
-            </select>
+            ${activeView === "world" ? renderSourceOptionSelector() : ""}
+            ${activeView !== "world" ? `
+              <select id="legend-security-selector" aria-label="Selecionar indicador de segurança">
+                ${renderMetricOptions(ANALYSIS_CATALOG.security.metrics, activeSecuritySubMetric)}
+              </select>
+            ` : ""}
           </div>
         ` : (activeAnalysis === "gdp" ? `
           <div class="flex-gap-4">
@@ -1869,7 +2192,13 @@
               <button type="button" id="enem-year-plus" title="Próximo ano" aria-label="Próximo ano">+</button>
             </div>
           </div>
-        ` : `<strong>${escapeHtml(config.metric)}</strong>`)))}
+        ` : (activeView === "world" ? `
+          <div class="flex-gap-4">
+            <select id="world-metric-select" aria-label="Variável">
+              ${renderMetricOptions(WORLD_METRIC_CATALOG, activeWorldMetric)}
+            </select>
+          </div>
+        ` : `<strong>${escapeHtml(config.metric)}</strong>`))))}
       </div>
       <div class="legend-scale" id="legend-gradient-scale"></div>
       <div class="legend-labels">
@@ -1909,11 +2238,19 @@
         const options = activeSourceOptions();
         const selected = options.some((option) => option.id === e.target.value) ? e.target.value : options[0]?.id;
         if (selected) activeSourceSelections[activeAnalysis] = selected;
-        const years = hdiYearsForActiveView();
-        if (activeHdiYear !== "last" && !years.includes(String(activeHdiYear))) activeHdiYear = "last";
-        syncHdiToActiveYear();
-        updateStateSources();
-        if (selectedStateId && stateCitiesCache.has(selectedStateId)) updateMunicipalitySources(stateCitiesCache.get(selectedStateId));
+        if (activeAnalysis === "hdi") {
+          const years = hdiYearsForActiveView();
+          if (activeHdiYear !== "last" && !years.includes(String(activeHdiYear))) activeHdiYear = "last";
+          syncHdiToActiveYear();
+          updateStateSources();
+          if (selectedStateId && stateCitiesCache.has(selectedStateId)) updateMunicipalitySources(stateCitiesCache.get(selectedStateId));
+        }
+        if (activeAnalysis === "security") {
+          if (worldFeatureCollection) {
+            hydrateWorldSecurity(worldFeatureCollection);
+            setSourceData("world-fill-source", worldFeatureCollection);
+          }
+        }
         if (window.updateWorldLayerColor) window.updateWorldLayerColor();
         updateAnalysisPaint();
         updateHeatLegend();
@@ -1964,6 +2301,18 @@
     if (selector) {
       selector.addEventListener("change", (e) => {
         activeGdpSubMetric = validAnalysisMetric("gdp", e.target.value) ? e.target.value : ANALYSIS_CATALOG.gdp.defaultMetric;
+        updateAnalysisPaint();
+        updateHeatLegend();
+        refreshAnalysisContent();
+        refreshFixedDetailCard();
+        savePreferences();
+      });
+    }
+
+    const securitySelector = legend.querySelector("#legend-security-selector");
+    if (securitySelector) {
+      securitySelector.addEventListener("change", (e) => {
+        activeSecuritySubMetric = validAnalysisMetric("security", e.target.value) ? e.target.value : ANALYSIS_CATALOG.security.defaultMetric;
         updateAnalysisPaint();
         updateHeatLegend();
         refreshAnalysisContent();
@@ -2102,24 +2451,6 @@
       };
     }
 
-    if (activeView === "world") {
-      let labels, metricLabel;
-      if (activeWorldMetric === "pop") { metricLabel = "População"; labels = ["<1mi", "10mi", "50mi", "200mi", "1bi+"]; }
-      else if (activeWorldMetric === "area") { metricLabel = "Área territorial"; labels = ["Pequeno", "Médio", "Grande", "Gigante", "Continental"]; }
-      else if (activeWorldMetric === "density") { metricLabel = "Densidade pop."; labels = ["<10", "50", "150", "500", "1000+"]; }
-      else if (activeWorldMetric === "gdp") { metricLabel = "PIB US$ (2024)"; labels = ["<10bi", "100bi", "500bi", "2tri", "10tri+"]; }
-      else if (activeWorldMetric === "gdpPerCapita") { metricLabel = "PIB per capita US$ (24)"; labels = ["<2k", "5k", "15k", "35k", "60k+"]; }
-      
-      return {
-        metric: metricLabel,
-        scope: "Global",
-        colors: ["#17212b", "#25534e", "#5b8e54", "#c59b3f", "#ef7d60", "#b799ff"],
-        labels: labels,
-        sourceIds: (WORLD_METRIC_CATALOG[activeWorldMetric] || WORLD_METRIC_CATALOG.pop).sourceIds,
-        isWorld: true
-      };
-    }
-
     const scope = activeView === "cities" && selectedStateId ? "city" : "state";
     const isCity = scope === "city";
     const scale = isCity ? getCityScaleMetrics(activeAnalysis) : null;
@@ -2130,6 +2461,7 @@
        if (type === "gdp") return formatCurrencyShort(val);
        if (type === "edu") return val.toFixed(1);
        if (type === "pol") return formatShort(val);
+       if (type === "sec") return val.toFixed(1);
        return val;
     };
 
@@ -2173,6 +2505,71 @@
         scope: isCity ? "locais com vídeo" : "estados visitados",
         colors: ["#17212b", "#f2c14e"],
         labels: ["Sem vídeos", "Com documentários"]
+      };
+    }
+
+    if (activeAnalysis === "security") {
+      if (activeView === "world") {
+        const sourceId = activeSourceOptionId("security", "world");
+        if (sourceId === "gpi") {
+          return {
+            metric: "Global Peace Index",
+            scope: "Global",
+            colors: ["#1a5f8a", "#4f8f70", "#a9d65c", "#f2c14e", "#ef7d60", "#ff3b3b"],
+            labels: ["1.0 (paz)", "1.5", "2.0", "2.5", "3.0", "3.5+ (conflito)"],
+            sourceIds: ["securityGlobalGpi"],
+            isWorld: true
+          };
+        }
+        return {
+          metric: "Homicídios por 100k habitantes",
+          scope: "Global",
+          colors: ["#17212b", "#5c3a1e", "#a0522d", "#ef7d60", "#ff3b3b"],
+          labels: ["0", "5", "15", "30", "50+"],
+          sourceIds: ["securityGlobalUnodc"],
+          isWorld: true
+        };
+      }
+      const metricLabels = {
+        mviRate: "MVI por 100k",
+        vehicleTheftRate: "Roubo veículos por 100k",
+        femicideRate: "Feminicídio por 100k",
+        domesticViolenceRate: "Violência doméstica por 100k"
+      };
+      const metric = activeSecuritySubMetric || "mviRate";
+      const metricStops = {
+        mviRate: isCity ? ["0", "15", "30", "45", "60+"] : ["0", "12", "24", "38", "55+"],
+        vehicleTheftRate: isCity ? ["0", "80", "160", "240", "320+"] : ["0", "60", "120", "180", "260+"],
+        femicideRate: isCity ? ["0", "1", "2", "3", "5+"] : ["0", "1", "1.5", "2.5", "4+"],
+        domesticViolenceRate: isCity ? ["0", "25", "45", "60", "75+"] : ["0", "20", "35", "50", "65+"]
+      };
+      const scopeLabel = isCity ? "cidades da UF (IPEA + proxy)" : "estados";
+      return {
+        metric: metricLabels[metric] || "MVI por 100k",
+        scope: scopeLabel,
+        colors: ["#17212b", "#5c3a1e", "#a0522d", "#ef7d60", "#ff3b3b"],
+        labels: (scale && scale.max > scale.min)
+          ? [formatLabel(scale.min, "sec"), "...", formatLabel(scale.max, "sec")]
+          : (metricStops[metric] || metricStops.mviRate),
+        sourceIds: isCity ? ["securityBrazilFBSP", "securityBrazilIPEACities", "securityBrazilCityProxy"] : ["securityBrazilFBSP"]
+      };
+    }
+
+    if (activeView === "world") {
+      let labels, metricLabel;
+      if (activeWorldMetric === "pop") { metricLabel = "População"; labels = ["<1mi", "10mi", "50mi", "200mi", "1bi+"]; }
+      else if (activeWorldMetric === "area") { metricLabel = "Área territorial"; labels = ["Pequeno", "Médio", "Grande", "Gigante", "Continental"]; }
+      else if (activeWorldMetric === "density") { metricLabel = "Densidade pop."; labels = ["<10", "50", "150", "500", "1000+"]; }
+      else if (activeWorldMetric === "gdp") { metricLabel = "PIB US$ (2024)"; labels = ["<10bi", "100bi", "500bi", "2tri", "10tri+"]; }
+      else if (activeWorldMetric === "gdpPerCapita") { metricLabel = "PIB per capita US$ (24)"; labels = ["<2k", "5k", "15k", "35k", "60k+"]; }
+      
+      return {
+        metric: metricLabel,
+        scope: "Global",
+        colors: ["#17212b", "#25534e", "#5b8e54", "#c59b3f", "#ef7d60", "#b799ff"],
+        labels: labels,
+        sourceIds: (WORLD_METRIC_CATALOG[activeWorldMetric] || WORLD_METRIC_CATALOG.pop).sourceIds,
+        isWorld: true
       };
     }
 
@@ -3227,10 +3624,59 @@
     if (activeAnalysis === "hdi") return hdiCards(scope, data);
     if (activeAnalysis === "politics") return politicsCards(scope, data);
     if (activeAnalysis === "education") return educationCards(scope, data);
+    if (activeAnalysis === "security") return securityCards(scope, data);
     if (activeAnalysis === "travel") return travelCards(scope, data);
     if (scope === "state") return stateGeneralCards(data);
     if (scope === "city") return cityGeneralCards(data);
     return brazilGeneralCards();
+  }
+
+  function securityCards(scope, data) {
+    const metric = activeSecuritySubMetric || "mviRate";
+    const metricLabels = {
+      mviRate: "MVI",
+      vehicleTheftRate: "Roubo de Veículos",
+      femicideRate: "Feminicídio",
+      domesticViolenceRate: "Violência Doméstica"
+    };
+    const metricLabel = metricLabels[metric] || "MVI";
+    const valueForMetric = (row) => row[metric] || 0;
+
+    if (scope === "state") {
+      const cards = [
+        { label: `${metricLabel} ${data.securityYear || 2023}`, value: `${valueForMetric(data).toFixed(1)} por 100k` },
+        { label: `Ranking ${metricLabel}`, value: rankTextByMetric(Array.from(stateById.values()), data.id, valueForMetric, "no Brasil") },
+        { label: "População", value: formatNumber(data.pop || 0) },
+        { label: "Mapa de calor", value: `${metricLabel} por 100 mil habitantes` },
+        { label: "Fonte", value: compactSourceLine(["securityBrazilFBSP"]) }
+      ];
+      // Show all indicators in general view
+      if (metric !== "mviRate") {
+        cards.splice(1, 0, { label: `MVI ${data.securityYear || 2023}`, value: `${(data.mviRate || 0).toFixed(1)} por 100k` });
+      }
+      return cards;
+    }
+    if (scope === "city") {
+      const isReal = data.securityReal;
+      const sourceIds = isReal ? ["securityBrazilIPEACities"] : ["securityBrazilFBSP", "securityBrazilCityProxy"];
+      const cards = [
+        { label: `${metricLabel} ${data.securityYear || 2023}${isReal ? "" : " (Proxy UF)"}`, value: `${valueForMetric(data).toFixed(1)} por 100k` },
+        { label: "Nível do dado", value: isReal ? "IPEA Atlas municipal" : "Proxy pela UF" },
+        { label: "UF", value: `${data.stateName || ""} (${data.uf || ""})` },
+        { label: "População", value: formatNumber(data.pop || 0) },
+        { label: "Fonte", value: compactSourceLine(sourceIds) }
+      ];
+      if (isReal && data.homicideRate) {
+        cards.splice(1, 0, { label: `Homicídios IPEA ${data.securityYear || 2022}`, value: `${data.homicideRate.toFixed(1)} por 100k` });
+      }
+      return cards;
+    }
+    const brData = securityBrazilData ? securityBrazilData.brazil : {};
+    return [
+      { label: `${metricLabel} Brasil ${brData.year || 2023}`, value: `${(brData[metric] || 0).toFixed(1)} por 100k` },
+      { label: "Mapa de calor", value: `${metricLabel} por 100 mil habitantes` },
+      { label: "Fonte", value: compactSourceLine(["securityBrazilFBSP"]) }
+    ];
   }
 
   function hdiCards(scope, data) {
@@ -3449,7 +3895,10 @@
     const hdiWarning = activeAnalysis === "hdi"
       ? ` Ano ativo: ${resolveHdiYear() || "N/D"}.${activeView === "cities" ? " Em cidades, o valor é proxy por UF, não IDHM municipal real." : ""}`
       : "";
-    return `${config.note}${projectionWarning}${hdiWarning} Fonte/procedência: ${sourceDetailsLine()}.`;
+    const securityWarning = activeAnalysis === "security"
+      ? ` Indicador ativo: ${activeSecuritySubMetric || "mviRate"}.${activeView === "cities" ? " Em cidades, prioriza dado IPEA Atlas; quando ausente, usa proxy UF." : ""}`
+      : "";
+    return `${config.note}${projectionWarning}${hdiWarning}${securityWarning} Fonte/procedência: ${sourceDetailsLine()}.`;
   }
 
   function renderStateChart() {
@@ -3556,6 +4005,22 @@
         format: formatShort
       };
     }
+    if (activeAnalysis === "security") {
+      const metric = activeSecuritySubMetric || "mviRate";
+      const metricTitles = {
+        mviRate: "MVI",
+        vehicleTheftRate: "Roubo de Veículos",
+        femicideRate: "Feminicídio",
+        domesticViolenceRate: "Violência Doméstica"
+      };
+      const title = metricTitles[metric] || "MVI";
+      return {
+        title: `Estados por ${title}`,
+        caption: "maiores taxas | top 10",
+        value: (row) => row[metric] || 0,
+        format: (v) => `${v.toFixed(1)} por 100k`
+      };
+    }
     return {
       title: "Estados mais populosos",
       caption: "top 10",
@@ -3588,6 +4053,22 @@
         caption: "maior carga por político | top 10",
         value: (row) => inhabitantsPerPolitician(row.pop, cityPoliticalSummary(row).total),
         format: formatPeoplePerPoliticianShort
+      };
+    }
+    if (activeAnalysis === "security") {
+      const metric = activeSecuritySubMetric || "mviRate";
+      const metricTitles = {
+        mviRate: "MVI",
+        vehicleTheftRate: "Roubo de Veículos",
+        femicideRate: "Feminicídio",
+        domesticViolenceRate: "Violência Doméstica"
+      };
+      const title = metricTitles[metric] || "MVI";
+      return {
+        title: `${title} — cidades de ${uf}`,
+        caption: metric === "mviRate" ? "IPEA + proxy UF quando ausente" : "proxy pela UF",
+        value: (row) => row[metric] || 0,
+        format: (v) => `${v.toFixed(1)} por 100k`
       };
     }
     if (activeAnalysis === "education") {
@@ -3768,6 +4249,7 @@
     if (activeAnalysis === "hdi") return hdiCards("brazil");
     if (activeAnalysis === "politics") return politicsCards("brazil");
     if (activeAnalysis === "education") return educationCards("brazil");
+    if (activeAnalysis === "security") return securityCards("brazil");
     if (activeAnalysis === "travel") return travelCards("brazil");
     const politics = brazilPoliticalSummary();
     const gdpPerCapita = perCapita(brazilGdp, totalPopulation);
@@ -3792,6 +4274,7 @@
     if (activeAnalysis === "hdi") return hdiCards("state", stateForCards);
     if (activeAnalysis === "politics") return politicsCards("state", stateForCards);
     if (activeAnalysis === "education") return educationCards("state", stateForCards);
+    if (activeAnalysis === "security") return securityCards("state", stateForCards);
     if (activeAnalysis === "travel") return travelCards("state", stateForCards);
     const pop = Number(props.pop || 0);
     const gdpPerCapita = perCapita(props.gdp, pop);
@@ -3819,6 +4302,7 @@
     if (activeAnalysis === "hdi") return hdiCards("city", props);
     if (activeAnalysis === "politics") return politicsCards("city", props);
     if (activeAnalysis === "education") return educationCards("city", props);
+    if (activeAnalysis === "security") return securityCards("city", props);
     if (activeAnalysis === "travel") return travelCards("city", props);
     const pop = Number(props.pop || 0);
     const state = stateById.get(String(props.stateId || ""));
@@ -4099,6 +4583,7 @@
         analysis: activeAnalysis,
         gdpSubMetric: activeGdpSubMetric,
         hdiYear: activeHdiYear,
+        securitySubMetric: activeSecuritySubMetric,
         sourceSelections: activeSourceSelections,
         worldMetric: activeWorldMetric,
         view: activeView,
@@ -4150,6 +4635,7 @@
       if (parsed.selectedCityId) safe.selectedCityId = normalizeCode(parsed.selectedCityId);
       if (validAnalysisMetric("gdp", parsed.gdpSubMetric)) safe.gdpSubMetric = String(parsed.gdpSubMetric);
       if (parsed.hdiYear) safe.hdiYear = String(parsed.hdiYear);
+      if (validAnalysisMetric("security", parsed.securitySubMetric)) safe.securitySubMetric = String(parsed.securitySubMetric);
       if (parsed.sourceSelections && typeof parsed.sourceSelections === "object") {
         safe.sourceSelections = {};
         Object.entries(parsed.sourceSelections).forEach(([analysis, value]) => {
@@ -4618,9 +5104,11 @@
     const worldHdiSourceIds = activeDataSourceIds();
     const globalHdiDataset = activeGlobalHdiDataset();
     const globalHdiYears = hdiYearsForActiveView("world");
-    updateSourceDisplays(activeAnalysis === "hdi" ? worldHdiSourceIds : ["localWorldJson"]);
+    const securityWorldSourceIds = activeAnalysis === "security" ? activeDataSourceIds() : ["securityGlobalUnodc"];
+    updateSourceDisplays(activeAnalysis === "hdi" ? worldHdiSourceIds : (activeAnalysis === "security" ? securityWorldSourceIds : ["localWorldJson"]));
     const hdiYear = resolveHdiYear("world");
     const globalHdiCount = globalHdiDataset && globalHdiDataset.countries ? Object.keys(globalHdiDataset.countries).length : 0;
+    const globalSecurityCount = securityGlobalData && securityGlobalData.countries ? Object.keys(securityGlobalData.countries).length : 0;
     elements["selected-code"].textContent = "GLOBO";
     elements["selected-type"].textContent = "Mundo";
     elements["selected-name"].textContent = "Visão Global";
@@ -4638,12 +5126,27 @@
           { label: "Série histórica", value: `${globalHdiYears[globalHdiYears.length - 1] || "-"}-${globalHdiYears[0] || "-"}` },
           { label: "Fonte selecionada", value: activeSourceOption("hdi", "world")?.label || "UNDP/HDR" }
         ] : []),
-        { label: "Arquivo local", value: activeAnalysis === "hdi" ? (activeSourceOptionId("hdi", "world") === "owid" ? "data/hdi_owid.json" : "data/hdi_global.json") : "data/world_data.geojson" },
-        { label: "Origem original", value: activeAnalysis === "hdi" ? upstreamSourceLine(sourceRecords(worldHdiSourceIds)[0]) : upstreamSourceLine(DATA_SOURCE_CATALOG.localWorldJson) }
+        ...(activeAnalysis === "security" ? (() => {
+          const sourceId = activeSourceOptionId("security", "world");
+          if (sourceId === "gpi") {
+            return [
+              { label: "GPI", value: globalSecurityCount ? `${formatNumber(globalSecurityCount)} países na base` : "carregando" },
+              { label: "Fonte", value: "Vision of Humanity" }
+            ];
+          }
+          return [
+            { label: "Homicídios", value: globalSecurityCount ? `${formatNumber(globalSecurityCount)} países na base` : "carregando" },
+            { label: "Fonte", value: "UNODC" }
+          ];
+        })() : []),
+        { label: "Arquivo local", value: activeAnalysis === "hdi" ? (activeSourceOptionId("hdi", "world") === "owid" ? "data/hdi_owid.json" : "data/hdi_global.json") : (activeAnalysis === "security" ? "data/security_global.json" : "data/world_data.geojson") },
+        { label: "Origem original", value: activeAnalysis === "hdi" ? upstreamSourceLine(sourceRecords(worldHdiSourceIds)[0]) : (activeAnalysis === "security" ? upstreamSourceLine(DATA_SOURCE_CATALOG.securityGlobalUnodc) : upstreamSourceLine(DATA_SOURCE_CATALOG.localWorldJson)) }
     ]);
     elements["general-note"].textContent = activeAnalysis === "hdi"
       ? `IDH global carregado de JSON local auditável. Fonte/procedência: ${sourceDetailsLine(worldHdiSourceIds)}.`
-      : `Dados globais carregados de base JSON local. Fonte/procedência: ${sourceDetailsLine(["localWorldJson"])}.`;
+      : (activeAnalysis === "security"
+        ? `Dados de segurança global carregados de JSON local. Fonte/procedência: ${sourceDetailsLine(["securityGlobalUnodc"])}.`
+        : `Dados globais carregados de base JSON local. Fonte/procedência: ${sourceDetailsLine(["localWorldJson"])}.`);
   }
 
   async function enterWorldMode(options = {}) {
@@ -4660,6 +5163,7 @@
             const data = await fetchJson(URLS.worldMesh);
             worldFeatureCollection = data;
             hydrateWorldHdi(worldFeatureCollection);
+            hydrateWorldSecurity(worldFeatureCollection);
             
             map.addSource("world-fill-source", { type: "geojson", data: worldFeatureCollection });
             map.addSource("selected-country-source", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
@@ -4769,7 +5273,8 @@
   function selectCountry(props, feature) {
     props = feature && feature.properties ? { ...props, ...feature.properties } : props;
     const worldHdiSourceIds = activeDataSourceIds();
-    updateSourceDisplays(activeAnalysis === "hdi" ? worldHdiSourceIds : ["localWorldJson"]);
+    const securityWorldSourceIds = activeAnalysis === "security" ? activeDataSourceIds() : ["securityGlobalUnodc"];
+    updateSourceDisplays(activeAnalysis === "hdi" ? worldHdiSourceIds : (activeAnalysis === "security" ? securityWorldSourceIds : ["localWorldJson"]));
     if (map.getSource("selected-country-source")) {
        setSourceData("selected-country-source", {
          type: "FeatureCollection",
@@ -4798,14 +5303,30 @@
           { label: "Categoria", value: hdiCategoryLabel(props.hdiCategory) },
           { label: "Histórico IDH", value: renderHdiHistoryChart(props.hdiHistory, resolveHdiYear("world"), false), isHtml: true }
         ] : []),
+        ...(activeAnalysis === "security" ? (() => {
+          const sourceId = activeSourceOptionId("security", "world");
+          if (sourceId === "gpi") {
+            return [
+              { label: `GPI ${props.securityYear || 2023}`, value: props.gpiScore ? `${props.gpiScore.toFixed(2)}` : "sem dado" },
+              { label: "Ranking GPI", value: props.gpiRank ? `${props.gpiRank}º` : "sem dado" },
+              { label: "Fonte", value: "Vision of Humanity" }
+            ];
+          }
+          return [
+            { label: `Homicídios ${props.securityYear || 2022}`, value: props.homicideRate ? `${props.homicideRate.toFixed(1)} por 100k` : "sem dado" },
+            { label: "Fonte", value: props.securitySource || "UNODC" }
+          ];
+        })() : []),
         { label: "PIB (2024)", value: formatCurrencyShortUSD(props.gdp) },
         { label: "PIB por habitante", value: formatCurrencyUSD(perCapita(props.gdp, props.pop)) },
         { label: "Região", value: props.region || "Global" },
-        { label: "Origem do JSON", value: activeAnalysis === "hdi" ? upstreamSourceLine(sourceRecords(worldHdiSourceIds)[0]) : upstreamSourceLine(DATA_SOURCE_CATALOG.localWorldJson) }
+        { label: "Origem do JSON", value: activeAnalysis === "hdi" ? upstreamSourceLine(sourceRecords(worldHdiSourceIds)[0]) : (activeAnalysis === "security" ? upstreamSourceLine(sourceRecords(securityWorldSourceIds)[0]) : upstreamSourceLine(DATA_SOURCE_CATALOG.localWorldJson)) }
     ]);
     elements["general-note"].textContent = activeAnalysis === "hdi"
       ? `IDH global. Fonte/procedência: ${sourceDetailsLine(worldHdiSourceIds)}.`
-      : `Dados globais carregados de base JSON local. Fonte/procedência: ${sourceDetailsLine(["localWorldJson"])}.`;
+      : (activeAnalysis === "security"
+        ? `Dados de segurança global. Fonte/procedência: ${sourceDetailsLine(securityWorldSourceIds)}.`
+        : `Dados globais carregados de base JSON local. Fonte/procedência: ${sourceDetailsLine(["localWorldJson"])}.`);
   }
 
   function showCountryHover(lngLat, props) {
@@ -4827,6 +5348,21 @@
           <span class="text-gray-400">IDH ${escapeHtml(props.hdiYear || resolveHdiYear("world"))}</span>
           <span class="text-right font-medium text-white">${formatHdi(props.hdi)}</span>
         ` : ""}
+        ${activeAnalysis === "security" ? (() => {
+          const sourceId = activeSourceOptionId("security", "world");
+          if (sourceId === "gpi") {
+            return `
+              <span class="text-gray-400">GPI</span>
+              <span class="text-right font-medium text-white">${props.gpiScore ? props.gpiScore.toFixed(2) : "-"}</span>
+              <span class="text-gray-400">Ranking GPI</span>
+              <span class="text-right font-medium text-white">${props.gpiRank ? props.gpiRank + "º" : "-"}</span>
+            `;
+          }
+          return `
+            <span class="text-gray-400">Homicídios</span>
+            <span class="text-right font-medium text-white">${props.homicideRate ? props.homicideRate.toFixed(1) + " /100k" : "-"}</span>
+          `;
+        })() : ""}
       </div>`;
     
     hoverPopup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, className: "atlas-popup", maxWidth: "260px" })
@@ -4857,6 +5393,20 @@
         { label: "Ranking HDR", value: props.hdiRank ? `${props.hdiRank} de ${hdiCountryCount()}` : "ranking disponível em 2023" },
         { label: "Categoria", value: hdiCategoryLabel(props.hdiCategory) }
       ] : []),
+      ...(activeAnalysis === "security" ? (() => {
+        const sourceId = activeSourceOptionId("security", "world");
+        if (sourceId === "gpi") {
+          return [
+            { label: `GPI ${props.securityYear || 2023}`, value: props.gpiScore ? `${props.gpiScore.toFixed(2)}` : "sem dado" },
+            { label: "Ranking GPI", value: props.gpiRank ? `${props.gpiRank}º` : "sem dado" },
+            { label: "Fonte", value: "Vision of Humanity" }
+          ];
+        }
+        return [
+          { label: `Homicídios ${props.securityYear || 2022}`, value: props.homicideRate ? `${props.homicideRate.toFixed(1)} por 100k` : "sem dado" },
+          { label: "Fonte", value: props.securitySource || "UNODC" }
+        ];
+      })() : []),
       { label: "Região", value: props.region || "Global" }
     ];
     showFixedDetailCard("País", `${name} (${props.ISO_A3 || "-"})`, rows, props);
@@ -4926,6 +5476,29 @@
         35000, "#ef7d60",
         60000, "#b799ff"
       ];
+    }
+    if (activeAnalysis === "security") {
+      const sourceId = activeSourceOptionId("security", "world");
+      if (sourceId === "gpi") {
+        colorExpr = [
+          "interpolate", ["linear"], ["to-number", ["get", "gpiScore"], 0],
+          1.0, "#1a5f8a",
+          1.5, "#4f8f70",
+          2.0, "#a9d65c",
+          2.5, "#f2c14e",
+          3.0, "#ef7d60",
+          3.5, "#ff3b3b"
+        ];
+      } else {
+        colorExpr = [
+          "interpolate", ["linear"], ["to-number", ["get", "homicideRate"], 0],
+          0, "#17212b",
+          5, "#5c3a1e",
+          15, "#a0522d",
+          30, "#ef7d60",
+          50, "#ff3b3b"
+        ];
+      }
     }
     map.setPaintProperty("world-fill", "fill-color", colorExpr);
   }

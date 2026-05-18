@@ -19,6 +19,7 @@ htmlcov/
 dist/
 build/
 *.egg-info/
+fetch*
 
 # Node/frontend artifacts, if the project gains a build step later
 node_modules/

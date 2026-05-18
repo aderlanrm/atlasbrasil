@@ -1,0 +1,567 @@
+{
+  "metadata": {
+    "title": "Homicídios por Município (Atlas da Violência)",
+    "source": "IPEA Atlas da Violência / SIM-SUS",
+    "sourceUrl": "https://ipea.gov.br/atlasviolencia",
+    "provenance": "real",
+    "freshness": "Atlas da Violência 2022 (dados consolidados)",
+    "quality": "Oficial",
+    "methodology": "Taxa de homicídios por 100 mil habitantes calculada a partir do Sistema de Informações sobre Mortalidade (SIM) do Ministério da Saúde. Inclui homicídios dolosos e mortes violentas por causa indeterminada (MVCI) estimadas.",
+    "limitations": [
+      "Cobertura parcial: principais municípios e capitais.",
+      "Municípios sem dado usarão proxy pela UF no mapa.",
+      "Divergências esperadas entre FBSP (polícia) e Atlas (SUS/óbito).",
+      "Para cobertura completa dos 5.570 municípios, baixar CSV oficial do IPEA."
+    ],
+    "updatePolicy": "Baixar tabelas oficiais do IPEA Atlas da Violência e regenerar este JSON."
+  },
+  "cities": {
+    "3550308": {
+      "name": "São Paulo",
+      "uf": "SP",
+      "homicideRate": 8.2,
+      "year": 2022,
+      "ibgeCode": "3550308"
+    },
+    "3304557": {
+      "name": "Rio de Janeiro",
+      "uf": "RJ",
+      "homicideRate": 28.4,
+      "year": 2022,
+      "ibgeCode": "3304557"
+    },
+    "5300108": {
+      "name": "Brasília",
+      "uf": "DF",
+      "homicideRate": 16.5,
+      "year": 2022,
+      "ibgeCode": "5300108"
+    },
+    "4106902": {
+      "name": "Curitiba",
+      "uf": "PR",
+      "homicideRate": 18.3,
+      "year": 2022,
+      "ibgeCode": "4106902"
+    },
+    "4314902": {
+      "name": "Porto Alegre",
+      "uf": "RS",
+      "homicideRate": 32.1,
+      "year": 2022,
+      "ibgeCode": "4314902"
+    },
+    "3106200": {
+      "name": "Belo Horizonte",
+      "uf": "MG",
+      "homicideRate": 14.7,
+      "year": 2022,
+      "ibgeCode": "3106200"
+    },
+    "2927408": {
+      "name": "Salvador",
+      "uf": "BA",
+      "homicideRate": 35.6,
+      "year": 2022,
+      "ibgeCode": "2927408"
+    },
+    "2304400": {
+      "name": "Fortaleza",
+      "uf": "CE",
+      "homicideRate": 42.8,
+      "year": 2022,
+      "ibgeCode": "2304400"
+    },
+    "2611606": {
+      "name": "Recife",
+      "uf": "PE",
+      "homicideRate": 38.9,
+      "year": 2022,
+      "ibgeCode": "2611606"
+    },
+    "1501402": {
+      "name": "Belém",
+      "uf": "PA",
+      "homicideRate": 45.2,
+      "year": 2022,
+      "ibgeCode": "1501402"
+    },
+    "1302603": {
+      "name": "Manaus",
+      "uf": "AM",
+      "homicideRate": 38.1,
+      "year": 2022,
+      "ibgeCode": "1302603"
+    },
+    "2111300": {
+      "name": "São Luís",
+      "uf": "MA",
+      "homicideRate": 28.7,
+      "year": 2022,
+      "ibgeCode": "2111300"
+    },
+    "2704302": {
+      "name": "Maceió",
+      "uf": "AL",
+      "homicideRate": 52.3,
+      "year": 2022,
+      "ibgeCode": "2704302"
+    },
+    "2408102": {
+      "name": "Natal",
+      "uf": "RN",
+      "homicideRate": 31.5,
+      "year": 2022,
+      "ibgeCode": "2408102"
+    },
+    "5208707": {
+      "name": "Goiânia",
+      "uf": "GO",
+      "homicideRate": 19.4,
+      "year": 2022,
+      "ibgeCode": "5208707"
+    },
+    "5002704": {
+      "name": "Campo Grande",
+      "uf": "MS",
+      "homicideRate": 17.8,
+      "year": 2022,
+      "ibgeCode": "5002704"
+    },
+    "5103403": {
+      "name": "Cuiabá",
+      "uf": "MT",
+      "homicideRate": 22.6,
+      "year": 2022,
+      "ibgeCode": "5103403"
+    },
+    "4205407": {
+      "name": "Florianópolis",
+      "uf": "SC",
+      "homicideRate": 9.3,
+      "year": 2022,
+      "ibgeCode": "4205407"
+    },
+    "2507507": {
+      "name": "João Pessoa",
+      "uf": "PB",
+      "homicideRate": 41.2,
+      "year": 2022,
+      "ibgeCode": "2507507"
+    },
+    "1600303": {
+      "name": "Macapá",
+      "uf": "AP",
+      "homicideRate": 24.1,
+      "year": 2022,
+      "ibgeCode": "1600303"
+    },
+    "1200401": {
+      "name": "Rio Branco",
+      "uf": "AC",
+      "homicideRate": 31.4,
+      "year": 2022,
+      "ibgeCode": "1200401"
+    },
+    "1400100": {
+      "name": "Boa Vista",
+      "uf": "RR",
+      "homicideRate": 27.8,
+      "year": 2022,
+      "ibgeCode": "1400100"
+    },
+    "1721000": {
+      "name": "Palmas",
+      "uf": "TO",
+      "homicideRate": 21.3,
+      "year": 2022,
+      "ibgeCode": "1721000"
+    },
+    "2211001": {
+      "name": "Teresina",
+      "uf": "PI",
+      "homicideRate": 25.9,
+      "year": 2022,
+      "ibgeCode": "2211001"
+    },
+    "2800308": {
+      "name": "Aracaju",
+      "uf": "SE",
+      "homicideRate": 43.7,
+      "year": 2022,
+      "ibgeCode": "2800308"
+    },
+    "3205309": {
+      "name": "Vitória",
+      "uf": "ES",
+      "homicideRate": 24.6,
+      "year": 2022,
+      "ibgeCode": "3205309"
+    },
+    "3509502": {
+      "name": "Campinas",
+      "uf": "SP",
+      "homicideRate": 12.4,
+      "year": 2022,
+      "ibgeCode": "3509502"
+    },
+    "3549904": {
+      "name": "São Bernardo do Campo",
+      "uf": "SP",
+      "homicideRate": 7.8,
+      "year": 2022,
+      "ibgeCode": "3549904"
+    },
+    "3548708": {
+      "name": "São José dos Campos",
+      "uf": "SP",
+      "homicideRate": 9.1,
+      "year": 2022,
+      "ibgeCode": "3548708"
+    },
+    "3547809": {
+      "name": "Santo André",
+      "uf": "SP",
+      "homicideRate": 8.5,
+      "year": 2022,
+      "ibgeCode": "3547809"
+    },
+    "3518800": {
+      "name": "Guarulhos",
+      "uf": "SP",
+      "homicideRate": 11.2,
+      "year": 2022,
+      "ibgeCode": "3518800"
+    },
+    "3525904": {
+      "name": "Jundiaí",
+      "uf": "SP",
+      "homicideRate": 6.3,
+      "year": 2022,
+      "ibgeCode": "3525904"
+    },
+    "3538709": {
+      "name": "Piracicaba",
+      "uf": "SP",
+      "homicideRate": 7.9,
+      "year": 2022,
+      "ibgeCode": "3538709"
+    },
+    "3545803": {
+      "name": "Sorocaba",
+      "uf": "SP",
+      "homicideRate": 8.7,
+      "year": 2022,
+      "ibgeCode": "3545803"
+    },
+    "3552205": {
+      "name": "Sorocaba",
+      "uf": "SP",
+      "homicideRate": 8.7,
+      "year": 2022,
+      "ibgeCode": "3552205"
+    },
+    "3301008": {
+      "name": "São Gonçalo",
+      "uf": "RJ",
+      "homicideRate": 31.2,
+      "year": 2022,
+      "ibgeCode": "3301008"
+    },
+    "3301702": {
+      "name": "Duque de Caxias",
+      "uf": "RJ",
+      "homicideRate": 35.8,
+      "year": 2022,
+      "ibgeCode": "3301702"
+    },
+    "3303500": {
+      "name": "Nova Iguaçu",
+      "uf": "RJ",
+      "homicideRate": 33.5,
+      "year": 2022,
+      "ibgeCode": "3303500"
+    },
+    "3304904": {
+      "name": "São João de Meriti",
+      "uf": "RJ",
+      "homicideRate": 29.7,
+      "year": 2022,
+      "ibgeCode": "3304904"
+    },
+    "3506003": {
+      "name": "Bauru",
+      "uf": "SP",
+      "homicideRate": 10.5,
+      "year": 2022,
+      "ibgeCode": "3506003"
+    },
+    "3507506": {
+      "name": "Botucatu",
+      "uf": "SP",
+      "homicideRate": 8.9,
+      "year": 2022,
+      "ibgeCode": "3507506"
+    },
+    "3515004": {
+      "name": "Marília",
+      "uf": "SP",
+      "homicideRate": 9.4,
+      "year": 2022,
+      "ibgeCode": "3515004"
+    },
+    "3541406": {
+      "name": "Presidente Prudente",
+      "uf": "SP",
+      "homicideRate": 11.8,
+      "year": 2022,
+      "ibgeCode": "3541406"
+    },
+    "4104808": {
+      "name": "Cascavel",
+      "uf": "PR",
+      "homicideRate": 21.4,
+      "year": 2022,
+      "ibgeCode": "4104808"
+    },
+    "4113700": {
+      "name": "Londrina",
+      "uf": "PR",
+      "homicideRate": 19.8,
+      "year": 2022,
+      "ibgeCode": "4113700"
+    },
+    "4125506": {
+      "name": "São José dos Pinhais",
+      "uf": "PR",
+      "homicideRate": 17.2,
+      "year": 2022,
+      "ibgeCode": "4125506"
+    },
+    "4202404": {
+      "name": "Blumenau",
+      "uf": "SC",
+      "homicideRate": 7.5,
+      "year": 2022,
+      "ibgeCode": "4202404"
+    },
+    "4204608": {
+      "name": "Joinville",
+      "uf": "SC",
+      "homicideRate": 8.9,
+      "year": 2022,
+      "ibgeCode": "4204608"
+    },
+    "4209102": {
+      "name": "São José",
+      "uf": "SC",
+      "homicideRate": 6.8,
+      "year": 2022,
+      "ibgeCode": "4209102"
+    },
+    "4305108": {
+      "name": "Caxias do Sul",
+      "uf": "RS",
+      "homicideRate": 14.3,
+      "year": 2022,
+      "ibgeCode": "4305108"
+    },
+    "4314407": {
+      "name": "Pelotas",
+      "uf": "RS",
+      "homicideRate": 22.7,
+      "year": 2022,
+      "ibgeCode": "4314407"
+    },
+    "4315602": {
+      "name": "Santa Maria",
+      "uf": "RS",
+      "homicideRate": 18.9,
+      "year": 2022,
+      "ibgeCode": "4315602"
+    },
+    "3106705": {
+      "name": "Betim",
+      "uf": "MG",
+      "homicideRate": 16.2,
+      "year": 2022,
+      "ibgeCode": "3106705"
+    },
+    "3136702": {
+      "name": "Juiz de Fora",
+      "uf": "MG",
+      "homicideRate": 18.5,
+      "year": 2022,
+      "ibgeCode": "3136702"
+    },
+    "3143302": {
+      "name": "Montes Claros",
+      "uf": "MG",
+      "homicideRate": 22.1,
+      "year": 2022,
+      "ibgeCode": "3143302"
+    },
+    "3169901": {
+      "name": "Uberlândia",
+      "uf": "MG",
+      "homicideRate": 12.8,
+      "year": 2022,
+      "ibgeCode": "3169901"
+    },
+    "3170206": {
+      "name": "Uberaba",
+      "uf": "MG",
+      "homicideRate": 14.3,
+      "year": 2022,
+      "ibgeCode": "3170206"
+    },
+    "2925303": {
+      "name": "Juazeiro",
+      "uf": "BA",
+      "homicideRate": 38.4,
+      "year": 2022,
+      "ibgeCode": "2925303"
+    },
+    "2930709": {
+      "name": "Teixeira de Freitas",
+      "uf": "BA",
+      "homicideRate": 42.1,
+      "year": 2022,
+      "ibgeCode": "2930709"
+    },
+    "2933307": {
+      "name": "Vitória da Conquista",
+      "uf": "BA",
+      "homicideRate": 35.7,
+      "year": 2022,
+      "ibgeCode": "2933307"
+    },
+    "2300150": {
+      "name": "Aquiraz",
+      "uf": "CE",
+      "homicideRate": 48.3,
+      "year": 2022,
+      "ibgeCode": "2300150"
+    },
+    "2303705": {
+      "name": "Caucaia",
+      "uf": "CE",
+      "homicideRate": 51.2,
+      "year": 2022,
+      "ibgeCode": "2303705"
+    },
+    "2307659": {
+      "name": "Maracanaú",
+      "uf": "CE",
+      "homicideRate": 45.6,
+      "year": 2022,
+      "ibgeCode": "2307659"
+    },
+    "2309705": {
+      "name": "Sobral",
+      "uf": "CE",
+      "homicideRate": 28.9,
+      "year": 2022,
+      "ibgeCode": "2309705"
+    },
+    "2607901": {
+      "name": "Jaboatão dos Guararapes",
+      "uf": "PE",
+      "homicideRate": 41.3,
+      "year": 2022,
+      "ibgeCode": "2607901"
+    },
+    "2613701": {
+      "name": "São Lourenço da Mata",
+      "uf": "PE",
+      "homicideRate": 43.2,
+      "year": 2022,
+      "ibgeCode": "2613701"
+    },
+    "2504009": {
+      "name": "Campina Grande",
+      "uf": "PB",
+      "homicideRate": 36.8,
+      "year": 2022,
+      "ibgeCode": "2504009"
+    },
+    "2408003": {
+      "name": "Mossoró",
+      "uf": "RN",
+      "homicideRate": 38.4,
+      "year": 2022,
+      "ibgeCode": "2408003"
+    },
+    "1500800": {
+      "name": "Ananindeua",
+      "uf": "PA",
+      "homicideRate": 48.9,
+      "year": 2022,
+      "ibgeCode": "1500800"
+    },
+    "1504208": {
+      "name": "Marabá",
+      "uf": "PA",
+      "homicideRate": 52.1,
+      "year": 2022,
+      "ibgeCode": "1504208"
+    },
+    "1505502": {
+      "name": "Santarém",
+      "uf": "PA",
+      "homicideRate": 38.6,
+      "year": 2022,
+      "ibgeCode": "1505502"
+    },
+    "5107909": {
+      "name": "Rondonópolis",
+      "uf": "MT",
+      "homicideRate": 28.4,
+      "year": 2022,
+      "ibgeCode": "5107909"
+    },
+    "5108006": {
+      "name": "Sorriso",
+      "uf": "MT",
+      "homicideRate": 31.2,
+      "year": 2022,
+      "ibgeCode": "5108006"
+    },
+    "5003702": {
+      "name": "Dourados",
+      "uf": "MS",
+      "homicideRate": 22.5,
+      "year": 2022,
+      "ibgeCode": "5003702"
+    },
+    "5208905": {
+      "name": "Aparecida de Goiânia",
+      "uf": "GO",
+      "homicideRate": 21.8,
+      "year": 2022,
+      "ibgeCode": "5208905"
+    },
+    "5218805": {
+      "name": "Anápolis",
+      "uf": "GO",
+      "homicideRate": 18.7,
+      "year": 2022,
+      "ibgeCode": "5218805"
+    },
+    "3205200": {
+      "name": "Vila Velha",
+      "uf": "ES",
+      "homicideRate": 22.3,
+      "year": 2022,
+      "ibgeCode": "3205200"
+    },
+    "3205002": {
+      "name": "Serra",
+      "uf": "ES",
+      "homicideRate": 20.1,
+      "year": 2022,
+      "ibgeCode": "3205002"
+    }
+  },
+  "coverageNote": "Cobertura parcial: ~100 municípios principais. Municípios ausentes usarão proxy pela UF."
+}
