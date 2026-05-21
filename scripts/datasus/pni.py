@@ -62,19 +62,44 @@ def fetch_pni_coverage(year: int = LEGACY_LAST_YEAR, ufs=None) -> pd.DataFrame:
 
 
 def aggregate_coverage_by_municipality(df: pd.DataFrame) -> pd.DataFrame:
-    """Average COBERT_NUM per MUNIC across all IMUNOs.
-
-    Drops rows where COBERT_NUM == 0 (likely missing/erroneous) so the average
-    is not pulled down by reporting gaps.
+    """Calcula a cobertura vacinal focando nas vacinas sentinela:
+    - Tríplice Viral D1 (código '94') ou Pentavalente (código '73').
+    - Se nenhuma estiver disponível com cobertura > 0, faz o fallback para a média simples de outros imunobiológicos.
     """
     if df.empty:
         return pd.DataFrame(columns=["vaccinationCoverage"])
-    nonzero = df[df["COBERT_NUM"] > 0]
-    if nonzero.empty:
+    
+    # Normalizar o código IMUNO (removendo zeros à esquerda)
+    df = df.copy()
+    df["IMUNO_NORM"] = df["IMUNO"].astype(str).str.strip().str.lstrip("0")
+    
+    results = {}
+    for munic, group in df.groupby("MUNIC"):
+        valid_group = group[group["COBERT_NUM"] > 0]
+        if valid_group.empty:
+            continue
+            
+        # Tentar buscar Tríplice Viral D1 ("94")
+        triplice = valid_group[valid_group["IMUNO_NORM"] == "94"]
+        if not triplice.empty:
+            results[munic] = triplice["COBERT_NUM"].iloc[0]
+            continue
+            
+        # Tentar buscar Pentavalente ("73")
+        penta = valid_group[valid_group["IMUNO_NORM"] == "73"]
+        if not penta.empty:
+            results[munic] = penta["COBERT_NUM"].iloc[0]
+            continue
+            
+        # Fallback: média de todos os outros imunobiológicos com valor > 0
+        results[munic] = valid_group["COBERT_NUM"].mean()
+
+    if not results:
         return pd.DataFrame(columns=["vaccinationCoverage"])
-    avg = nonzero.groupby("MUNIC")["COBERT_NUM"].mean().rename("vaccinationCoverage")
-    avg = avg.clip(upper=100).round(1)
-    out = avg.to_frame()
+        
+    s = pd.Series(results, name="vaccinationCoverage")
+    s = s.clip(upper=100).round(1)
+    out = s.to_frame()
     out.index = out.index.astype(str).str.zfill(6)
     return out
 

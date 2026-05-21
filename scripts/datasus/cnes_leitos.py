@@ -57,7 +57,11 @@ def aggregate_leitos_by_municipality(df: pd.DataFrame) -> pd.DataFrame:
 
     total = df.groupby("CODUFMUN")["QT_EXIST"].sum().rename("leitos_total")
     sus = df.groupby("CODUFMUN")["QT_SUS"].sum().rename("leitos_sus")
-    uti_mask = df["TP_LEITO"] == 3
+    if "CODLEITO" in df.columns:
+        codleito_numeric = pd.to_numeric(df["CODLEITO"], errors="coerce")
+        uti_mask = (df["TP_LEITO"] == 3) & (codleito_numeric >= 74) & (codleito_numeric <= 83)
+    else:
+        uti_mask = df["TP_LEITO"] == 3
     uti = df.loc[uti_mask].groupby("CODUFMUN")["QT_EXIST"].sum().rename("leitos_uti")
     out = pd.concat([total, sus, uti], axis=1).fillna(0).astype(int)
     out.index = out.index.astype(str).str.zfill(6)

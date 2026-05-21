@@ -1159,3 +1159,29 @@ h1 {
 .cols-4 { grid-template-columns: repeat(4, 1fr) !important; }
 .cols-5 { grid-template-columns: repeat(5, 1fr) !important; }
 
+/* Tooltip de Ajuda Compacto e Premium */
+.help-tooltip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  text-decoration: none;
+  margin-left: 6px;
+  vertical-align: middle;
+  cursor: help;
+  transition: all 0.2s ease;
+}
+
+.help-tooltip:hover {
+  background: var(--cyan);
+  color: #06201d;
+  box-shadow: 0 0 8px rgba(81, 209, 194, 0.5);
+}
+
+

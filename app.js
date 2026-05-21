@@ -1687,6 +1687,8 @@
       healthYear: healthBase.year || healthBase.healthYear || 2023,
       healthReal: hasCityHealthData,
       healthProxy: !hasCityHealthData,
+      healthCoverage: cityHealthData ? (cityHealthData.coverage || "uf_proxy") : "uf_proxy",
+      healthRealFields: cityHealthData ? (cityHealthData.realFields || []) : [],
       healthSource: hasCityHealthData ? (cityHealthData.source || "CNES/SIM/SINASC/SI-PNI/IBGE") : (healthBase.source || "Proxy UF"),
       enemScore: baseScore > 0 ? parseFloat((baseScore + cityEnemVariation).toFixed(1)) : 0,
       travelScore: DOCUMENTED_CITIES[props.id] ? 1 : 0,
@@ -4057,10 +4059,11 @@
       if (card.isHtml) {
         return `<div class="grid-full-span">${card.value}</div>`;
       }
+      const valStr = card.isValueHtml ? card.value : escapeHtml(card.value);
       return `
         <div>
           <span>${escapeHtml(card.label)}</span>
-          <strong>${escapeHtml(card.value)}</strong>
+          <strong>${valStr}</strong>
         </div>
       `;
     }).join("");
@@ -4182,18 +4185,79 @@
       ];
     }
     if (scope === "city") {
-      const sourceIds = data.healthReal
+      const sourceIds = data.healthCoverage === "real"
         ? ["healthBrazilCitiesDatasus", "populationIbge"]
-        : ["healthBrazilDatasus", "healthBrazilCityProxy", "populationIbge"];
-      return [
-        { label: `${metricLabels[metric] || "Saude"} ${data.healthYear || 2023}${data.healthReal ? "" : " (Proxy UF)"}`, value: formatHealthValue(metric, valueForMetric(data)) },
-        { label: "Nivel do dado", value: data.healthReal ? "Dado municipal" : "Proxy pela UF, nao cidade" },
-        { label: "UF usada", value: `${data.stateName || ""} (${data.uf || ""})` },
-        { label: data.healthReal ? "Leitos totais" : "Leitos totais UF", value: formatHealthValue("bedsPer1000", data.bedsPer1000 || 0) },
-        { label: data.healthReal ? "UTI" : "UTI UF", value: formatHealthValue("icuBedsPer100k", data.icuBedsPer100k || 0) },
-        { label: data.healthReal ? "Mortalidade infantil" : "Mortalidade infantil UF", value: formatHealthValue("infantMortality", data.infantMortality || 0) },
-        { label: "Fonte", value: compactSourceLine(sourceIds) }
-      ];
+        : (data.healthCoverage === "partial"
+            ? ["healthBrazilCitiesDatasus", "healthBrazilDatasus", "healthBrazilCityProxy", "populationIbge"]
+            : ["healthBrazilDatasus", "healthBrazilCityProxy", "populationIbge"]);
+
+      const isFieldReal = (field) => {
+        if (data.healthCoverage === "real") return true;
+        if (data.healthCoverage === "partial" && Array.isArray(data.healthRealFields) && data.healthRealFields.includes(field)) return true;
+        return false;
+      };
+
+      const cards = [];
+
+      const isMainReal = isFieldReal(metric);
+      cards.push({
+        label: `${metricLabels[metric] || "Saúde"} ${data.healthYear || 2023}${isMainReal ? "" : " (Proxy UF)"}`,
+        value: formatHealthValue(metric, valueForMetric(data))
+      });
+
+      let levelValue = "Proxy pela UF, não cidade";
+      let isHtmlVal = false;
+      if (data.healthCoverage === "real") {
+        levelValue = "Dado municipal";
+      } else if (data.healthCoverage === "partial") {
+        levelValue = `Misto <a href="#" class="help-tooltip" onclick="event.preventDefault();" title="Alguns indicadores são reais e outros são baseados no proxy da UF. Veja abaixo quais são reais.">?</a>`;
+        isHtmlVal = true;
+      }
+      cards.push({
+        label: "Nível do dado",
+        value: levelValue,
+        isValueHtml: isHtmlVal
+      });
+
+      cards.push({
+        label: "UF usada",
+        value: `${data.stateName || ""} (${data.uf || ""})`
+      });
+
+      if (data.healthCoverage === "partial") {
+        const realNames = Array.isArray(data.healthRealFields)
+          ? data.healthRealFields.map(f => metricLabels[f] || f).join(", ")
+          : "";
+        cards.push({
+          label: "Indicadores reais",
+          value: realNames || "Nenhum"
+        });
+      }
+
+      const isBedsReal = isFieldReal("bedsPer1000");
+      cards.push({
+        label: isBedsReal ? "Leitos totais" : "Leitos totais (Proxy UF)",
+        value: formatHealthValue("bedsPer1000", data.bedsPer1000 || 0)
+      });
+
+      const isIcuReal = isFieldReal("icuBedsPer100k");
+      cards.push({
+        label: isIcuReal ? "UTI" : "UTI (Proxy UF)",
+        value: formatHealthValue("icuBedsPer100k", data.icuBedsPer100k || 0)
+      });
+
+      const isMortReal = isFieldReal("infantMortality");
+      cards.push({
+        label: isMortReal ? "Mortalidade infantil" : "Mortalidade infantil (Proxy UF)",
+        value: formatHealthValue("infantMortality", data.infantMortality || 0)
+      });
+
+      cards.push({
+        label: "Fonte",
+        value: compactSourceLine(sourceIds)
+      });
+
+      return cards;
     }
     const brData = healthBrazilData ? healthBrazilData.brazil : {};
     return [
