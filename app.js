@@ -8,6 +8,7 @@
 
 
   const LATEST_OFFICIAL_GDP_YEAR = "2023";
+  const APP_VERSION = "1.0.0";
 
   const URLS = {
     mapStyle: "https://tiles.openfreemap.org/styles/liberty",
@@ -23,16 +24,16 @@
     municipalityGdpHistory: (cityId) => `https://apisidra.ibge.gov.br/values/t/5938/n6/${cityId}/v/37/p/all`,
     states: "https://servicodados.ibge.gov.br/api/v1/localidades/estados?orderBy=nome",
     cities: "https://servicodados.ibge.gov.br/api/v1/localidades/municipios?orderBy=nome",
-    hdiGlobal: "./data/hdi_global.json?v=" + Date.now(),
-    hdiOwid: "./data/hdi_owid.json?v=" + Date.now(),
-    idhmBrazil: "./data/idhm_brazil.json?v=" + Date.now(),
-    securityGlobal: "./data/security_global.json?v=" + Date.now(),
-    securityBrazil: "./data/security_brazil.json?v=" + Date.now(),
-    securityBrazilCities: "./data/security_brazil_cities.json?v=" + Date.now(),
-    healthGlobal: "./data/health_global.json?v=" + Date.now(),
-    healthBrazil: "./data/health_brazil.json?v=" + Date.now(),
-    healthBrazilCities: "./data/health_brazil_cities.json?v=" + Date.now(),
-    worldMesh: "./data/world_data.geojson?v=" + Date.now()
+    hdiGlobal: "./data/hdi_global.json?v=" + APP_VERSION,
+    hdiOwid: "./data/hdi_owid.json?v=" + APP_VERSION,
+    idhmBrazil: "./data/idhm_brazil.json?v=" + APP_VERSION,
+    securityGlobal: "./data/security_global.json?v=" + APP_VERSION,
+    securityBrazil: "./data/security_brazil.json?v=" + APP_VERSION,
+    securityBrazilCities: "./data/security_brazil_cities.json?v=" + APP_VERSION,
+    healthGlobal: "./data/health_global.json?v=" + APP_VERSION,
+    healthBrazil: "./data/health_brazil.json?v=" + APP_VERSION,
+    healthBrazilCities: "./data/health_brazil_cities.json?v=" + APP_VERSION,
+    worldMesh: "./data/world_data.geojson?v=" + APP_VERSION
   };
 
   const DATA_SOURCE_CATALOG = {
@@ -739,6 +740,8 @@
   let activeAnalysis = validAnalysis(savedPreferences.analysis) ? savedPreferences.analysis : "general";
   let activeGdpSubMetric = savedPreferences.gdpSubMetric || "perCapita";
   let activeWorldMetric = validWorldMetric(savedPreferences.worldMetric) ? savedPreferences.worldMetric : "pop";
+  let activeCurrency = savedPreferences.currency === "USD" ? "USD" : "BRL";
+  const USD_BRL_RATE = 5.0;
   let dataCacheStats = createDataCacheStats();
   let basePaintByLayer = new Map();
   let worldFeatureCollection = null;
@@ -2925,7 +2928,9 @@
         colors: ["#17212b", "#23534d", "#79a95d", "#f2c14e", "#ef7d60"],
         labels: (scale && scale.max > scale.min)
           ? [formatLabel(scale.min, "gdp"), "...", formatLabel(scale.max, "gdp")]
-          : isCity ? ["menor", "R$ 80 mil/hab.", "R$ 180 mil+"] : ["menor", "R$ 42 mil/hab.", "R$ 120 mil+"]
+          : isCity 
+            ? ["menor", activeCurrency === "BRL" ? "R$ 80 mil/hab." : "US$ 16 mil/hab.", activeCurrency === "BRL" ? "R$ 180 mil+" : "US$ 36 mil+"] 
+            : ["menor", activeCurrency === "BRL" ? "R$ 42 mil/hab." : "US$ 8.4 mil/hab.", activeCurrency === "BRL" ? "R$ 120 mil+" : "US$ 24 mil+"]
       };
     }
 
@@ -3506,33 +3511,21 @@
     document.querySelectorAll("[data-view]").forEach((button) => {
       button.addEventListener("click", () => {
         const view = button.dataset.view;
+        setActiveView(view);
+        
         if (view === "world") {
           enterWorldMode();
-        } else {
-          setActiveView(view);
-        }
-        setActiveView(view);
-        if (view === "world") {
-          clearHoverPopup();
-          if (fixedPopup) fixedPopup.remove();
-//           fixedPopup = null;
-          syncAtlasLayersForActiveView();
-          map.flyTo({ center: [-30, 0], zoom: 1.55, speed: 0.8, curve: 1.35, essential: true });
-        }
-        if (view === "brazil") {
+        } else if (view === "brazil") {
           enterBrazilOverviewMode();
-        }
-        if (view === "states") {
+        } else if (view === "states") {
           enterStateAnalysisMode({ selectBrazil: true });
-        }
-        if (view === "cities") {
+        } else if (view === "cities") {
           if (selectedStateId) {
             loadStateCities(selectedStateId);
           } else {
             enterCitiesChooserMode();
           }
-        }
-        if (view === "street") {
+        } else if (view === "street") {
           flyToStreet();
         }
       });
@@ -3544,13 +3537,21 @@
         setBaseMode(button.dataset.base);
       });
     });
-
     document.querySelectorAll("[data-projection]").forEach((button) => {
       button.addEventListener("click", () => {
         setActiveButton("[data-projection]", button);
         activeProjection = button.dataset.projection;
         try { map.setProjection({ type: activeProjection }); } catch (error) { console.warn(error); }
         savePreferences();
+      });
+    });
+
+    document.querySelectorAll("[data-currency]").forEach((button) => {
+      button.addEventListener("click", () => {
+        setActiveButton("[data-currency]", button);
+        activeCurrency = button.dataset.currency;
+        savePreferences();
+        refreshActiveViews();
       });
     });
 
@@ -3911,7 +3912,8 @@
     elements["selected-type"].textContent = "Cidade";
     elements["selected-name"].textContent = `${props.name} (${props.uf})`;
     elements["selected-pop"].textContent = formatNumber(props.pop || 0);
-    const state = stateById.get(String(props.stateId));
+    const stateId = props.stateId || (props.id && String(props.id).length >= 2 ? String(props.id).substring(0, 2) : "");
+    const state = stateById.get(String(stateId));
     elements["selected-share"].textContent = state ? percent((props.pop || 0) / (state.pop || 1)) : "-";
     const area = props.areaKm2;
     elements["selected-area"].textContent = formatArea(area);
@@ -4125,7 +4127,7 @@
       { label: "População", value: formatNumber(props.pop || 0) },
       { label: "Área territorial", value: formatArea(area) },
       { label: "Densidade pop.", value: formatDensity(area ? (props.pop || 0) / area : null) },
-      { label: `PIB ${props.gdpYear || ""}`, value: formatCurrencyShortUSD(props.gdp) },
+      { label: `PIB ${props.gdpYear || ""}`, value: formatCurrencyShort(props.gdp) },
       { label: "PIB por habitante", value: formatCurrency(cityPerCapita) },
       { label: "Relativo à UF", value: formatRatio(cityPerCapita, statePerCapita) },
       { label: "Executivo municipal", value: politics.mayor ? "1 prefeito | 1 vice" : "não se aplica" },
@@ -4463,8 +4465,9 @@
     }
 
     if (scope === "city") {
-      const state = stateById.get(String(data.stateId));
-      const cities = citiesForState(data.stateId);
+      const stateId = data.stateId || (data.id && String(data.id).length >= 2 ? String(data.id).substring(0, 2) : "");
+      const state = stateById.get(String(stateId));
+      const cities = citiesForState(stateId);
       const perCapitaValue = perCapita(data.gdp, data.pop);
       return [
         { label: `PIB ${data.gdpYear || ""}`, value: formatCurrencyShort(data.gdp) },
@@ -5061,7 +5064,7 @@
       { label: "População total", value: formatNumber(pop) },
       { label: "Área territorial", value: formatArea(area) },
       { label: "Densidade pop.", value: formatDensity(area ? pop / area : null) },
-      { label: `PIB ${props.gdpYear || ""}`, value: formatCurrencyShortUSD(props.gdp) },
+      { label: `PIB ${props.gdpYear || ""}`, value: formatCurrencyShort(props.gdp) },
       { label: "PIB por habitante", value: formatCurrency(gdpPerCapita) },
       { label: state.id === "53" ? "Deputados distritais" : "Deputados estaduais", value: formatStateDeputies(state, politics) },
       { label: "Prefeitos", value: politics.mayors ? formatNumber(politics.mayors) : "não se aplica" },
@@ -5082,7 +5085,8 @@
     if (activeAnalysis === "sse") return sseCards("city", props);
     if (activeAnalysis === "travel") return travelCards("city", props);
     const pop = Number(props.pop || 0);
-    const state = stateById.get(String(props.stateId || ""));
+    const stateId = props.stateId || (props.id && String(props.id).length >= 2 ? String(props.id).substring(0, 2) : "");
+    const state = stateById.get(String(stateId));
     const gdpPerCapita = perCapita(props.gdp, pop);
     const politics = cityPoliticalSummary(props);
     const area = props.areaKm2;
@@ -5090,7 +5094,7 @@
       { label: "População", value: formatNumber(pop) },
       { label: "Área territorial", value: formatArea(area) },
       { label: "Densidade pop.", value: formatDensity(area ? pop / area : null) },
-      { label: `PIB ${props.gdpYear || ""}`, value: formatCurrencyShortUSD(props.gdp) },
+      { label: `PIB ${props.gdpYear || ""}`, value: formatCurrencyShort(props.gdp) },
       { label: "PIB por habitante", value: formatCurrency(gdpPerCapita) },
       { label: "Vereadores", value: politics.councilorsMax ? formatNumber(politics.councilorsMax) : "não se aplica" },
       { label: `${props.uf || "UF"} | ranking`, value: props.rank ? `${props.rank}º` : "-" },
@@ -5144,6 +5148,13 @@
         showBrazilPopup(null);
       }
     }
+  }
+
+  function refreshActiveViews() {
+    refreshAnalysisContent();
+    refreshFixedDetailCard();
+    updateHeatLegend();
+    if (window.updateWorldLayerColor) window.updateWorldLayerColor();
   }
 
   function hideFixedDetailCard() {
@@ -5335,6 +5346,9 @@
     if (analysisButton) setActiveButton("[data-analysis]", analysisButton);
     if (elements["analysis-caption"]) elements["analysis-caption"].textContent = analysisLabel(activeAnalysis);
 
+    const currencyButton = document.querySelector(`[data-currency="${activeCurrency}"]`);
+    if (currencyButton) setActiveButton("[data-currency]", currencyButton);
+
     setHoverCardsEnabled(hoverCardsEnabled);
     updateHeatLegend();
   }
@@ -5366,6 +5380,7 @@
         sourceSelections: activeSourceSelections,
         worldMetric: activeWorldMetric,
         view: activeView,
+        currency: activeCurrency,
         selectedStateId,
         selectedCityId,
         camera: currentMapCamera()
@@ -5409,6 +5424,7 @@
       if (validAnalysis(parsed.analysis)) safe.analysis = parsed.analysis;
       if (validView(parsed.view)) safe.view = parsed.view;
       if (validWorldMetric(parsed.worldMetric)) safe.worldMetric = parsed.worldMetric;
+      if (parsed.currency === "BRL" || parsed.currency === "USD") safe.currency = parsed.currency;
 
       if (parsed.selectedStateId) safe.selectedStateId = normalizeCode(parsed.selectedStateId);
       if (parsed.selectedCityId) safe.selectedCityId = normalizeCode(parsed.selectedCityId);
@@ -5569,6 +5585,31 @@
       const cache = await window.caches.open(DATA_CACHE_NAME);
       const response = await cache.match(url);
       if (!response) return null;
+
+      // TTL de 7 dias = 7 * 24 * 60 * 60 * 1000 = 604800000 ms
+      const cacheTimeStr = response.headers.get("X-Cache-Time");
+      if (cacheTimeStr) {
+        const cacheTime = parseInt(cacheTimeStr, 10);
+        if (!isNaN(cacheTime)) {
+          const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+          if (Date.now() - cacheTime > sevenDaysMs) {
+            await cache.delete(url);
+            return null;
+          }
+        }
+      } else {
+        // Fallback usando o header HTTP "Date" se disponível
+        const dateHeader = response.headers.get("date");
+        if (dateHeader) {
+          const cacheDate = new Date(dateHeader).getTime();
+          const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+          if (!isNaN(cacheDate) && (Date.now() - cacheDate > sevenDaysMs)) {
+            await cache.delete(url);
+            return null;
+          }
+        }
+      }
+
       dataCacheStats.hits += 1;
       return await response.json();
     } catch (error) {
@@ -5582,7 +5623,17 @@
 
     try {
       const cache = await window.caches.open(DATA_CACHE_NAME);
-      await cache.put(url, response.clone());
+      const newHeaders = new Headers(response.headers);
+      newHeaders.set("X-Cache-Time", Date.now().toString());
+
+      const blob = await response.clone().blob();
+      const customResponse = new Response(blob, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: newHeaders
+      });
+
+      await cache.put(url, customResponse);
       dataCacheStats.writes += 1;
     } catch (error) {
       dataCacheStats.failures += 1;
@@ -5694,45 +5745,70 @@
     return Number(value || 0).toLocaleString("pt-BR");
   }
 
-  function formatCurrency(value) {
-    const number = Number(value || 0);
-    if (!number) return "-";
-    return number.toLocaleString("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-      maximumFractionDigits: 0
-    });
+  // Converte valor original do IBGE (que é BRL) para a moeda ativa
+  function getBrlValueInActiveCurrency(valueInBrl) {
+    const val = Number(valueInBrl || 0);
+    if (activeCurrency === "USD") {
+      return val / USD_BRL_RATE;
+    }
+    return val;
   }
 
-  function formatCurrencyShort(value) {
-    const number = Number(value || 0);
-    if (!number) return "-";
-    const abs = Math.abs(number);
-    if (abs >= 1000000000000) return `R$ ${(number / 1000000000000).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} tri`;
-    if (abs >= 1000000000) return `R$ ${(number / 1000000000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} bi`;
-    if (abs >= 1000000) return `R$ ${(number / 1000000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mi`;
-    return formatCurrency(number);
+  // Converte valor original global (que é USD) para a moeda ativa
+  function getUsdValueInActiveCurrency(valueInUsd) {
+    const val = Number(valueInUsd || 0);
+    if (activeCurrency === "BRL") {
+      return val * USD_BRL_RATE;
+    }
+    return val;
   }
 
+  function formatCurrency(value, originalUnit = "BRL") {
+    const originalValue = Number(value || 0);
+    if (!originalValue) return "-";
+    
+    const convertedValue = originalUnit === "BRL" 
+      ? getBrlValueInActiveCurrency(originalValue)
+      : getUsdValueInActiveCurrency(originalValue);
+
+    if (activeCurrency === "BRL") {
+      const numOnly = convertedValue.toLocaleString("pt-BR", { maximumFractionDigits: 0 });
+      return `R$ ${numOnly}`;
+    } else {
+      const numOnly = convertedValue.toLocaleString("en-US", { maximumFractionDigits: 0 });
+      return `US$ ${numOnly}`;
+    }
+  }
+
+  function formatCurrencyShort(value, originalUnit = "BRL") {
+    const originalValue = Number(value || 0);
+    if (!originalValue) return "-";
+
+    const convertedValue = originalUnit === "BRL" 
+      ? getBrlValueInActiveCurrency(originalValue)
+      : getUsdValueInActiveCurrency(originalValue);
+
+    const abs = Math.abs(convertedValue);
+    
+    if (activeCurrency === "BRL") {
+      if (abs >= 1000000000000) return `R$ ${(convertedValue / 1000000000000).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} tri`;
+      if (abs >= 1000000000) return `R$ ${(convertedValue / 1000000000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} bi`;
+      if (abs >= 1000000) return `R$ ${(convertedValue / 1000000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mi`;
+      return formatCurrency(originalValue, originalUnit);
+    } else {
+      if (abs >= 1000000000000) return `US$ ${(convertedValue / 1000000000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} tri`;
+      if (abs >= 1000000000) return `US$ ${(convertedValue / 1000000000).toLocaleString("en-US", { maximumFractionDigits: 1 })} bi`;
+      if (abs >= 1000000) return `US$ ${(convertedValue / 1000000).toLocaleString("en-US", { maximumFractionDigits: 1 })} mi`;
+      return formatCurrency(originalValue, originalUnit);
+    }
+  }
 
   function formatCurrencyUSD(value) {
-    const number = Number(value || 0);
-    if (!number) return "-";
-    return number.toLocaleString("en-US", {
-      style: "currency",
-      currency: "USD",
-      maximumFractionDigits: 0
-    });
+    return formatCurrency(value, "USD");
   }
 
   function formatCurrencyShortUSD(value) {
-    const number = Number(value || 0);
-    if (!number) return "-";
-    const abs = Math.abs(number);
-    if (abs >= 1000000000000) return `US$ ${(number / 1000000000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} tri`;
-    if (abs >= 1000000000) return `US$ ${(number / 1000000000).toLocaleString("en-US", { maximumFractionDigits: 1 })} bi`;
-    if (abs >= 1000000) return `US$ ${(number / 1000000).toLocaleString("en-US", { maximumFractionDigits: 1 })} mi`;
-    return formatCurrencyUSD(number);
+    return formatCurrencyShort(value, "USD");
   }
 
   function perCapita(total, population) {
@@ -6358,6 +6434,26 @@
       }
     }
     map.setPaintProperty("world-fill", "fill-color", colorExpr);
+  }
+
+  if (typeof globalThis !== "undefined") {
+    globalThis.TestUtils = {
+      escapeHtml,
+      normalizeCode,
+      parseNumber,
+      clampNumber,
+      normalizeText,
+      sseScores,
+      formatCurrency,
+      formatCurrencyShort,
+      formatCurrencyUSD,
+      formatCurrencyShortUSD,
+      getBrlValueInActiveCurrency,
+      getUsdValueInActiveCurrency,
+      getActiveCurrency: () => activeCurrency,
+      setActiveCurrency: (curr) => { activeCurrency = curr; },
+      USD_BRL_RATE
+    };
   }
 
 })();

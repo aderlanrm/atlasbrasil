@@ -18,8 +18,8 @@ __pycache__/
 htmlcov/
 dist/
 build/
-*.egg-info/
 fetch*
+!scripts/fetch_world_data.py
 
 # Node/frontend artifacts, if the project gains a build step later
 node_modules/

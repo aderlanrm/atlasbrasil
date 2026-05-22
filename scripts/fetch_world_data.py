@@ -4,13 +4,13 @@ import os
 
 print("Downloading GeoJSON...")
 geo_url = "https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson"
-req = urllib.request.urlopen(geo_url)
+req = urllib.request.urlopen(geo_url, timeout=30)
 geo_data = json.loads(req.read())
 
 print("Downloading RestCountries data...")
 rc_url = "https://restcountries.com/v3.1/all?fields=name,population,area,cca3,region,translations"
 req = urllib.request.Request(rc_url, headers={'User-Agent': 'Mozilla/5.0'})
-rc_data = json.loads(urllib.request.urlopen(req).read())
+rc_data = json.loads(urllib.request.urlopen(req, timeout=30).read())
 
 rc_map = {}
 for country in rc_data:
@@ -29,7 +29,7 @@ for country in rc_data:
 
 print("Downloading World Bank GDP data (2024)...")
 wb_url = "https://api.worldbank.org/v2/country/all/indicator/NY.GDP.MKTP.CD?format=json&per_page=300&date=2024"
-req = urllib.request.urlopen(wb_url)
+req = urllib.request.urlopen(wb_url, timeout=30)
 wb_data = json.loads(req.read())
 
 wb_map = {}
