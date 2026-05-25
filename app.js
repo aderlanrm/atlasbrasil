@@ -894,6 +894,7 @@
 
     mergeStates(states);
     mergePopulation(stateRows, stateById);
+    totalPopulation = sumPopulation(Array.from(stateById.values()));
     mergeCities(cities);
     mergeCityPopulation(cityRows);
     mergeBrazilGdp(gdpBrazilRows);
@@ -2072,7 +2073,7 @@
     let scale = isCity ? getCityScaleMetrics(activeAnalysis) : null;
 
     if (activeAnalysis === "gdp") {
-      colors = ["#17212b", "#23534d", "#79a95d", "#f2c14e", "#ef7d60"];
+      colors = ["#ff3b3b", "#ef7d60", "#f2c14e", "#79a95d", "#17212b"];
       if (!scale || scale.max <= scale.min) {
         if (activeGdpSubMetric === "total") {
           stops = isCity ? [0, 100e6, 500e6, 2e9, 10e9] : [0, 15e9, 50e9, 150e9, 400e9];
@@ -2081,10 +2082,10 @@
         }
       }
     } else if (activeAnalysis === "hdi") {
-      colors = ["#17212b", "#335c67", "#4f8f70", "#a9d65c", "#f2c14e"];
+      colors = ["#ff3b3b", "#ef7d60", "#f2c14e", "#a9d65c", "#17212b"];
       if (!scale || scale.max <= scale.min) stops = [0.45, 0.6, 0.7, 0.8, 0.9];
     } else if (activeAnalysis === "politics") {
-      colors = ["#16212b", "#29515d", "#51d1c2", "#f2c14e", "#ef7d60"];
+      colors = ["#ff3b3b", "#ef7d60", "#f2c14e", "#51d1c2", "#16212b"];
       if (!scale || scale.max <= scale.min) stops = isCity ? [0, 1500, 6000, 25000, 180000] : [0, 1500, 3000, 5000, 8000];
     } else if (activeAnalysis === "education") {
       colors = ["#5c1514", "#ef7d60", "#f2c14e", "#a9d65c", "#51d1c2", "#3a8fc7"];
@@ -2123,8 +2124,8 @@
       const metric = activeHealthSubMetric || "bedsPer1000";
       const isNegative = metric === "infantMortality" || metric === "maternalMortality" || metric === "outOfPocketPct";
       colors = isNegative
-        ? ["#4f8f70", "#a9d65c", "#f2c14e", "#ef7d60", "#ff3b3b"]
-        : ["#17212b", "#1a5f8a", "#4f8f70", "#a9d65c", "#f2c14e"];
+        ? ["#1a5f8a", "#4f8f70", "#a9d65c", "#f2c14e", "#ff3b3b"]
+        : ["#ff3b3b", "#ef7d60", "#f2c14e", "#a9d65c", "#17212b"];
       if (!scale || scale.max <= scale.min) {
         const metricStops = {
           bedsPer1000: [0.8, 1.4, 2.0, 2.6, 3.2],
@@ -2139,8 +2140,9 @@
         stops = metricStops[metric] || metricStops.bedsPer1000;
       }
     } else {
-      colors = ["#17212b", "#25534e", "#5b8e54", "#c59b3f", "#ef7d60"];
-      if (isCity) colors.push("#b799ff");
+      colors = isCity
+        ? ["#ff3b3b", "#ef7d60", "#f2c14e", "#5b8e54", "#25534e", "#17212b"]
+        : ["#ff3b3b", "#ef7d60", "#f2c14e", "#5b8e54", "#17212b"];
       if (!scale || scale.max <= scale.min) stops = isCity ? [0, 10000, 100000, 500000, 2000000, 11000000] : [600000, 3000000, 8000000, 16000000, 44000000];
     }
 
@@ -2888,7 +2890,7 @@
       return {
         metric: `${isWorld ? "IDH" : "IDHM"} ${year || ""}`,
         scope: isWorld ? "Global" : (isCity ? "cidades da UF (proxy)" : "estados"),
-        colors: ["#17212b", "#335c67", "#4f8f70", "#a9d65c", "#f2c14e"],
+        colors: ["#ff3b3b", "#ef7d60", "#f2c14e", "#a9d65c", "#17212b"],
         labels: ["baixo", "médio", "alto", "muito alto", "topo"],
         sourceIds: isWorld ? (activeSourceOption("hdi", "world")?.sourceIds || ["hdiGlobalUndp"]) : (isCity ? ["idhmPnudBrazil", "idhmCityProxy"] : ["idhmPnudBrazil"]),
         isWorld
@@ -2925,7 +2927,7 @@
       return {
         metric: activeGdpSubMetric === "total" ? `PIB Total ${yearText}` : `PIB por habitante ${yearText}`,
         scope: isCity ? "cidades da UF (relativo)" : "estados",
-        colors: ["#17212b", "#23534d", "#79a95d", "#f2c14e", "#ef7d60"],
+        colors: ["#ff3b3b", "#ef7d60", "#f2c14e", "#79a95d", "#17212b"],
         labels: (scale && scale.max > scale.min)
           ? [formatLabel(scale.min, "gdp"), "...", formatLabel(scale.max, "gdp")]
           : isCity 
@@ -2938,7 +2940,7 @@
       return {
         metric: "Habitantes por político",
         scope: isCity ? "cidades da UF (relativo)" : "estados",
-        colors: ["#16212b", "#29515d", "#51d1c2", "#f2c14e", "#ef7d60"],
+        colors: ["#ff3b3b", "#ef7d60", "#f2c14e", "#51d1c2", "#16212b"],
         labels: (scale && scale.max > scale.min)
           ? [formatLabel(scale.min, "pol"), "...", formatLabel(scale.max, "pol")]
           : isCity ? ["menos gente", "25 mil", "180 mil+"] : ["1 mil", "5 mil", "8 mil+"]
@@ -2981,7 +2983,7 @@
         return {
           metric: metricLabels[metric] || "UHC cobertura essencial",
           scope: "Global",
-          colors: ["#17212b", "#1a5f8a", "#4f8f70", "#a9d65c", "#f2c14e"],
+          colors: ["#ff3b3b", "#ef7d60", "#f2c14e", "#a9d65c", "#17212b"],
           labels: labels[metric] || labels.uhcIndex,
           sourceIds: ["healthGlobalWho", "healthGlobalWorldBank"],
           isWorld: true
@@ -3007,8 +3009,8 @@
         metric: metricLabels[metric] || metricLabels.bedsPer1000,
         scope: isCity ? "cidades da UF (municipal + proxy)" : "estados",
         colors: negative
-          ? ["#4f8f70", "#a9d65c", "#f2c14e", "#ef7d60", "#ff3b3b"]
-          : ["#17212b", "#1a5f8a", "#4f8f70", "#a9d65c", "#f2c14e"],
+          ? ["#1a5f8a", "#4f8f70", "#a9d65c", "#f2c14e", "#ff3b3b"]
+          : ["#ff3b3b", "#ef7d60", "#f2c14e", "#a9d65c", "#17212b"],
         labels: (scale && scale.max > scale.min)
           ? [formatLabel(scale.min, "health"), "...", formatLabel(scale.max, "health")]
           : (metricStops[metric] || metricStops.bedsPer1000),
@@ -3074,7 +3076,7 @@
       return {
         metric: metricLabel,
         scope: "Global",
-        colors: ["#17212b", "#25534e", "#5b8e54", "#c59b3f", "#ef7d60", "#b799ff"],
+        colors: ["#ff3b3b", "#ef7d60", "#f2c14e", "#5b8e54", "#25534e", "#17212b"],
         labels: labels,
         sourceIds: (WORLD_METRIC_CATALOG[activeWorldMetric] || WORLD_METRIC_CATALOG.pop).sourceIds,
         isWorld: true
@@ -3085,8 +3087,8 @@
       metric: "População",
       scope: isCity ? "cidades da UF (relativo)" : "estados",
       colors: isCity
-        ? ["#17212b", "#25534e", "#5b8e54", "#c59b3f", "#ef7d60", "#b799ff"]
-        : ["#17212b", "#25534e", "#5b8e54", "#c59b3f", "#ef7d60"],
+        ? ["#ff3b3b", "#ef7d60", "#f2c14e", "#5b8e54", "#25534e", "#17212b"]
+        : ["#ff3b3b", "#ef7d60", "#f2c14e", "#5b8e54", "#17212b"],
       labels: (scale && scale.max > scale.min)
         ? [formatLabel(scale.min, "pop"), "...", formatLabel(scale.max, "pop")]
         : isCity ? ["menos", "500 mil", "11 mi+"] : ["600 mil", "8 mi", "44 mi+"]
@@ -5794,12 +5796,12 @@
       if (abs >= 1000000000000) return `R$ ${(convertedValue / 1000000000000).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} tri`;
       if (abs >= 1000000000) return `R$ ${(convertedValue / 1000000000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} bi`;
       if (abs >= 1000000) return `R$ ${(convertedValue / 1000000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mi`;
-      return formatCurrency(originalValue, originalUnit);
+      return formatCurrency(convertedValue, activeCurrency);
     } else {
       if (abs >= 1000000000000) return `US$ ${(convertedValue / 1000000000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} tri`;
       if (abs >= 1000000000) return `US$ ${(convertedValue / 1000000000).toLocaleString("en-US", { maximumFractionDigits: 1 })} bi`;
       if (abs >= 1000000) return `US$ ${(convertedValue / 1000000).toLocaleString("en-US", { maximumFractionDigits: 1 })} mi`;
-      return formatCurrency(originalValue, originalUnit);
+      return formatCurrency(convertedValue, activeCurrency);
     }
   }
 
@@ -6208,52 +6210,64 @@
 
   function showCountryHover(lngLat, props) {
     if (!hoverCardsEnabled) return;
-    clearHoverPopup();
+
+    if (activeAnalysis === "hdi" && props && props.hdiHistory) {
+      const year = resolveHdiYear("world");
+      props = {
+        ...props,
+        hdi: hdiValueForYear(props.hdiHistory, year),
+        hdiYear: year
+      };
+    }
+
     const name = props.name_pt || props.ADMIN || props.name || "Desconhecido";
-    let html = `<div class="font-bold mb-1">${escapeHtml(name)}</div>
-      <div class="text-xs text-gray-400 mb-2">${escapeHtml(props.ISO_A3)}</div>
-      <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-        <span class="text-gray-400">População</span>
-        <span class="text-right font-medium text-white">${formatShort(props.pop || 0)}</span>
-        <span class="text-gray-400">Área</span>
-        <span class="text-right font-medium text-white">${formatArea(props.areaKm2)}</span>
-        <span class="text-gray-400">PIB (24)</span>
-        <span class="text-right font-medium text-white">${formatCurrencyShortUSD(props.gdp)}</span>
-        <span class="text-gray-400">PIB/Hab</span>
-        <span class="text-right font-medium text-white">${formatCurrencyUSD(perCapita(props.gdp, props.pop))}</span>
-        ${activeAnalysis === "hdi" ? `
-          <span class="text-gray-400">IDH ${escapeHtml(props.hdiYear || resolveHdiYear("world"))}</span>
-          <span class="text-right font-medium text-white">${formatHdi(props.hdi)}</span>
-        ` : ""}
-        ${activeAnalysis === "security" ? (() => {
-          const sourceId = activeSourceOptionId("security", "world");
-          if (sourceId === "gpi") {
-            return `
-              <span class="text-gray-400">GPI</span>
-              <span class="text-right font-medium text-white">${props.gpiScore ? props.gpiScore.toFixed(2) : "-"}</span>
-              <span class="text-gray-400">Ranking GPI</span>
-              <span class="text-right font-medium text-white">${props.gpiRank ? props.gpiRank + "º" : "-"}</span>
-            `;
-          }
-          return `
-            <span class="text-gray-400">Homicídios</span>
-            <span class="text-right font-medium text-white">${props.homicideRate ? props.homicideRate.toFixed(1) + " /100k" : "-"}</span>
-          `;
-        })() : ""}
-        ${activeAnalysis === "health" ? `
-          <span class="text-gray-400">UHC</span>
-          <span class="text-right font-medium text-white">${props.uhcIndex ? props.uhcIndex.toFixed(1) : "-"}</span>
-          <span class="text-gray-400">Expect. vida</span>
-          <span class="text-right font-medium text-white">${props.lifeExpectancy ? props.lifeExpectancy.toFixed(1) + " anos" : "-"}</span>
-          <span class="text-gray-400">Leitos</span>
-          <span class="text-right font-medium text-white">${props.hospitalBedsPer10000 ? props.hospitalBedsPer10000.toFixed(1) + " /10k" : "-"}</span>
-        ` : ""}
-      </div>`;
     
-    hoverPopup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, className: "atlas-popup", maxWidth: "260px" })
-      .setLngLat(lngLat)
-      .setHTML(html)
-      .addTo(map);
+    const rows = [
+      { label: "População", value: formatShort(props.pop || 0) },
+      { label: "Área territorial", value: formatArea(props.areaKm2) },
+      { label: "PIB (2024)", value: formatCurrencyShortUSD(props.gdp) },
+      { label: "PIB por hab.", value: formatCurrencyUSD(perCapita(props.gdp, props.pop)) },
+      ...(activeAnalysis === "hdi" ? [
+        { label: `IDH ${props.hdiYear || resolveHdiYear("world")}`, value: formatHdi(props.hdi) }
+      ] : []),
+      ...(activeAnalysis === "security" ? (() => {
+        const sourceId = activeSourceOptionId("security", "world");
+        if (sourceId === "gpi") {
+          return [
+            { label: "GPI", value: props.gpiScore ? props.gpiScore.toFixed(2) : "-" },
+            { label: "Ranking GPI", value: props.gpiRank ? `${props.gpiRank}º` : "-" }
+          ];
+        }
+        return [
+          { label: "Homicídios", value: props.homicideRate ? `${props.homicideRate.toFixed(1)} /100k` : "-" }
+        ];
+      })() : []),
+      ...(activeAnalysis === "health" ? [
+        { label: "UHC", value: props.uhcIndex ? props.uhcIndex.toFixed(1) : "-" },
+        { label: "Expectativa de vida", value: props.lifeExpectancy ? `${props.lifeExpectancy.toFixed(1)} anos` : "-" },
+        { label: "Leitos hospitalares", value: props.hospitalBedsPer10000 ? `${props.hospitalBedsPer10000.toFixed(1)} /10k` : "-" }
+      ] : [])
+    ];
+
+    const html = popupHtml("País", `${name} (${props.ISO_A3})`, rows);
+    const key = `country:${props.ISO_A3 || ""}`;
+
+    if (!hoverPopup) {
+      hoverPopup = new maplibregl.Popup({
+        closeButton: false,
+        closeOnClick: false,
+        offset: 14,
+        className: "hover-popup"
+      }).setLngLat(lngLat).setHTML(html).addTo(map);
+      hoveredFeatureKey = key;
+      return;
+    }
+
+    hoverPopup.setLngLat(lngLat);
+    if (hoveredFeatureKey !== key) {
+      hoverPopup.setHTML(html);
+      hoveredFeatureKey = key;
+    }
   }
 
   function showCountryPopup(lngLat, props) {
@@ -6311,63 +6325,63 @@
     if (activeAnalysis === "hdi") {
       colorExpr = [
         "interpolate", ["linear"], ["to-number", ["get", "hdi"], 0],
-        0.35, "#17212b",
-        0.55, "#335c67",
-        0.7, "#4f8f70",
+        0.35, "#ff3b3b",
+        0.55, "#ef7d60",
+        0.7, "#f2c14e",
         0.8, "#a9d65c",
-        0.9, "#f2c14e"
+        0.9, "#17212b"
       ];
     } else if (activeWorldMetric === "pop") {
       colorExpr = [
         "interpolate", ["linear"], ["to-number", ["get", "pop"], 0],
-        0, "#17212b",
-        1000000, "#25534e",
-        10000000, "#5b8e54",
-        50000000, "#c59b3f",
-        200000000, "#ef7d60",
-        1000000000, "#b799ff"
+        0, "#ff3b3b",
+        1000000, "#ef7d60",
+        10000000, "#f2c14e",
+        50000000, "#5b8e54",
+        200000000, "#25534e",
+        1000000000, "#17212b"
       ];
     } else if (activeWorldMetric === "area") {
       colorExpr = [
         "interpolate", ["linear"], ["to-number", ["get", "areaKm2"], 0],
-        0, "#17212b",
-        10000, "#25534e",
-        100000, "#5b8e54",
-        500000, "#c59b3f",
-        2000000, "#ef7d60",
-        10000000, "#b799ff"
+        0, "#ff3b3b",
+        10000, "#ef7d60",
+        100000, "#f2c14e",
+        500000, "#5b8e54",
+        2000000, "#25534e",
+        10000000, "#17212b"
       ];
     } else if (activeWorldMetric === "density") {
       colorExpr = [
         "interpolate", ["linear"], 
         ["/", ["to-number", ["get", "pop"], 0], ["max", ["to-number", ["get", "areaKm2"], 1], 1]],
-        0, "#17212b",
-        10, "#25534e",
-        50, "#5b8e54",
-        150, "#c59b3f",
-        500, "#ef7d60",
-        1000, "#b799ff"
+        0, "#ff3b3b",
+        10, "#ef7d60",
+        50, "#f2c14e",
+        150, "#5b8e54",
+        500, "#25534e",
+        1000, "#17212b"
       ];
     } else if (activeWorldMetric === "gdp") {
       colorExpr = [
         "interpolate", ["linear"], ["to-number", ["get", "gdp"], 0],
-        0, "#17212b",
-        10000000000, "#25534e",
-        100000000000, "#5b8e54",
-        500000000000, "#c59b3f",
-        2000000000000, "#ef7d60",
-        10000000000000, "#b799ff"
+        0, "#ff3b3b",
+        10000000000, "#ef7d60",
+        100000000000, "#f2c14e",
+        500000000000, "#5b8e54",
+        2000000000000, "#25534e",
+        10000000000000, "#17212b"
       ];
     } else if (activeWorldMetric === "gdpPerCapita") {
       colorExpr = [
         "interpolate", ["linear"], 
         ["/", ["to-number", ["get", "gdp"], 0], ["max", ["to-number", ["get", "pop"], 1], 1]],
-        0, "#17212b",
-        2000, "#25534e",
-        5000, "#5b8e54",
-        15000, "#c59b3f",
-        35000, "#ef7d60",
-        60000, "#b799ff"
+        0, "#ff3b3b",
+        2000, "#ef7d60",
+        5000, "#f2c14e",
+        15000, "#5b8e54",
+        35000, "#25534e",
+        60000, "#17212b"
       ];
     }
     if (activeAnalysis === "security") {
@@ -6398,38 +6412,38 @@
       if (activeHealthSubMetric === "lifeExpectancy") {
         colorExpr = [
           "interpolate", ["linear"], ["to-number", ["get", metric], 0],
-          55, "#17212b",
-          65, "#1a5f8a",
-          72, "#4f8f70",
+          55, "#ff3b3b",
+          65, "#ef7d60",
+          72, "#f2c14e",
           78, "#a9d65c",
-          84, "#f2c14e"
+          84, "#17212b"
         ];
       } else if (activeHealthSubMetric === "hospitalBedsPer10000") {
         colorExpr = [
           "interpolate", ["linear"], ["to-number", ["get", metric], 0],
-          5, "#17212b",
-          15, "#1a5f8a",
-          30, "#4f8f70",
+          5, "#ff3b3b",
+          15, "#ef7d60",
+          30, "#f2c14e",
           60, "#a9d65c",
-          100, "#f2c14e"
+          100, "#17212b"
         ];
       } else if (activeHealthSubMetric === "doctorsPer1000") {
         colorExpr = [
           "interpolate", ["linear"], ["to-number", ["get", metric], 0],
-          5, "#17212b",
-          15, "#1a5f8a",
-          25, "#4f8f70",
+          5, "#ff3b3b",
+          15, "#ef7d60",
+          25, "#f2c14e",
           40, "#a9d65c",
-          55, "#f2c14e"
+          55, "#17212b"
         ];
       } else {
         colorExpr = [
           "interpolate", ["linear"], ["to-number", ["get", metric], 0],
-          40, "#17212b",
-          60, "#1a5f8a",
-          75, "#4f8f70",
+          40, "#ff3b3b",
+          60, "#ef7d60",
+          75, "#f2c14e",
           85, "#a9d65c",
-          92, "#f2c14e"
+          92, "#17212b"
         ];
       }
     }
