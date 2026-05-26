@@ -20,6 +20,20 @@ O diretório `tools/` é reservado para utilitários locais e não faz parte do 
 - Localidades: API de Localidades do IBGE.
 - Mapa base: MapLibre GL com OpenFreeMap e Esri World Imagery.
 
+## Testes
+
+O projeto utiliza o executor de testes nativo do Node.js. Para rodar a suite de testes unitários integrada (que valida sanitização contra XSS, normalização de termos e regressão de dados):
+
+```bash
+npm test
+```
+
+## Scripts e Utilitários
+
+O diretório `scripts/` contém scripts utilitários auxiliares escritos em Python para manutenção e processamento de dados territoriais:
+
+- `scripts/fetch_world_data.py`: Baixa a geometria global de países, consulta a RestCountries e o World Bank para consolidar e gerar o arquivo GeoJSON integrado de desenvolvimento (`data/world_data.geojson`).
+
 ## Segurança e privacidade
 
 - O projeto não usa chaves de API, autenticação, cookies ou coleta de dados do usuário.
