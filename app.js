@@ -8,7 +8,7 @@
 
 
   const LATEST_OFFICIAL_GDP_YEAR = "2023";
-  const APP_VERSION = "1.0.0";
+  const APP_VERSION = "1.0.1";
 
   const URLS = {
     mapStyle: "https://tiles.openfreemap.org/styles/liberty",
@@ -190,9 +190,9 @@
       provider: "PNUD Brasil, IPEA, FJP e IBGE/PNAD Contínua",
       type: "json",
       provenance: "real",
-      freshness: "IDHM anual 2012-2021 para Brasil e UFs",
+      freshness: "IDHM anual 2012-2024 para Brasil e UFs (Radar IDHM 2026)",
       url: "https://www.undp.org/pt/brazil/desenvolvimento-humano/painel-idhm",
-      upstreamLabel: "Painel IDHM/PNUD + base_de_dados.xlsx",
+      upstreamLabel: "Radar IDHM 2026 (PNUD/IPEA-FJP/IBGE)",
       upstreamSources: [
         {
           label: "Painel IDHM - PNUD Brasil",
@@ -201,24 +201,24 @@
           usage: "referência metodológica e página pública da fonte"
         },
         {
-          label: "base_de_dados.xlsx",
-          url: "https://www.undp.org/sites/g/files/zskgke326/files/2023-07/base_de_dados.xlsx",
-          fields: "ANO, AGREGACAO, CODIGO, NOME, IDHM, IDHM_L, IDHM_E, IDHM_R, IDHMAD, ESPVIDA, RDPC e GINI",
-          usage: "arquivo bruto compactado em data/idhm_brazil.json"
+          label: "Relatório Radar IDHM 2026 (PDF)",
+          url: "https://www.undp.org/pt/brazil/publications/radar-idhm-evolucao-do-idhm-e-de-seus-componentes-periodo-de-2012-2024",
+          fields: "Tabelas-anexo: IDHM e subíndices (Educação, Longevidade, Renda) por UF e Brasil, 2012 a 2024; IDHMAD do Brasil",
+          usage: "série anual extraída para data/idhm_brazil.json por scripts/extract_idhm_from_radar_pdf.py (PDF baixado dessa URL, não versionado)"
         },
         {
           label: "PNAD Contínua/IBGE",
           url: "https://www.ibge.gov.br/estatisticas/sociais/trabalho/9171-pesquisa-nacional-por-amostra-de-domicilios-continua-mensal.html",
           fields: "insumos demográficos, renda e educação",
-          usage: "base estatística usada pelo painel IDHM"
+          usage: "base estatística usada pelo IDHM anual"
         }
       ],
       quality: "Oficial",
-      fields: ["IDHM", "IDHM Longevidade", "IDHM Educação", "IDHM Renda", "IDHMAD", "esperança de vida", "renda per capita", "Gini"],
-      methodology: "O arquivo data/idhm_brazil.json foi gerado a partir da planilha oficial do Painel IDHM. O app seleciona o ano ativo e copia IDHM e componentes para Brasil e UFs.",
-      limitations: ["A série anual desta planilha cobre Brasil e UFs de 2012 a 2021.", "Não é uma série municipal anual.", "IDHM brasileiro e IDH global não devem ser misturados em ranking único."],
-      updatePolicy: "Quando o PNUD publicar nova planilha, substituir data/idhm_pnud_brazil.xlsx, regenerar data/idhm_brazil.json e revisar latestYear/years.",
-      note: "Dado real oficial do Painel IDHM, com componentes e série histórica."
+      fields: ["IDHM", "IDHM Longevidade", "IDHM Educação", "IDHM Renda", "IDHMAD (Brasil)"],
+      methodology: "data/idhm_brazil.json traz a série recalculada 2012-2024 do Radar IDHM 2026. IDHM e os três subíndices vêm das tabelas por UF e do Brasil; o IDHMAD geral só é publicado para o Brasil. O app seleciona o ano ativo e copia os valores para Brasil e UFs.",
+      limitations: ["Série anual cobre Brasil e UFs de 2012 a 2024 (a edição 2026 recalculou toda a série).", "IDHMAD geral não é publicado por UF, só para o Brasil; nas UFs esse campo fica sem dado.", "Não é uma série municipal anual.", "IDHM brasileiro e IDH global não devem ser misturados em ranking único."],
+      updatePolicy: "Preferir a planilha oficial: scripts/generate_idhm_brazil.py --url <url do .xlsx do Painel IDHM>. Enquanto só houver o relatório em PDF (como na edição 2026), usar scripts/extract_idhm_from_radar_pdf.py. Veja docs/DADOS.md.",
+      note: "Dado real oficial do Radar IDHM 2026 (PNUD/IPEA-FJP/IBGE), série 2012-2024 com componentes."
     },
     idhmCityProxy: {
       label: "IDHM de cidades",

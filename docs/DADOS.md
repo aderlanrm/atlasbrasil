@@ -124,7 +124,7 @@ A aba `IDH` usa três fontes cadastradas:
 
 - `hdiGlobalUndp`: IDH global real/oficial do UNDP Human Development Report. O app carrega `data/hdi_global.json`, gerado a partir do CSV oficial `HDR25_Composite_indices_complete_time_series.csv`. Campos usados: `iso3`, `country`, `hdi_1990` a `hdi_2023` e `hdi_rank_2023`.
 - `hdiGlobalOwid`: IDH global via Our World in Data. O app carrega `data/hdi_owid.json`, gerado a partir de `human-development-index.csv` e `human-development-index.metadata.json`. O OWID cita UNDP Human Development Report 2025 como fonte original e aplica processamento menor.
-- `idhmPnudBrazil`: IDHM real/oficial do Painel IDHM/PNUD Brasil, IPEA, FJP e IBGE/PNAD Contínua. O app carrega `data/idhm_brazil.json`, gerado a partir de `data/idhm_pnud_brazil.xlsx`. Campos usados: `ANO`, `AGREGACAO`, `CODIGO`, `NOME`, `IDHM`, `IDHM_L`, `IDHM_E`, `IDHM_R`, `IDHMAD`, `ESPVIDA`, `RDPC` e `GINI`.
+- `idhmPnudBrazil`: IDHM real/oficial do PNUD Brasil, IPEA, FJP e IBGE/PNAD Contínua. O app carrega `data/idhm_brazil.json` com a série anual **2012-2024** (Radar IDHM 2026, recalculada). Campos por Brasil/UF e ano: `idhm`, `longevity`, `education`, `income` e `adjusted` (IDHMAD; só publicado para o Brasil, fica `null` nas UFs). A fonte preferencial é a planilha `data/idhm_pnud_brazil.xlsx` (via `scripts/generate_idhm_brazil.py`); na edição 2026, como só saiu o relatório em PDF, a série foi extraída de `data/radar_idhm_web.pdf` (via `scripts/extract_idhm_from_radar_pdf.py`).
 - `idhmCityProxy`: proxy calculado. Como a planilha anual carregada cobre Brasil e UFs, mas não municípios, as cidades recebem temporariamente o IDHM da UF. Isso aparece na fonte e nos cards como `proxy UF`; não trate como IDHM municipal real.
 
 No escopo `Globo`, a análise IDH declara `sourceOptions` para permitir alternar entre `UNDP/HDR` e `Our World in Data`. A diferença aparece abaixo da fonte e nos detalhes do botão `i`.
@@ -144,13 +144,33 @@ Para atualizar a versão OWID do IDH global:
 3. Regenere `data/hdi_owid.json` mantendo `latestYear`, `years`, `countries[ISO3].history` e região OWID.
 4. Atualize `DATA_SOURCE_CATALOG.hdiGlobalOwid`, especialmente `freshness`, `methodology`, `limitations` e metadados de atualização.
 
-Para atualizar o IDHM do Brasil:
+Para atualizar o IDHM do Brasil, use o script `scripts/generate_idhm_brazil.py` (ele faz o download, parse e geração do JSON no formato exato do app):
 
-1. Baixe a planilha mais recente no Painel IDHM/PNUD Brasil.
-2. Substitua `data/idhm_pnud_brazil.xlsx`.
-3. Regenere `data/idhm_brazil.json` com `latestYear`, `years`, `brazil.history` e `states[CODIGO].history`.
-4. Confira uma UF manualmente, comparando ano, `IDHM`, `IDHM_L`, `IDHM_E` e `IDHM_R` com a planilha.
-5. Atualize `DATA_SOURCE_CATALOG.idhmPnudBrazil`.
+1. Abra a página "Base de dados (xls)" do Painel IDHM/PNUD Brasil e copie o link direto do `.xlsx`
+   (`https://www.undp.org/pt/brazil/desenvolvimento-humano/publications/base-de-dados-xls`).
+   Cada edição do Radar IDHM publica uma planilha nova; a edição 2026 estendeu e recalculou a série para 2012-2024.
+2. Rode o gerador passando a URL (ele baixa para `data/idhm_pnud_brazil.xlsx` e regenera o JSON):
+   ```
+   python scripts/generate_idhm_brazil.py --url "<URL_DO_XLSX>"
+   ```
+   Sem `--url`, ele usa a planilha local já em `data/idhm_pnud_brazil.xlsx`.
+   Com `--check`, ele só compara o JSON atual com a planilha, sem escrever.
+3. Confira o resumo impresso (anos, `latestYear`, IDHM do Brasil no último ano) com a fonte oficial.
+4. Atualize `DATA_SOURCE_CATALOG.idhmPnudBrazil` em `app.js`: `freshness` (ex.: "IDHM anual 2012-2024..."),
+   `url`/`fileUrl` e, se a metodologia/cobertura mudou, `methodology`/`limitations`/`note`.
+
+O mapeamento coluna→campo (`IDHM→idhm`, `IDHM_L→longevity`, `IDHM_E→education`, `IDHM_R→income`,
+`IDHMAD→adjusted`, `ESPVIDA→lifeExpectancy`, `RDPC→incomePerCapita`, `GINI→gini`) está documentado no topo do script.
+
+Quando uma edição nova sair só como **relatório em PDF** (sem planilha), como o Radar IDHM 2026,
+use `scripts/extract_idhm_from_radar_pdf.py` (padrão: `data/radar_idhm_web.pdf`, baixado de
+`https://www.undp.org/pt/brazil/publications/radar-idhm-evolucao-do-idhm-e-de-seus-componentes-periodo-de-2012-2024`;
+o PDF tem ~85 MB e **não é versionado** — está no `.gitignore`). Ele localiza as
+tabelas-anexo pela legenda, extrai IDHM e subíndices por UF e Brasil (e o IDHMAD do Brasil), **valida
+contra valores-âncora oficiais** (ex.: Brasil 2024 = 0,805) e só então escreve o JSON. Rode com
+`--check` para validar sem escrever. Assim que a planilha oficial for publicada, volte a usar o
+`generate_idhm_brazil.py`. Obs.: o app só exibe `idhm/longevity/education/income/adjusted` no IDH;
+os campos `lifeExpectancy/incomePerCapita/gini` não são usados nessa aba.
 
 Para trocar o proxy de cidades por IDHM municipal real:
 
