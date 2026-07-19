@@ -8,7 +8,7 @@
 
 
   const LATEST_OFFICIAL_GDP_YEAR = "2023";
-  const APP_VERSION = "1.0.1";
+  const APP_VERSION = "1.1.6";
 
   const URLS = {
     mapStyle: "https://tiles.openfreemap.org/styles/liberty",
@@ -33,6 +33,7 @@
     healthGlobal: "./data/health_global.json?v=" + APP_VERSION,
     healthBrazil: "./data/health_brazil.json?v=" + APP_VERSION,
     healthBrazilCities: "./data/health_brazil_cities.json?v=" + APP_VERSION,
+    storiesBrazilCities: "./data/stories_brazil_cities.json?v=" + APP_VERSION,
     worldMesh: "./data/world_data.geojson?v=" + APP_VERSION
   };
 
@@ -444,6 +445,21 @@
       limitations: ["Cobertura depende de curadoria; ausência de vídeo não significa ausência de conteúdo público sobre a cidade."],
       updatePolicy: "Adicionar novas cidades com URL, título, canal e checagem manual do link.",
       note: "Lista manual de cidades com documentário e metadados de vídeo."
+    },
+    storiesAi: {
+      label: "Histórias de cidades",
+      shortLabel: "IA + IBGE",
+      provider: "data/stories_brazil_cities.json",
+      type: "json",
+      provenance: "gerado por IA",
+      freshness: "Piloto gerado em 2026-07-19",
+      url: "./data/stories_brazil_cities.json",
+      quality: "Texto de IA ancorado em dados oficiais",
+      fields: ["arquétipo", "história (até 6 frases)", "sinais usados", "lacunas", "confiança", "hash do material-fonte"],
+      methodology: "scripts/generate_city_stories.py coleta população, PIB, composição do VAB e o histórico oficial do IBGE Cidades; o prompt-mestre (prompt-mestre-atlas-cidades.md) instrui o modelo a escrever no máximo 6 frases usando apenas esse material, com inferências sinalizadas e arquétipo da paleta.",
+      limitations: ["Texto gerado por IA: pode conter leituras imprecisas mesmo ancorado nos dados.", "VAB municipal disponível até 2021; PIB total até 2023.", "Piloto com 10 cidades; cobertura completa depende de validação da ideia."],
+      updatePolicy: "Regenerar com o script + prompt-mestre e revisar antes de publicar; guardar hash do material por cidade.",
+      note: "História socioeconômica curta por cidade, gerada por IA a partir de dados IBGE e auditada contra o material-fonte."
     }
   };
 
@@ -592,6 +608,16 @@
       defaultMetric: "documentedCities",
       sourceIds: ["travelCurated"],
       note: "Camada curada manualmente para cidades e estados com documentários em vídeo."
+    },
+    stories: {
+      label: "Histórias das Cidades",
+      caption: "Histórias das Cidades",
+      icon: "book-open",
+      group: "explore",
+      title: "A leitura do lugar: por que a cidade existe e do que ela vive",
+      defaultMetric: "storyScore",
+      sourceIds: ["storiesAi"],
+      note: "Piloto com 10 cidades: história curta gerada por IA apenas com dados do IBGE (população, PIB, VAB e histórico oficial), com arquétipo e nível de confiança."
     }
   };
 
@@ -731,6 +757,7 @@
   let healthGlobalData = null;
   let healthBrazilData = null;
   let healthBrazilCitiesData = null;
+  let storiesBrazilCitiesData = null;
   let activeHealthSubMetric = savedPreferences.healthSubMetric || "bedsPer1000";
   let activeSourceSelections = { ...(savedPreferences.sourceSelections || {}) };
   let fallbackStyleTried = false;
@@ -881,6 +908,10 @@
         console.warn("Falha ao carregar dados municipais de saude.", error);
         return null;
       }),
+      fetchJson(URLS.storiesBrazilCities).catch((error) => {
+        console.warn("Falha ao carregar histórias das cidades.", error);
+        return null;
+      }),
       fetchJson(URLS.brazilMesh).catch((error) => {
         console.warn("Falha ao carregar malha nacional do Brasil.", error);
         return null;
@@ -888,7 +919,7 @@
       fetchJson(URLS.statesMesh)
     ]);
 
-    const [stateRows, cityRows, gdpBrazilRows, gdpStateRows, gdpCityRows, states, cities, hdiGlobalRows, hdiOwidRows, idhmBrazilRows, securityGlobalRows, securityBrazilRows, securityBrazilCitiesRows, healthGlobalRows, healthBrazilRows, healthBrazilCitiesRows, brazilMesh, statesMesh] = requests.map((result) => (
+    const [stateRows, cityRows, gdpBrazilRows, gdpStateRows, gdpCityRows, states, cities, hdiGlobalRows, hdiOwidRows, idhmBrazilRows, securityGlobalRows, securityBrazilRows, securityBrazilCitiesRows, healthGlobalRows, healthBrazilRows, healthBrazilCitiesRows, storiesBrazilCitiesRows, brazilMesh, statesMesh] = requests.map((result) => (
       result.status === "fulfilled" ? result.value : null
     ));
 
@@ -909,6 +940,9 @@
     mergeHealthGlobal(healthGlobalRows);
     mergeHealthBrazil(healthBrazilRows);
     mergeHealthBrazilCities(healthBrazilCitiesRows);
+    if (storiesBrazilCitiesRows && storiesBrazilCitiesRows.cities) {
+      storiesBrazilCitiesData = storiesBrazilCitiesRows;
+    }
     hydrateBrazilMesh(brazilMesh);
     hydrateStatesMesh(statesMesh);
     syncHdiToActiveYear();
@@ -1630,9 +1664,20 @@
       segurancaScore: scores.segurancaScore,
       educacaoScore: scores.educacaoScore,
       travelScore: Object.keys(DOCUMENTED_CITIES).some(id => id.startsWith(state.id)) ? 1 : 0,
+      storyScore: storyCityIds().some(id => id.startsWith(state.id)) ? 1 : 0,
       lng: state.lng,
       lat: state.lat
     };
+  }
+
+  function storyForCity(cityId) {
+    if (!storiesBrazilCitiesData || !storiesBrazilCitiesData.cities) return null;
+    return storiesBrazilCitiesData.cities[String(cityId)] || null;
+  }
+
+  function storyCityIds() {
+    if (!storiesBrazilCitiesData || !storiesBrazilCitiesData.cities) return [];
+    return Object.keys(storiesBrazilCitiesData.cities);
   }
 
   function cityMapProperties(props) {
@@ -1696,6 +1741,7 @@
       healthSource: hasCityHealthData ? (cityHealthData.source || "CNES/SIM/SINASC/SI-PNI/IBGE") : (healthBase.source || "Proxy UF"),
       enemScore: baseScore > 0 ? parseFloat((baseScore + cityEnemVariation).toFixed(1)) : 0,
       travelScore: DOCUMENTED_CITIES[props.id] ? 1 : 0,
+      storyScore: storyForCity(props.id) ? 1 : 0,
       ...sseScores({
         bedsPer1000: healthBase.bedsPer1000 || 0,
         doctorsPer1000: healthBase.doctorsPer1000 || 0,
@@ -2015,8 +2061,8 @@
       "circle-color": analysisBubbleColor(),
       "circle-radius": territoryBubbleRadiusExpression("city"),
       "circle-opacity": 0.72,
-      "circle-stroke-width": activeAnalysis === "travel" ? 2.2 : 1.4,
-      "circle-stroke-color": activeAnalysis === "travel" ? "#ffffff" : "#0b1014"
+      "circle-stroke-width": (activeAnalysis === "travel" || activeAnalysis === "stories") ? 2.2 : 1.4,
+      "circle-stroke-color": (activeAnalysis === "travel" || activeAnalysis === "stories") ? "#ffffff" : "#0b1014"
     });
   }
 
@@ -2041,6 +2087,8 @@
        values = collection.features.map(f => f.properties.enemScore || 0);
     } else if (metricType === "travel") {
        values = collection.features.map(f => f.properties.travelScore || 0);
+    } else if (metricType === "stories") {
+       values = collection.features.map(f => f.properties.storyScore || 0);
     } else if (metricType === "security") {
        const metricMap = {
          mviRate: "mviRate",
@@ -2094,6 +2142,10 @@
       colors = ["#17212b", "#f2c14e"];
       stops = [0, 1];
       scale = null; // force fixed stops for travel
+    } else if (activeAnalysis === "stories") {
+      colors = ["#17212b", "#b78ae8"];
+      stops = [0, 1];
+      scale = null; // force fixed stops for stories
     } else if (activeAnalysis === "security") {
       if (activeView === "world") {
         const sourceId = activeSourceOptionId("security", "world");
@@ -2199,6 +2251,9 @@
     if (activeAnalysis === "travel") {
       return ["interpolate", ["linear"], metric, 0, 0, 1, 15];
     }
+    if (activeAnalysis === "stories") {
+      return ["interpolate", ["linear"], metric, 0, 0, 1, 15];
+    }
     if (activeAnalysis === "security") {
       if (activeView === "world") {
         const sourceId = activeSourceOptionId("security", "world");
@@ -2265,6 +2320,7 @@
     if (activeAnalysis === "politics") return ["to-number", ["get", "peoplePerPolitician"], 0];
     if (activeAnalysis === "education") return ["to-number", ["get", "enemScore"], 0];
     if (activeAnalysis === "travel") return ["to-number", ["get", "travelScore"], 0];
+    if (activeAnalysis === "stories") return ["to-number", ["get", "storyScore"], 0];
     if (activeAnalysis === "health") return ["to-number", ["get", healthMetricField()], 0];
     if (activeAnalysis === "sse") return ["to-number", ["get", "sseTotal"], 0];
     if (activeAnalysis === "security") {
@@ -2290,6 +2346,7 @@
     if (activeAnalysis === "politics") return "#51d1c2";
     if (activeAnalysis === "education") return "#b8e8e0";
     if (activeAnalysis === "travel") return "#f2c14e";
+    if (activeAnalysis === "stories") return "#b78ae8";
     if (activeAnalysis === "security") return "#ef7d60";
     if (activeAnalysis === "health") return "#51d1c2";
     if (activeAnalysis === "sse") return "#a9d65c";
@@ -2302,6 +2359,7 @@
     if (activeAnalysis === "politics") return "#51d1c2";
     if (activeAnalysis === "education") return "#1a5f8a";
     if (activeAnalysis === "travel") return "#f2c14e";
+    if (activeAnalysis === "stories") return "#b78ae8";
     if (activeAnalysis === "security") return "#ef7d60";
     if (activeAnalysis === "sse") return "#a9d65c";
     return "#18b978";
@@ -2955,6 +3013,14 @@
         labels: ["Sem vídeos", "Com documentários"]
       };
     }
+    if (activeAnalysis === "stories") {
+      return {
+        metric: "Histórias das cidades",
+        scope: isCity ? "cidades com história" : "estados com histórias",
+        colors: ["#17212b", "#b78ae8"],
+        labels: ["Sem história", "Com história"]
+      };
+    }
     if (activeAnalysis === "sse") {
       const isCity = activeView === "cities" && selectedStateId;
       return {
@@ -3466,7 +3532,7 @@
     if (activeView === "brazil") {
       setBrazilLayerVisibility(true);
       hideAtlasAnalysisLayers();
-      if (activeAnalysis === "travel") {
+      if (activeAnalysis === "travel" || activeAnalysis === "stories") {
         setLayersVisibility(["states-bubbles", "states-labels"], true);
       }
       return;
@@ -4148,6 +4214,7 @@
     if (activeAnalysis === "health") return healthCards(scope, data);
     if (activeAnalysis === "sse") return sseCards(scope, data);
     if (activeAnalysis === "travel") return travelCards(scope, data);
+    if (activeAnalysis === "stories") return storiesCards(scope, data);
     if (scope === "state") return stateGeneralCards(data);
     if (scope === "city") return cityGeneralCards(data);
     return brazilGeneralCards();
@@ -4615,6 +4682,90 @@
     ];
   }
 
+  function formatStoryDate(isoDate) {
+    if (!isoDate || !/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) return isoDate || "";
+    const [year, month, day] = isoDate.split("-");
+    return `${day}/${month}/${year}`;
+  }
+
+  function storyCityList(stateId) {
+    const ids = storyCityIds().filter((id) => !stateId || id.startsWith(stateId));
+    return ids
+      .map((id) => ({ id, story: storyForCity(id) }))
+      .filter((item) => item.story)
+      .sort((a, b) => a.story.name.localeCompare(b.story.name, "pt-BR"));
+  }
+
+  function storyListHtml(items) {
+    return `
+      <ul class="story-list">
+        ${items.map(({ story }) => `
+          <li><strong>${escapeHtml(story.name)} (${escapeHtml(story.uf)})</strong><span>${escapeHtml(story.arquetipo || "")}</span></li>
+        `).join("")}
+      </ul>
+    `;
+  }
+
+  function storyCardHtml(story) {
+    const confidence = { alta: "confiança alta", media: "confiança média", baixa: "confiança baixa" }[story.confianca] || "";
+    const paragraphs = String(story.historia || "").split(/\n+/).map((part) => `<p>${escapeHtml(part)}</p>`).join("");
+    const sinais = Array.isArray(story.sinaisUsados) && story.sinaisUsados.length
+      ? `<details class="story-details"><summary>Sinais usados</summary><ul>${story.sinaisUsados.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></details>`
+      : "";
+    const lacunas = Array.isArray(story.lacunas) && story.lacunas.length
+      ? `<details class="story-details"><summary>Lacunas declaradas</summary><ul>${story.lacunas.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></details>`
+      : "";
+    return `
+      <div class="story-card">
+        <div class="story-tags">
+          <span class="story-badge">${escapeHtml(story.arquetipo || "sem arquétipo claro")}</span>
+          ${story.arquetipoSecundario ? `<span class="story-badge secondary">${escapeHtml(story.arquetipoSecundario)}</span>` : ""}
+          ${confidence ? `<span class="story-confidence ${escapeHtml(story.confianca)}">${escapeHtml(confidence)}</span>` : ""}
+        </div>
+        <div class="story-text">${paragraphs}</div>
+        ${sinais}
+        ${lacunas}
+        <div class="story-seal">
+          Texto gerado por IA em ${escapeHtml(formatStoryDate(story.geradoEm))} a partir de dados do IBGE.
+          <a href="https://github.com/inteligenciamilgrau/atlasbrasil/issues" target="_blank" rel="noopener noreferrer">Encontrou um erro?</a>
+        </div>
+      </div>
+    `;
+  }
+
+  function storiesCards(scope, data) {
+    const total = storyCityIds().length;
+    if (scope === "state") {
+      const items = storyCityList(String(data.id || ""));
+      const cards = [
+        { label: "Histórias na UF", value: items.length ? formatNumber(items.length) : "Ainda não" },
+        { label: "Piloto nacional", value: `${formatNumber(total)} cidades` }
+      ];
+      if (items.length) cards.push({ label: "Cidades", value: storyListHtml(items), isHtml: true });
+      return cards;
+    }
+    if (scope === "city") {
+      const story = storyForCity(data.id);
+      if (!story) {
+        return [
+          { label: "História", value: "Ainda não escrita" },
+          { label: "Piloto", value: `${formatNumber(total)} cidades com história` },
+          { label: "Cidade", value: `${data.name || ""} (${data.uf || ""})` }
+        ];
+      }
+      return [
+        { isHtml: true, value: storyCardHtml(story) },
+        { label: "População", value: formatNumber(data.pop || 0) }
+      ];
+    }
+    const items = storyCityList(null);
+    return [
+      { label: "Piloto", value: `${formatNumber(total)} cidades com história` },
+      { label: "Como é feito", value: "IA + dados IBGE" },
+      { label: "Cidades do piloto", value: storyListHtml(items), isHtml: true }
+    ];
+  }
+
   function analysisNote() {
     const config = activeAnalysisConfig();
     const projectionWarning = activeAnalysis === "gdp" && parseInt(activeGdpYear, 10) > parseInt(LATEST_OFFICIAL_GDP_YEAR, 10)
@@ -4736,6 +4887,14 @@
         format: formatShort
       };
     }
+    if (activeAnalysis === "stories") {
+      return {
+        title: "Estados com histórias escritas",
+        caption: "piloto | 10 cidades",
+        value: (row) => storyCityIds().filter((id) => id.startsWith(row.id)).length,
+        format: (v) => v === 1 ? "1 história" : `${v} histórias`
+      };
+    }
     if (activeAnalysis === "security") {
       const metric = activeSecuritySubMetric || "mviRate";
       const metricTitles = {
@@ -4854,6 +5013,14 @@
         title: `Cidades documentadas em ${uf}`,
         caption: "por população",
         value: (row) => DOCUMENTED_CITIES[row.id] ? row.pop : 0,
+        format: formatShort
+      };
+    }
+    if (activeAnalysis === "stories") {
+      return {
+        title: `Cidades com história em ${uf}`,
+        caption: "piloto | clique para ler",
+        value: (row) => storyForCity(row.id) ? row.pop : 0,
         format: formatShort
       };
     }
@@ -5029,6 +5196,7 @@
     if (activeAnalysis === "health") return healthCards("brazil");
     if (activeAnalysis === "sse") return sseCards("brazil");
     if (activeAnalysis === "travel") return travelCards("brazil");
+    if (activeAnalysis === "stories") return storiesCards("brazil");
     const politics = brazilPoliticalSummary();
     const gdpPerCapita = perCapita(brazilGdp, totalPopulation);
     const area = brazilMeshFeature ? brazilMeshFeature.properties.areaKm2 : null;
@@ -5056,6 +5224,7 @@
     if (activeAnalysis === "health") return healthCards("state", stateForCards);
     if (activeAnalysis === "sse") return sseCards("state", stateForCards);
     if (activeAnalysis === "travel") return travelCards("state", stateForCards);
+    if (activeAnalysis === "stories") return storiesCards("state", stateForCards);
     const pop = Number(props.pop || 0);
     const gdpPerCapita = perCapita(props.gdp, pop);
     const state = stateById.get(String(props.id || "")) || { id: String(props.id || ""), sigla: props.uf || "" };
@@ -5086,6 +5255,7 @@
     if (activeAnalysis === "health") return healthCards("city", props);
     if (activeAnalysis === "sse") return sseCards("city", props);
     if (activeAnalysis === "travel") return travelCards("city", props);
+    if (activeAnalysis === "stories") return storiesCards("city", props);
     const pop = Number(props.pop || 0);
     const stateId = props.stateId || (props.id && String(props.id).length >= 2 ? String(props.id).substring(0, 2) : "");
     const state = stateById.get(String(stateId));

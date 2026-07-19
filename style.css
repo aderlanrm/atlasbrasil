@@ -1153,6 +1153,79 @@ h1 {
 .icon-small { width: 12px; height: 12px; }
 .bar-fill { height: 100%; background: var(--gold); border-radius: 2px; }
 
+/* Histórias das Cidades */
+.story-card { padding: 4px 0 2px; }
+.story-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.story-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(183, 138, 232, 0.16);
+  border: 1px solid rgba(183, 138, 232, 0.55);
+  color: #cfaef2;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.story-badge.secondary { opacity: 0.75; }
+.story-confidence {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: var(--muted);
+}
+.story-confidence.alta { border-color: rgba(169, 214, 92, 0.5); color: #a9d65c; }
+.story-confidence.media { border-color: rgba(242, 193, 78, 0.5); color: #f2c14e; }
+.story-confidence.baixa { border-color: rgba(239, 125, 96, 0.5); color: #ef7d60; }
+.story-text p {
+  font-family: "Source Serif 4", Georgia, serif;
+  font-size: 13.5px;
+  line-height: 1.62;
+  color: var(--text);
+  margin: 0 0 10px;
+}
+.story-details { margin: 6px 0; }
+.story-details summary {
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  padding: 3px 0;
+}
+.story-details summary:hover { color: var(--text); }
+.story-details ul { margin: 4px 0 6px; padding-left: 16px; }
+.story-details li { font-size: 11px; line-height: 1.5; color: var(--muted); margin-bottom: 3px; }
+.story-seal {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.14);
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--quiet);
+}
+.story-seal a { color: #b78ae8; text-decoration: none; font-weight: 600; }
+.story-seal a:hover { text-decoration: underline; }
+.story-list { list-style: none; margin: 4px 0 0; padding: 0; }
+.story-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.story-list li:last-child { border-bottom: 0; }
+.story-list li strong { font-size: 11.5px; color: var(--text); white-space: nowrap; }
+.story-list li span { font-size: 9px; color: var(--quiet); text-transform: uppercase; letter-spacing: 0.04em; text-align: right; }
+
 .cols-1 { grid-template-columns: repeat(1, 1fr) !important; }
 .cols-2 { grid-template-columns: repeat(2, 1fr) !important; }
 .cols-3 { grid-template-columns: repeat(3, 1fr) !important; }
