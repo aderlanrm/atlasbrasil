@@ -186,6 +186,35 @@ button {
   margin-bottom: 10px;
 }
 
+.legend-toggle {
+  display: none;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 9px;
+  padding: 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  background: rgba(237, 243, 238, 0.06);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+
+.legend-toggle-caret {
+  font-size: 11px;
+  line-height: 1;
+  transition: transform 0.2s ease;
+}
+
+.heat-legend:not(.collapsed) .legend-toggle-caret {
+  transform: rotate(180deg);
+}
+
 .legend-head span {
   color: var(--quiet);
   font-size: 10px;
@@ -506,6 +535,51 @@ button {
 .panel-scroll {
   overflow-y: auto;
   padding-bottom: 18px;
+}
+
+.panel-handle {
+  display: none;
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 16px 11px;
+  border: 0;
+  border-bottom: 1px solid var(--line-strong);
+  background: rgba(17, 33, 43, 0.94);
+  backdrop-filter: blur(10px);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.panel-handle-grip {
+  width: 46px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--line-strong);
+}
+
+.panel-handle-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.panel-handle-caret {
+  font-size: 12px;
+  line-height: 1;
+  transition: transform 0.2s ease;
+}
+
+.panel-handle.at-panel .panel-handle-caret {
+  transform: rotate(180deg);
 }
 
 .panel-scroll::-webkit-scrollbar { width: 10px; }
@@ -1064,7 +1138,8 @@ h1 {
 
   .app {
     grid-template-columns: 1fr;
-    grid-template-rows: 58vh auto;
+    grid-template-rows: 72vh auto;
+    grid-template-rows: 72svh auto;
     height: auto;
     min-height: 100vh;
   }
@@ -1085,11 +1160,17 @@ h1 {
   .panel-scroll {
     overflow: visible;
   }
+
+  .panel-handle {
+    display: flex;
+  }
 }
 
 @media (max-width: 620px) {
   .app {
-    grid-template-rows: 54vh auto;
+    grid-template-rows: 88vh auto;
+    grid-template-rows: 88svh auto;
+    min-height: 100svh;
   }
 
   .brand,
@@ -1116,10 +1197,38 @@ h1 {
     display: none;
   }
 
+  /* Legenda vira uma faixa baixa na base do mapa, recolhível */
   .heat-legend {
-    right: 12px;
-    bottom: 42px;
-    width: min(280px, calc(100% - 24px));
+    left: 10px;
+    right: 10px;
+    bottom: 30px;
+    width: auto;
+    max-height: 62vh;
+    max-height: 62svh;
+    overflow-y: auto;
+    padding: 10px 11px;
+  }
+
+  .legend-head {
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .legend-toggle {
+    display: flex;
+  }
+
+  .heat-legend.collapsed .legend-source {
+    display: none;
+  }
+
+  .fixed-detail-card {
+    top: 60px;
+    left: 10px;
+    width: calc(100% - 20px);
+    max-height: 62vh;
+    max-height: 62svh;
   }
 }
 

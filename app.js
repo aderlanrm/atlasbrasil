@@ -772,6 +772,7 @@
   let dataCacheStats = createDataCacheStats();
   let basePaintByLayer = new Map();
   let worldFeatureCollection = null;
+  let legendCollapsed = null;
   document.addEventListener("DOMContentLoaded", init);
 
   function init() {
@@ -786,8 +787,41 @@
 
     initMap();
     bindControls();
+    bindPanelHandle();
     applyPreferenceControls();
     loadAtlas();
+  }
+
+  function isMobileLayout() {
+    return window.matchMedia("(max-width: 620px)").matches;
+  }
+
+  function bindPanelHandle() {
+    const handle = document.getElementById("panel-handle");
+    const panel = document.querySelector(".panel");
+    if (!handle || !panel) return;
+
+    const label = handle.querySelector(".panel-handle-label");
+    const atPanel = () => panel.getBoundingClientRect().top <= 8;
+
+    const sync = () => {
+      const showingPanel = atPanel();
+      handle.classList.toggle("at-panel", showingPanel);
+      if (label) label.textContent = showingPanel ? "Voltar ao mapa" : "Deslize para ver os dados";
+      handle.setAttribute("aria-label", showingPanel ? "Voltar ao mapa" : "Ver dados e análises");
+    };
+
+    handle.addEventListener("click", () => {
+      if (atPanel()) {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } else {
+        panel.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
+
+    window.addEventListener("scroll", sync, { passive: true });
+    window.addEventListener("resize", sync);
+    sync();
   }
 
   function cacheElements() {
@@ -2570,7 +2604,7 @@
     const provenance = [...new Set(records.map((source) => source.provenance))].join(" + ");
     const upstream = upstreamSourceLine(primary);
     return `
-      <div class="legend-source">
+      <div class="legend-source" id="legend-source-block">
         <div class="legend-source-top">
           <span>Fonte</span>
           <button type="button" class="source-info-button" id="source-info-button" aria-expanded="false" aria-controls="source-detail-panel" title="Ver detalhes e links das fontes">i</button>
@@ -2630,6 +2664,11 @@
       updateSourceDisplays();
       return;
     }
+
+    if (legendCollapsed === null) legendCollapsed = isMobileLayout();
+    const sourceHtml = legendSourceHtml(config.sourceIds);
+
+    legend.classList.toggle("collapsed", Boolean(sourceHtml) && legendCollapsed);
 
     legend.innerHTML = `
       <div class="legend-head">
@@ -2695,12 +2734,29 @@
       <div class="legend-labels">
         ${config.labels.map((label) => `<span>${escapeHtml(label)}</span>`).join("")}
       </div>
-      ${legendSourceHtml(config.sourceIds)}
+      ${sourceHtml ? `
+        <button type="button" class="legend-toggle" id="legend-toggle" aria-expanded="${legendCollapsed ? "false" : "true"}" aria-controls="legend-source-block">
+          <span class="legend-toggle-label">${legendCollapsed ? "Fonte e detalhes" : "Ocultar detalhes"}</span>
+          <span class="legend-toggle-caret" aria-hidden="true">▾</span>
+        </button>
+      ` : ""}
+      ${sourceHtml}
     `;
 
     const gradScale = legend.querySelector("#legend-gradient-scale");
     if (gradScale) {
       gradScale.style.background = `linear-gradient(90deg, ${config.colors.join(", ")})`;
+    }
+
+    const legendToggle = legend.querySelector("#legend-toggle");
+    if (legendToggle) {
+      legendToggle.addEventListener("click", () => {
+        legendCollapsed = !legendCollapsed;
+        legend.classList.toggle("collapsed", legendCollapsed);
+        legendToggle.setAttribute("aria-expanded", String(!legendCollapsed));
+        const toggleLabel = legendToggle.querySelector(".legend-toggle-label");
+        if (toggleLabel) toggleLabel.textContent = legendCollapsed ? "Fonte e detalhes" : "Ocultar detalhes";
+      });
     }
 
     const sourceInfoButton = legend.querySelector("#source-info-button");
