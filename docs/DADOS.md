@@ -180,6 +180,130 @@ Para trocar o proxy de cidades por IDHM municipal real:
 4. Ajuste `cityMapProperties()` para ler o IDHM municipal real antes de cair no proxy da UF.
 5. Remova `idhmCityProxy` dos `sourceIds` quando a cidade tiver dado municipal real.
 
+## Exemplo: IPS (Índice de Progresso Social)
+
+A aba `IPS` usa três fontes cadastradas:
+
+- `ipsBrasilImazon`: IPS Brasil real/oficial (Instituto IPS Brasil, Imazon, Amazônia 2030 e Social Progress
+  Imperative). O app carrega `data/ips_brazil.json` com Brasil e 27 UFs **nas três edições (2024, 2025, 2026)**
+  em `byYear`, mais a série recalculada em `recalculatedSeries`. Escala 0-100, maior = melhor.
+- `ipsBrasilCities`: IPS municipal real/oficial dos **5.570 municípios**, um arquivo por edição
+  (`data/ips_brazil_cities_2024.json`, `_2025`, `_2026`), indexado por código IBGE de 7 dígitos, com IPS geral,
+  ranking nacional (x/5.570) e as 3 dimensões. O app baixa a edição vigente no load e as outras sob demanda,
+  quando o usuário troca o ano no seletor da legenda.
+
+### Comparabilidade entre edições (leia antes de comparar anos)
+
+A fonte é explícita: **as edições 2024, 2025 e 2026 não são estritamente comparáveis** — cada uma usa os
+indicadores e tratamentos disponíveis na época. Existem, portanto, dois conjuntos de números diferentes, e
+misturá-los é erro de leitura:
+
+| | 2024 | 2025 | 2026 |
+|---|---|---|---|
+| **Por edição** (`brazil.byYear`) — o que foi publicado na época, alimenta o mapa | 61,83 | 61,96 | 63,40 |
+| **Recalculada** (`brazil.recalculatedSeries`) — parâmetros de 2026, comparável, alimenta o gráfico | 62,85 | 63,05 | 63,40 |
+
+O app usa a série por edição no mapa e nos cards (é o dado daquele ano) e a recalculada no gráfico de
+histórico, rotulado como "série recalculada (comparável)". O aviso da fonte aparece na nota da análise.
+
+### UF nas edições anteriores
+
+Só o relatório da edição vigente está integrado, então as UFs de 2024 e 2025 vêm da **agregação municipal
+ponderada pela população** — o mesmo cálculo que o relatório usa para a nota do Brasil. O método é validado
+na edição vigente: a derivação reproduz o Quadro oficial das UFs com diferença máxima de **0,01**. Se algum
+dia divergir mais que 0,02, o script aborta (`validate_derived_states`).
+- `ipsCityProxy`: fallback. Só entra em cena se o JSON municipal não carregar ou um município faltar nele —
+  aí a cidade recebe o IPS da UF e é marcada como `proxy UF`.
+
+### De onde vem a planilha municipal (importante para a próxima edição)
+
+O painel `https://ipsbrasil.org.br/explore/data` é **Phoenix LiveView**: o botão *Download* é um evento de
+LiveView, então a URL da planilha **não está no HTML**. Ela aparece no diff que o servidor manda ao receber o
+evento `open_download_modal`. Hoje o modal expõe duas saídas:
+
+- **XLSX completo (todos os municípios)** — URL estática, é a que o script usa. O ano é parte do caminho,
+  então dá para baixar as edições anteriores trocando só o número:
+  `https://ips-brasil.fly.storage.tigris.dev/downloads/ips-brasil-<ano>-tabela.xlsx` (confirmado para 2024, 2025 e 2026)
+- **CSV filtrado pela seleção atual** — `/explore/data/export?edition_id=<uuid>`
+
+Se a URL do XLSX mudar numa edição futura, o caminho para achar a nova é falar o protocolo LiveView:
+GET da página (pega `csrf-token`, `data-phx-session`, `data-phx-static`) → WebSocket em
+`wss://ipsbrasil.org.br/live/websocket?_csrf_token=...&vsn=2.0.0` → `phx_join` no tópico `lv:<id>` →
+push do evento `open_download_modal` → ler o diff.
+
+A planilha traz `Município` e `UF`, mas **não traz código IBGE**. O script casa por nome normalizado contra a
+API de localidades do IBGE; cinco municípios têm grafia diferente e estão em `CITY_NAME_ALIASES`
+(Gracho/Graccho Cardoso, Arês/Arez, Açu/Assú, Barão de/do Monte Alto, São Luiz/São Luiz do Anauá). Se sobrar
+qualquer município sem código, o script **aborta** em vez de gravar cobertura parcial.
+
+O JSON municipal sai com IPS geral + ranking + 3 dimensões (706 KB, ~144 KB com gzip). Os 12 componentes
+existem na planilha e saem com `--full`, mas triplicam o arquivo (para ~1,8 MB) — como o app baixa esse
+arquivo no carregamento, inclusive no celular, eles ficam de fora até virarem opção de verdade na tela.
+
+Estrutura do índice: 3 dimensões — Necessidades Humanas Básicas, Fundamentos do Bem-estar e Oportunidades —
+e 12 componentes, somando 57 indicadores. O seletor da legenda (`#legend-ips-selector`) já traz **o IPS geral
+e as 3 dimensões**. Para acrescentar um componente:
+
+1. Adicionar a chave em `ANALYSIS_CATALOG.ips.metrics`.
+2. Mapear a chave para o campo achatado em `IPS_METRIC_FIELDS`.
+3. Preencher esse campo em `stateMapProperties()` / `cityMapProperties()`.
+4. Gerar os dados com `--full` (os componentes ficam fora do JSON por padrão) e incluir a chave em
+   `build_class_breaks()` no gerador, para o indicador ganhar cortes de cor na faixa dele.
+
+### Por que o mapa é classificado, e não um gradiente
+
+O mapa oficial do IPS usa **9 classes** (quebras naturais), não interpolação contínua — e há um motivo
+prático: interpolar amarelo → azul em RGB passa por cinza-oliva, e como 20 das 27 UFs caem justamente na
+faixa de 58 a 65, o mapa contínuo ficava visualmente homogêneo mesmo com valores distintos. Com `step` e
+cores discretas, as UFs se espalham por 6 classes bem separadas.
+
+Os cortes ficam em `classBreaks` no `data/ips_brazil.json`, **um conjunto por indicador**, porque as
+dimensões vivem em faixas muito diferentes (Necessidades Básicas gira em torno de 75, Oportunidades de 44):
+usar os cortes do IPS geral em todas pintaria uma toda de azul e outra toda de vermelho.
+
+- `ips`: pontos médios entre as médias dos 9 grupos oficiais do relatório. Cada média publicada cai na sua
+  própria classe — é o que o script checa em `class_breaks_for_ips()`.
+- dimensões: quantis da distribuição municipal da edição vigente.
+
+Os cortes são calculados na edição vigente e aplicados a todas, para a cor não mudar de significado quando
+o usuário troca o ano.
+
+Para atualizar o IPS, use `scripts/generate_ips_brazil.py`:
+
+```
+python scripts/generate_ips_brazil.py                    # baixa o que faltar e regenera todos os JSONs
+python scripts/generate_ips_brazil.py --check            # extrai e valida sem escrever
+python scripts/generate_ips_brazil.py --download         # força rebaixar relatório e planilhas
+python scripts/generate_ips_brazil.py --full             # inclui os 12 componentes nos JSONs municipais
+python scripts/generate_ips_brazil.py --skip-cities      # só Brasil/UFs
+python scripts/generate_ips_brazil.py --editions 2026    # processa só uma edição
+```
+
+Ao sair uma edição nova: acrescente o ano em `EDITIONS`, atualize `REPORT_URL` e as âncoras
+(`DEFAULT_ANCHORS` e `CITY_ANCHORS`, que mudam de município entre edições), e rode com `--download`.
+
+Brasil e UFs vêm do **relatório geral em PDF** (`https://ipsbrasil.org.br/relatorios`); os municípios vêm da
+**planilha oficial** (seção acima). O script localiza as tabelas do PDF pelo texto (não por número de página,
+que muda entre edições) e **valida antes de escrever**:
+
+- âncoras do relatório: Brasil 63,40; DF 70,73; Pará 55,80 (edição 2026);
+- âncoras municipais: Gavião Peixoto 73,10; Jundiaí 71,80; Breves 49,66; Bannach 47,23;
+- os 5.570 municípios casaram com código IBGE, em **todas** as edições;
+- **a média municipal ponderada por população reproduz a nota nacional do PDF** — é o teste mais forte,
+  porque amarra as duas fontes independentes uma na outra (deu 63,40 exato na edição 2026);
+- **a derivação das UFs reproduz o Quadro oficial** (dif. máxima 0,01), o que legitima usá-la nas edições
+  anteriores, cujo relatório não está integrado.
+
+O PDF (~39 MB) e os XLSX (~2 MB cada) ficam em `data/` e **não são versionados**.
+
+Ao trocar de edição, atualize também `DATA_SOURCE_CATALOG.ipsBrasilImazon` (`freshness`, `limitations`) e as
+âncoras em `DEFAULT_ANCHORS` no script. Atenção: o próprio relatório avisa que as edições **não são
+estritamente comparáveis** entre si, e que IPS Brasil e IPS Global medem coisas diferentes (o Brasil marca
+72,74 no IPS Global 2026 e 63,40 no IPS Brasil 2026).
+
+Ao trocar de edição, confira também se as âncoras municipais em `CITY_ANCHORS` continuam publicadas no novo
+relatório (os quadros de melhores/piores desempenhos mudam de município entre edições).
+
 ## 3. Crie uma nova análise
 
 Adicione uma entrada em `ANALYSIS_CATALOG`:

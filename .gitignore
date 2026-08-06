@@ -72,5 +72,7 @@ desktop.ini
 # Baixado de: https://www.undp.org/pt/brazil/publications/radar-idhm-evolucao-do-idhm-e-de-seus-componentes-periodo-de-2012-2024
 # Reprocessar com: python scripts/extract_idhm_from_radar_pdf.py
 data/radar_idhm_web.pdf
+data/ips_brasil_relatorio.pdf
+data/ips_brasil_tabela*.xlsx
 
 server.py

@@ -8,7 +8,19 @@
 
 
   const LATEST_OFFICIAL_GDP_YEAR = "2023";
-  const APP_VERSION = "1.1.6";
+
+  // O mapa oficial do IPS é CLASSIFICADO em 9 grupos (quebras naturais), não um
+  // gradiente contínuo. Interpolar amarelo -> azul em RGB passa por cinza-oliva, e
+  // como 20 das 27 UFs caem justamente nessa faixa, o mapa lia como homogêneo.
+  // Com classes discretas cada grupo tem cor própria e saturada, como na fonte.
+  // Ordem: pior (vermelho escuro) -> melhor (azul escuro).
+  const IPS_CLASS_COLORS = [
+    "#8f2820", "#c8402f", "#e8743b", "#ef9f52", "#f2c14e",
+    "#bcd08a", "#7fbcd8", "#3a8fc7", "#1c5f9e"
+  ];
+  // Fallback só para o caso de o JSON não trazer classBreaks (dado antigo em cache).
+  const IPS_FALLBACK_BREAKS = [48.53, 52.0, 54.62, 56.86, 58.88, 60.86, 63.05, 66.29];
+  const APP_VERSION = "1.2.1";
 
   const URLS = {
     mapStyle: "https://tiles.openfreemap.org/styles/liberty",
@@ -34,6 +46,8 @@
     healthBrazil: "./data/health_brazil.json?v=" + APP_VERSION,
     healthBrazilCities: "./data/health_brazil_cities.json?v=" + APP_VERSION,
     storiesBrazilCities: "./data/stories_brazil_cities.json?v=" + APP_VERSION,
+    ipsBrazil: "./data/ips_brazil.json?v=" + APP_VERSION,
+    ipsBrazilCities: (year) => `./data/ips_brazil_cities_${year}.json?v=${APP_VERSION}`,
     worldMesh: "./data/world_data.geojson?v=" + APP_VERSION
   };
 
@@ -233,6 +247,100 @@
       methodology: "Como a base anual carregada não traz IDHM municipal, cada cidade recebe temporariamente o IDHM da sua UF para permitir navegação e comparação visual dentro do mapa.",
       limitations: ["Não é IDHM municipal real.", "Não deve ser usado para ranking municipal, tomada de decisão local ou comparação entre cidades.", "O Atlas Brasil possui IDHM municipal em anos censitários, mas essa base ainda não foi integrada nesta versão."],
       updatePolicy: "Substituir este proxy por uma base municipal auditável, informando anos censitários, arquivo bruto, campos usados e script de normalização.",
+      note: "Marcado como estimado para evitar falsa precisão em cidades."
+    },
+    ipsBrasilImazon: {
+      label: "IPS Brasil e UFs",
+      shortLabel: "IPS Brasil",
+      provider: "Instituto IPS Brasil, Imazon, Amazônia 2030 e Social Progress Imperative",
+      type: "json",
+      provenance: "real",
+      freshness: "IPS Brasil 2026 (3ª edição), série recalculada 2024-2026",
+      url: "https://ipsbrasil.org.br",
+      upstreamLabel: "Relatório geral do IPS Brasil 2026 (PDF)",
+      upstreamSources: [
+        {
+          label: "IPS Brasil - painel de dados",
+          url: "https://ipsbrasil.org.br/explore/data",
+          fields: "IPS geral, 3 dimensões, 12 componentes e 57 indicadores por município",
+          usage: "página pública da fonte; o painel é Phoenix LiveView e não expõe planilha por URL estável"
+        },
+        {
+          label: "Relatório geral IPS Brasil 2026 (PDF)",
+          url: "https://ipsbrasil.org.br/relatorios",
+          fields: "Quadro 11 (IPS das 27 UFs com ranking), seção Resultados (Brasil e dimensões) e série temporal 2024-2026",
+          usage: "extraído para data/ips_brazil.json por scripts/generate_ips_brazil.py (PDF baixado dessa página, não versionado)"
+        },
+        {
+          label: "Social Progress Imperative",
+          url: "https://www.socialprogress.org/social-progress-index",
+          fields: "metodologia do Social Progress Index",
+          usage: "referência metodológica do índice (dimensões, componentes e escala 0-100)"
+        }
+      ],
+      quality: "Oficial",
+      fields: ["IPS geral (0-100)", "Necessidades Humanas Básicas", "Fundamentos do Bem-estar", "Oportunidades", "Ranking entre UFs"],
+      methodology: "IPS mede resultados sociais e ambientais (sem indicadores econômicos), em escala 0-100, a partir de 57 indicadores de fontes públicas agrupados em 3 dimensões e 12 componentes. data/ips_brazil.json traz o IPS geral do Brasil e das 27 UFs da edição 2026, mais a série nacional recalculada de 2024 a 2026.",
+      limitations: [
+        "Esta base cobre Brasil e UFs; o IPS municipal dos 5.570 municípios existe no painel oficial mas ainda não foi integrado.",
+        "As edições 2024, 2025 e 2026 não são estritamente comparáveis entre si (mudaram indicadores e tratamentos); a série 2024-2026 publicada no relatório é um recálculo com os parâmetros de 2026.",
+        "IPS Brasil e IPS Global não são comparáveis: o Brasil marca 72,74 no IPS Global 2026 e 63,40 no IPS Brasil 2026, porque o conjunto de indicadores é diferente.",
+        "Subnotificação é um risco reconhecido pela fonte, sobretudo nos componentes Segurança Pessoal e Saúde e Bem-estar."
+      ],
+      updatePolicy: "Rodar scripts/generate_ips_brazil.py (baixa o relatório geral vigente de https://ipsbrasil.org.br/relatorios, extrai e valida contra âncoras oficiais). Veja docs/DADOS.md.",
+      note: "Dado real oficial do IPS Brasil 2026 (Imazon/Instituto IPS Brasil), Brasil e 27 UFs."
+    },
+    ipsBrasilCities: {
+      label: "IPS dos 5.570 municípios",
+      shortLabel: "IPS municipal",
+      provider: "Instituto IPS Brasil, Imazon, Amazônia 2030 e Social Progress Imperative",
+      type: "json",
+      provenance: "real",
+      freshness: "IPS Brasil 2026, tabela municipal completa",
+      url: "https://ipsbrasil.org.br/explore/data",
+      upstreamLabel: "Planilha oficial \"Dataset completo (todos os municípios)\"",
+      upstreamSources: [
+        {
+          label: "Tabela municipal do IPS Brasil (XLSX)",
+          url: "https://ips-brasil.fly.storage.tigris.dev/downloads/ips-brasil-2026-tabela.xlsx",
+          fields: "IPS geral, 3 dimensões, 12 componentes e 57 indicadores para 5.570 municípios",
+          usage: "convertida para data/ips_brazil_cities.json por scripts/generate_ips_brazil.py"
+        },
+        {
+          label: "Localidades IBGE",
+          url: "https://servicodados.ibge.gov.br/api/docs/localidades",
+          fields: "código IBGE de 7 dígitos por município",
+          usage: "a planilha do IPS traz só Município+UF; o código vem daqui para casar com o mapa"
+        }
+      ],
+      quality: "Oficial",
+      fields: ["IPS geral (0-100)", "Ranking nacional (x/5.570)", "Necessidades Humanas Básicas", "Fundamentos do Bem-estar", "Oportunidades"],
+      methodology: "Planilha municipal oficial da edição vigente, convertida para JSON e indexada por código IBGE. A conversão é validada contra o relatório: a média municipal ponderada pela população reproduz exatamente a nota nacional (63,40 em 2026), e as notas de municípios citados no relatório conferem uma a uma.",
+      limitations: [
+        "5.570 unidades de análise incluem Brasília (DF) e Fernando de Noronha (PE); Boa Esperança do Norte (MT), criado em 2025, não tem IPS.",
+        "Edições 2024, 2025 e 2026 não são estritamente comparáveis entre si.",
+        "O JSON publicado traz IPS geral, ranking e as 3 dimensões; os 12 componentes e os 57 indicadores existem na planilha e são gerados com --full.",
+        "Subnotificação é risco reconhecido pela fonte, sobretudo em Segurança Pessoal e Saúde e Bem-estar."
+      ],
+      updatePolicy: "Rodar scripts/generate_ips_brazil.py (baixa a planilha, casa com o IBGE e valida contra o relatório). Veja docs/DADOS.md.",
+      note: "Dado real oficial por município, não proxy."
+    },
+    ipsCityProxy: {
+      label: "IPS de cidades (fallback)",
+      shortLabel: "Proxy UF",
+      provider: "Cálculo local a partir do IPS da UF",
+      type: "computed",
+      provenance: "estimado",
+      freshness: "Proxy derivado do IPS estadual da edição vigente",
+      quality: "Proxy transparente",
+      fields: ["IPS da UF", "código da UF", "cidade selecionada"],
+      methodology: "Fallback: se a base municipal não carregar ou um município não estiver nela, a cidade recebe o IPS da sua UF só para o mapa não ficar vazio.",
+      limitations: [
+        "Não é IPS municipal real: o IPS oficial varia muito dentro de uma mesma UF (de 42 a 73 no país).",
+        "Não deve ser usado para ranking municipal nem para decisão local.",
+        "Com a base municipal carregada, esse proxy não é usado."
+      ],
+      updatePolicy: "Nada a fazer enquanto data/ips_brazil_cities.json estiver publicado; esse caminho só existe como degradação graciosa.",
       note: "Marcado como estimado para evitar falsa precisão em cidades."
     },
     securityGlobalUnodc: {
@@ -515,6 +623,28 @@
       ],
       note: "No Globo, usa IDH global oficial do UNDP/HDR. No Brasil e UFs, usa IDHM anual do Painel IDHM/PNUD. Em cidades, a camada aparece como proxy pela UF até integrar uma base municipal auditável."
     },
+    ips: {
+      label: "IPS",
+      caption: "Progresso social",
+      icon: "sprout",
+      group: "primary",
+      title: "Índice de Progresso Social: resultados sociais e ambientais (0-100)",
+      defaultMetric: "ipsGeral",
+      metricStateKey: "ipsSubMetric",
+      sourceIds: ["ipsBrasilImazon", "ipsBrasilCities"],
+      // Só o índice geral está integrado. As dimensões e os 12 componentes do IPS
+      // entram aqui conforme forem extraídos da fonte; o seletor da legenda já
+      // lê este mapa, então basta acrescentar as chaves.
+      metrics: {
+        // label = texto curto do seletor (dividindo espaço com o seletor de ano);
+        // metric = nome completo usado nos títulos e na legenda.
+        ipsGeral: { label: "IPS Geral", metric: "IPS geral (0-100)", sourceIds: ["ipsBrasilImazon"] },
+        basicNeeds: { label: "Necessidades", metric: "Necessidades Humanas Básicas", sourceIds: ["ipsBrasilImazon"] },
+        wellbeing: { label: "Bem-estar", metric: "Fundamentos do Bem-estar", sourceIds: ["ipsBrasilImazon"] },
+        opportunity: { label: "Oportunidades", metric: "Oportunidades", sourceIds: ["ipsBrasilImazon"] }
+      },
+      note: "IPS Brasil 2026 (Imazon/Instituto IPS Brasil): 57 indicadores sociais e ambientais, sem indicadores econômicos, em escala 0-100. Dado oficial no Brasil, nas 27 UFs e nos 5.570 municípios."
+    },
     politics: {
       label: "Política",
       caption: "Política",
@@ -759,6 +889,14 @@
   let healthBrazilCitiesData = null;
   let storiesBrazilCitiesData = null;
   let activeHealthSubMetric = savedPreferences.healthSubMetric || "bedsPer1000";
+  let ipsBrazilData = null;
+  let ipsBrazilCitiesData = null;
+  const ipsCitiesByYear = new Map();
+  const ipsDerivedBreaks = new Map();
+  let availableIpsYears = [];
+  // "last" resolve para a edição vigente assim que o JSON carrega.
+  let activeIpsYear = savedPreferences.ipsYear ? String(savedPreferences.ipsYear) : "2026";
+  let activeIpsSubMetric = validAnalysisMetric("ips", savedPreferences.ipsSubMetric) ? savedPreferences.ipsSubMetric : "ipsGeral";
   let activeSourceSelections = { ...(savedPreferences.sourceSelections || {}) };
   let fallbackStyleTried = false;
   let activeBaseMode = validBaseMode(savedPreferences.base) ? savedPreferences.base : "hybrid";
@@ -946,6 +1084,14 @@
         console.warn("Falha ao carregar histórias das cidades.", error);
         return null;
       }),
+      fetchJson(URLS.ipsBrazil).catch((error) => {
+        console.warn("Falha ao carregar IPS Brasil.", error);
+        return null;
+      }),
+      fetchJson(URLS.ipsBrazilCities(activeIpsYear)).catch((error) => {
+        console.warn("Falha ao carregar IPS municipal.", error);
+        return null;
+      }),
       fetchJson(URLS.brazilMesh).catch((error) => {
         console.warn("Falha ao carregar malha nacional do Brasil.", error);
         return null;
@@ -953,7 +1099,7 @@
       fetchJson(URLS.statesMesh)
     ]);
 
-    const [stateRows, cityRows, gdpBrazilRows, gdpStateRows, gdpCityRows, states, cities, hdiGlobalRows, hdiOwidRows, idhmBrazilRows, securityGlobalRows, securityBrazilRows, securityBrazilCitiesRows, healthGlobalRows, healthBrazilRows, healthBrazilCitiesRows, storiesBrazilCitiesRows, brazilMesh, statesMesh] = requests.map((result) => (
+    const [stateRows, cityRows, gdpBrazilRows, gdpStateRows, gdpCityRows, states, cities, hdiGlobalRows, hdiOwidRows, idhmBrazilRows, securityGlobalRows, securityBrazilRows, securityBrazilCitiesRows, healthGlobalRows, healthBrazilRows, healthBrazilCitiesRows, storiesBrazilCitiesRows, ipsBrazilRows, ipsBrazilCitiesRows, brazilMesh, statesMesh] = requests.map((result) => (
       result.status === "fulfilled" ? result.value : null
     ));
 
@@ -977,11 +1123,14 @@
     if (storiesBrazilCitiesRows && storiesBrazilCitiesRows.cities) {
       storiesBrazilCitiesData = storiesBrazilCitiesRows;
     }
+    mergeIpsBrazil(ipsBrazilRows);
+    mergeIpsBrazilCities(ipsBrazilCitiesRows);
     hydrateBrazilMesh(brazilMesh);
     hydrateStatesMesh(statesMesh);
     syncHdiToActiveYear();
     syncSecurityData();
     syncHealthData();
+    syncIpsData();
 
     // Apply projections after all data is merged
     mockGdpProjections(brazilGdpHistory);
@@ -1204,6 +1353,205 @@
     });
 
     syncHdiToActiveYear();
+  }
+
+  function mergeIpsBrazil(data) {
+    if (!data || !data.states) return;
+    ipsBrazilData = data;
+
+    availableIpsYears = (data.editions || data.years || [])
+      .map((year) => String(year))
+      .sort((a, b) => Number(b) - Number(a));
+
+    if (!availableIpsYears.includes(activeIpsYear)) {
+      activeIpsYear = String(data.latestYear || data.edition || availableIpsYears[0] || "");
+    }
+
+    syncIpsToActiveYear();
+  }
+
+  function mergeIpsBrazilCities(data) {
+    if (!data || !data.cities) return;
+    const year = String(data.edition || data.latestYear || activeIpsYear);
+    ipsCitiesByYear.set(year, data);
+    if (year === activeIpsYear) ipsBrazilCitiesData = data;
+    syncIpsToActiveYear();
+  }
+
+  /** Busca a base municipal de um ano sob demanda (só a edição vigente vem no load). */
+  async function ensureIpsYearLoaded(year) {
+    const key = String(year);
+    if (ipsCitiesByYear.has(key)) return ipsCitiesByYear.get(key);
+    try {
+      const data = await fetchJson(URLS.ipsBrazilCities(key));
+      if (data && data.cities) {
+        ipsCitiesByYear.set(key, data);
+        return data;
+      }
+    } catch (error) {
+      console.warn(`Falha ao carregar IPS municipal de ${key}.`, error);
+    }
+    return null;
+  }
+
+  function syncIpsToActiveYear() {
+    if (!ipsBrazilData) return;
+    const year = String(activeIpsYear);
+
+    Object.entries(ipsBrazilData.states || {}).forEach(([stateId, row]) => {
+      const state = stateById.get(String(stateId));
+      if (!state) return;
+      const entry = (row.byYear || {})[year] || {};
+      state.ips = entry.ips || 0;
+      state.ipsRank = entry.rank || 0;
+      state.ipsDimensions = entry.dimensions || null;
+      state.ipsYear = year;
+    });
+
+    ipsBrazilCitiesData = ipsCitiesByYear.get(year) || null;
+    ipsDerivedBreaks.clear();
+    const cityRows = ipsBrazilCitiesData ? ipsBrazilCitiesData.cities : null;
+    cityById.forEach((city) => {
+      const row = cityRows ? cityRows[String(city.id)] : null;
+      city.ips = row ? (row.ips || 0) : 0;
+      city.ipsRank = row ? (row.rank || 0) : 0;
+      city.ipsDimensions = row ? (row.dimensions || null) : null;
+      city.ipsYear = year;
+      city.ipsReal = Boolean(row);
+    });
+
+    syncIpsData();
+  }
+
+  function ipsBrazilForYear(year) {
+    if (!ipsBrazilData || !ipsBrazilData.brazil) return null;
+    const key = String(year || activeIpsYear);
+    const byYear = ipsBrazilData.brazil.byYear || {};
+    return byYear[key] || null;
+  }
+
+  function isLatestIpsYear() {
+    if (!ipsBrazilData) return true;
+    return String(activeIpsYear) === String(ipsBrazilData.latestYear || ipsBrazilData.edition || activeIpsYear);
+  }
+
+  /** Dimensão da cidade; se faltar, cai na da UF (mesmo fallback do IPS geral). */
+  function ipsDimensionValue(cityRow, state, key) {
+    if (cityRow && cityRow.dimensions) return cityRow.dimensions[key] || 0;
+    if (state && state.ipsDimensions) return state.ipsDimensions[key] || 0;
+    return 0;
+  }
+
+  function ipsCityRow(cityId) {
+    if (!ipsBrazilCitiesData || !ipsBrazilCitiesData.cities) return null;
+    return ipsBrazilCitiesData.cities[String(cityId)] || null;
+  }
+
+  function ipsCityCount() {
+    return ipsBrazilCitiesData ? (ipsBrazilCitiesData.count || Object.keys(ipsBrazilCitiesData.cities || {}).length) : 0;
+  }
+
+  function syncIpsData() {
+    if (!ipsBrazilData && !ipsBrazilCitiesData) return;
+
+    if (brazilMeshFeature && ipsBrazilData) {
+      const brazilYear = ipsBrazilForYear(activeIpsYear);
+      brazilMeshFeature.properties.ips = (brazilYear && brazilYear.ips) || 0;
+      brazilMeshFeature.properties.ipsYear = ipsEdition();
+    }
+
+    stateCitiesCache.forEach((collection, cachedStateId) => {
+      const state = stateById.get(String(cachedStateId));
+      collection.features.forEach((feature) => {
+        feature.properties = { ...feature.properties, ...cityMapProperties(feature.properties) };
+        if (!feature.properties.ips && state) {
+          feature.properties.ips = state.ips || 0;
+          feature.properties.ipsProxy = true;
+        }
+      });
+      if (selectedStateId && String(selectedStateId) === String(cachedStateId)) {
+        updateMunicipalitySources(collection);
+      }
+    });
+  }
+
+  // ipsSubMetric -> campo achatado nas properties do mapa (MapLibre lê melhor
+  // propriedade simples que objeto aninhado).
+  const IPS_METRIC_FIELDS = {
+    ipsGeral: "ips",
+    basicNeeds: "ipsBasicNeeds",
+    wellbeing: "ipsWellbeing",
+    opportunity: "ipsOpportunity"
+  };
+
+  function ipsMetricField() {
+    return IPS_METRIC_FIELDS[activeIpsSubMetric] || "ips";
+  }
+
+  /** Chave do indicador ativo dentro de classBreaks/dimensions do JSON. */
+  function ipsMetricKey() {
+    return IPS_METRIC_FIELDS[activeIpsSubMetric] ? activeIpsSubMetric : "ipsGeral";
+  }
+
+  function ipsClassBreaks() {
+    const key = ipsMetricKey();
+    const catalog = (ipsBrazilData && ipsBrazilData.classBreaks) || {};
+    const entry = catalog[key === "ipsGeral" ? "ips" : key];
+    if (entry && Array.isArray(entry.breaks) && entry.breaks.length) return entry.breaks;
+
+    // JSON antigo em cache não traz classBreaks. Usar os cortes do IPS geral numa
+    // dimensão achataria o mapa (Necessidades vive perto de 75, Oportunidades de 44),
+    // então derivamos os cortes do próprio dado carregado.
+    const derived = deriveIpsBreaks(key);
+    return derived.length ? derived : IPS_FALLBACK_BREAKS;
+  }
+
+  /** Cortes por quantis calculados do dado em memória (fallback auto-corretivo). */
+  function deriveIpsBreaks(key) {
+    const cached = ipsDerivedBreaks.get(key);
+    if (cached) return cached;
+
+    const values = [];
+    const collect = (row) => {
+      const value = ipsValueOf(row);
+      if (Number.isFinite(value) && value > 0) values.push(value);
+    };
+    if (ipsBrazilCitiesData && ipsBrazilCitiesData.cities) {
+      Object.values(ipsBrazilCitiesData.cities).forEach(collect);
+    } else if (ipsBrazilData && ipsBrazilData.states) {
+      Object.values(ipsBrazilData.states).forEach((row) => collect((row.byYear || {})[String(activeIpsYear)]));
+    }
+    if (values.length < IPS_CLASS_COLORS.length) return [];
+
+    values.sort((a, b) => a - b);
+    const breaks = [];
+    for (let index = 1; index < IPS_CLASS_COLORS.length; index++) {
+      const position = Math.round((index / IPS_CLASS_COLORS.length) * (values.length - 1));
+      const value = Number(values[position].toFixed(2));
+      breaks.push(index > 0 && breaks.length && value <= breaks[breaks.length - 1]
+        ? Number((breaks[breaks.length - 1] + 0.01).toFixed(2))
+        : value);
+    }
+    ipsDerivedBreaks.set(key, breaks);
+    return breaks;
+  }
+
+  /** Valor do indicador ativo em um registro com {ips, dimensions:{...}}. */
+  function ipsValueOf(row) {
+    if (!row) return 0;
+    const key = ipsMetricKey();
+    if (key === "ipsGeral") return row.ips || 0;
+    return (row.dimensions && row.dimensions[key]) || 0;
+  }
+
+  function ipsEdition() {
+    if (!ipsBrazilData) return String(activeIpsYear || "");
+    return String(activeIpsYear || ipsBrazilData.latestYear || ipsBrazilData.edition || "");
+  }
+
+  function formatIps(value) {
+    const numeric = Number(value) || 0;
+    return numeric > 0 ? numeric.toFixed(2).replace(".", ",") : "sem dado";
   }
 
   function mergeSecurityGlobal(data) {
@@ -1669,6 +2017,14 @@
       hdiHistory: state.hdiHistory || {},
       hdiComponents: state.hdiComponents || hdiEntryForYear(state.hdiHistory, resolveHdiYear("brazil")),
       hdiProxy: false,
+      ips: state.ips || 0,
+      ipsRank: state.ipsRank || 0,
+      ipsBasicNeeds: (state.ipsDimensions && state.ipsDimensions.basicNeeds) || 0,
+      ipsWellbeing: (state.ipsDimensions && state.ipsDimensions.wellbeing) || 0,
+      ipsOpportunity: (state.ipsDimensions && state.ipsDimensions.opportunity) || 0,
+      ipsDimensions: state.ipsDimensions || null,
+      ipsYear: state.ipsYear || ipsEdition(),
+      ipsProxy: false,
       mviRate: state.mviRate || 0,
       vehicleTheftRate: state.vehicleTheftRate || 0,
       femicideRate: state.femicideRate || 0,
@@ -1731,6 +2087,7 @@
     const hasRealData = !!cityRealData;
     const cityHomicideRate = cityRealData ? (cityRealData.homicideRate || 0) : 0;
     const citySecurityYear = cityRealData ? (cityRealData.year || 2022) : (state ? (state.securityYear || 2023) : 2023);
+    const cityIps = ipsCityRow(props.id);
     const cityHealthData = healthBrazilCitiesData && healthBrazilCitiesData.cities ? healthBrazilCitiesData.cities[String(props.id)] : null;
     const hasCityHealthData = !!cityHealthData && !cityHealthData.proxy;
     const healthBase = cityHealthData || state || {};
@@ -1744,6 +2101,18 @@
       hdiHistory: state ? (state.hdiHistory || {}) : {},
       hdiComponents: state ? (state.hdiComponents || null) : null,
       hdiProxy: true,
+      // IPS municipal oficial dos 5.570 municípios; só cai no proxy da UF se faltar.
+      ips: cityIps ? (cityIps.ips || 0) : (state ? (state.ips || 0) : 0),
+      ipsRank: cityIps ? (cityIps.rank || 0) : 0,
+      ipsDimensions: cityIps ? (cityIps.dimensions || null) : (state ? (state.ipsDimensions || null) : null),
+      ipsBasicNeeds: ipsDimensionValue(cityIps, state, "basicNeeds"),
+      ipsWellbeing: ipsDimensionValue(cityIps, state, "wellbeing"),
+      ipsOpportunity: ipsDimensionValue(cityIps, state, "opportunity"),
+      ipsStateRank: state ? (state.ipsRank || 0) : 0,
+      ipsStateValue: state ? (state.ips || 0) : 0,
+      ipsYear: cityIps ? (ipsBrazilCitiesData.edition || ipsEdition()) : (state ? (state.ipsYear || ipsEdition()) : ipsEdition()),
+      ipsReal: Boolean(cityIps),
+      ipsProxy: !cityIps,
       // Security: use IPEA real data for homicide/MVI when available, fallback to state proxy
       mviRate: hasRealData ? cityHomicideRate : (state ? (state.mviRate || 0) : 0),
       homicideRate: hasRealData ? cityHomicideRate : 0,
@@ -2078,21 +2447,24 @@
       "fill-color": brazilAnalysisColor(),
       "fill-opacity": 0.84
     });
+    // O IPS é coroplético classificado: com 0.58 sobre o basemap híbrido as classes
+    // lavam e o mapa volta a parecer homogêneo. Sobe a opacidade só nessa análise.
+    const isChoropleth = activeAnalysis === "ips";
     setLayerPaint("states-fill", {
       "fill-color": territoryHeatColorExpression("state"),
-      "fill-opacity": 0.58
+      "fill-opacity": isChoropleth ? 0.86 : 0.58
     });
     setLayerPaint("states-bubbles", {
-      "circle-color": analysisBubbleColor(),
+      "circle-color": isChoropleth ? territoryHeatColorExpression("state") : analysisBubbleColor(),
       "circle-radius": territoryBubbleRadiusExpression("state"),
       "circle-opacity": 0.74
     });
     setLayerPaint("municipality-fill", {
       "fill-color": territoryHeatColorExpression("city"),
-      "fill-opacity": 0.5
+      "fill-opacity": isChoropleth ? 0.82 : 0.5
     });
     setLayerPaint("municipality-bubbles", {
-      "circle-color": analysisBubbleColor(),
+      "circle-color": isChoropleth ? territoryHeatColorExpression("city") : analysisBubbleColor(),
       "circle-radius": territoryBubbleRadiusExpression("city"),
       "circle-opacity": 0.72,
       "circle-stroke-width": (activeAnalysis === "travel" || activeAnalysis === "stories") ? 2.2 : 1.4,
@@ -2115,6 +2487,10 @@
        values = collection.features.map(f => activeGdpSubMetric === "total" ? (f.properties.gdp || 0) : perCapita(f.properties.gdp, f.properties.pop));
     } else if (metricType === "hdi") {
        values = collection.features.map(f => f.properties.hdi || 0);
+    } else if (metricType === "ips") {
+       // A escala do IPS é fixa (0-100) e igual em UF e cidade, para a cor significar
+       // sempre a mesma coisa. Sem escala relativa aqui, de propósito.
+       return null;
     } else if (metricType === "politics") {
        values = collection.features.map(f => inhabitantsPerPolitician(f.properties.pop, cityPoliticalSummary(f.properties).total));
     } else if (metricType === "education") {
@@ -2153,6 +2529,16 @@
     let colors = [];
     let isCity = scope === "city" && activeView === "cities";
     let scale = isCity ? getCityScaleMetrics(activeAnalysis) : null;
+
+    if (activeAnalysis === "ips") {
+      // Mapa classificado (step), como o oficial: sem cor intermediária embarrada.
+      const breaks = ipsClassBreaks();
+      const expression = ["step", metric, IPS_CLASS_COLORS[0]];
+      breaks.forEach((value, index) => {
+        expression.push(value, IPS_CLASS_COLORS[index + 1] || IPS_CLASS_COLORS[IPS_CLASS_COLORS.length - 1]);
+      });
+      return expression;
+    }
 
     if (activeAnalysis === "gdp") {
       colors = ["#ff3b3b", "#ef7d60", "#f2c14e", "#79a95d", "#17212b"];
@@ -2267,6 +2653,16 @@
         ? ["interpolate", ["linear"], metric, 0.45, 3, 0.7, 8, 0.8, 13, 0.9, 20]
         : ["interpolate", ["linear"], metric, 0.45, 5, 0.7, 10, 0.8, 16, 0.9, 24];
     }
+    if (activeAnalysis === "ips") {
+      // Raio acompanha os mesmos cortes do indicador ativo, para bolha e cor contarem
+      // a mesma história (as dimensões vivem em faixas bem diferentes do IPS geral).
+      const breaks = ipsClassBreaks();
+      const low = breaks[0];
+      const high = breaks[breaks.length - 1];
+      return scope === "city"
+        ? ["interpolate", ["linear"], metric, low, 3, (low + high) / 2, 9, high, 18]
+        : ["interpolate", ["linear"], metric, low, 5, (low + high) / 2, 13, high, 24];
+    }
     if (activeAnalysis === "politics") {
       return scope === "city"
         ? ["interpolate", ["sqrt"], metric, 100, 3, 2000, 7, 8000, 12, 30000, 20, 200000, 34]
@@ -2351,6 +2747,7 @@
        return activeGdpSubMetric === "total" ? ["to-number", ["get", "gdp"], 0] : ["to-number", ["get", "gdpPerCapita"], 0];
     }
     if (activeAnalysis === "hdi") return ["to-number", ["get", "hdi"], 0];
+    if (activeAnalysis === "ips") return ["to-number", ["get", ipsMetricField()], 0];
     if (activeAnalysis === "politics") return ["to-number", ["get", "peoplePerPolitician"], 0];
     if (activeAnalysis === "education") return ["to-number", ["get", "enemScore"], 0];
     if (activeAnalysis === "travel") return ["to-number", ["get", "travelScore"], 0];
@@ -2377,6 +2774,7 @@
   function analysisBubbleColor() {
     if (activeAnalysis === "gdp") return "#f2c14e";
     if (activeAnalysis === "hdi") return "#a9d65c";
+    if (activeAnalysis === "ips") return "#4f9bd9";
     if (activeAnalysis === "politics") return "#51d1c2";
     if (activeAnalysis === "education") return "#b8e8e0";
     if (activeAnalysis === "travel") return "#f2c14e";
@@ -2390,6 +2788,7 @@
   function brazilAnalysisColor() {
     if (activeAnalysis === "gdp") return "#f2c14e";
     if (activeAnalysis === "hdi") return "#a9d65c";
+    if (activeAnalysis === "ips") return "#4f9bd9";
     if (activeAnalysis === "politics") return "#51d1c2";
     if (activeAnalysis === "education") return "#1a5f8a";
     if (activeAnalysis === "travel") return "#f2c14e";
@@ -2699,6 +3098,19 @@
               ${renderMetricOptions(healthMetricsForActiveView(), activeHealthSubMetric)}
             </select>
           </div>
+        ` : (activeAnalysis === "ips" && activeView !== "world" ? `
+          <div class="flex-gap-4">
+            <select id="legend-ips-selector" aria-label="Selecionar indicador do IPS">
+              ${renderMetricOptions(ANALYSIS_CATALOG.ips.metrics, activeIpsSubMetric)}
+            </select>
+            <div class="year-stepper">
+              <button type="button" id="ips-year-minus" title="Edição anterior" aria-label="Edição anterior">−</button>
+              <select id="legend-ips-year-selector" aria-label="Selecionar edição do IPS">
+                ${availableIpsYears.map((year) => `<option value="${escapeHtml(year)}" ${year === String(activeIpsYear) ? "selected" : ""}>IPS ${escapeHtml(year)}</option>`).join("")}
+              </select>
+              <button type="button" id="ips-year-plus" title="Próxima edição" aria-label="Próxima edição">+</button>
+            </div>
+          </div>
         ` : (activeAnalysis === "gdp" ? `
           <div class="flex-gap-4">
             <div class="year-stepper">
@@ -2728,7 +3140,7 @@
               ${renderMetricOptions(WORLD_METRIC_CATALOG, activeWorldMetric)}
             </select>
           </div>
-        ` : `<strong>${escapeHtml(config.metric)}</strong>`)))))}
+        ` : `<strong>${escapeHtml(config.metric)}</strong>`))))))}
       </div>
       <div class="legend-scale" id="legend-gradient-scale"></div>
       <div class="legend-labels">
@@ -2745,7 +3157,16 @@
 
     const gradScale = legend.querySelector("#legend-gradient-scale");
     if (gradScale) {
-      gradScale.style.background = `linear-gradient(90deg, ${config.colors.join(", ")})`;
+      if (config.stepped) {
+        // Faixas duras: a legenda espelha o mapa classificado, sem cor de transição.
+        const size = 100 / config.colors.length;
+        const bands = config.colors.map((color, index) => (
+          `${color} ${(index * size).toFixed(2)}%, ${color} ${((index + 1) * size).toFixed(2)}%`
+        ));
+        gradScale.style.background = `linear-gradient(90deg, ${bands.join(", ")})`;
+      } else {
+        gradScale.style.background = `linear-gradient(90deg, ${config.colors.join(", ")})`;
+      }
     }
 
     const legendToggle = legend.querySelector("#legend-toggle");
@@ -2881,6 +3302,56 @@
       });
     }
 
+    const ipsSelector = legend.querySelector("#legend-ips-selector");
+    if (ipsSelector) {
+      ipsSelector.addEventListener("change", (e) => {
+        activeIpsSubMetric = validAnalysisMetric("ips", e.target.value) ? e.target.value : ANALYSIS_CATALOG.ips.defaultMetric;
+        updateAnalysisPaint();
+        updateHeatLegend();
+        refreshAnalysisContent();
+        refreshFixedDetailCard();
+        savePreferences();
+      });
+    }
+
+    const ipsYearSelector = legend.querySelector("#legend-ips-year-selector");
+    if (ipsYearSelector) {
+      const handleIpsYearChange = async (newYear) => {
+        const year = String(newYear);
+        if (!availableIpsYears.includes(year) || year === String(activeIpsYear)) return;
+
+        // A base municipal do ano pode ainda não estar em memória.
+        const needsFetch = !ipsCitiesByYear.has(year);
+        if (needsFetch) showStatus(`Carregando IPS ${year}`, "Buscando a tabela municipal dessa edição.");
+        activeIpsYear = year;
+        await ensureIpsYearLoaded(year);
+        syncIpsToActiveYear();
+        if (needsFetch) hideStatus();
+
+        updateAnalysisPaint();
+        updateStateSources();
+        updateHeatLegend();
+        refreshAnalysisContent();
+        refreshFixedDetailCard();
+        savePreferences();
+      };
+
+      ipsYearSelector.addEventListener("change", (e) => { handleIpsYearChange(e.target.value); });
+
+      const minus = legend.querySelector("#ips-year-minus");
+      const plus = legend.querySelector("#ips-year-plus");
+      // availableIpsYears está do mais novo para o mais antigo.
+      const index = availableIpsYears.indexOf(String(activeIpsYear));
+      if (minus) {
+        minus.disabled = index >= availableIpsYears.length - 1;
+        minus.addEventListener("click", () => { handleIpsYearChange(availableIpsYears[index + 1]); });
+      }
+      if (plus) {
+        plus.disabled = index <= 0;
+        plus.addEventListener("click", () => { handleIpsYearChange(availableIpsYears[index - 1]); });
+      }
+    }
+
     const yearSelector = legend.querySelector("#legend-year-selector");
     if (yearSelector) {
       const handleGdpYearChange = async (newYear) => {
@@ -3008,6 +3479,30 @@
         labels: ["baixo", "médio", "alto", "muito alto", "topo"],
         sourceIds: isWorld ? (activeSourceOption("hdi", "world")?.sourceIds || ["hdiGlobalUndp"]) : (isCity ? ["idhmPnudBrazil", "idhmCityProxy"] : ["idhmPnudBrazil"]),
         isWorld
+      };
+    }
+
+    if (activeAnalysis === "ips" && activeView !== "world") {
+      const isCityScope = activeView === "cities" && selectedStateId;
+      const metricConfig = ANALYSIS_CATALOG.ips.metrics[activeIpsSubMetric] || ANALYSIS_CATALOG.ips.metrics.ipsGeral;
+      const edition = ipsEdition();
+      const hasCityData = ipsCityCount() > 0;
+      const breaks = ipsClassBreaks();
+      const formatBreak = (value) => value.toFixed(1).replace(".", ",");
+      return {
+        metric: `${metricConfig.metric}${edition ? ` ${edition}` : ""}`,
+        scope: `${isCityScope ? (hasCityData ? "cidades (municipal)" : "cidades da UF (proxy)") : "estados"}${edition ? ` ${edition}` : ""}`,
+        colors: IPS_CLASS_COLORS,
+        // Rótulos nos cortes que importam: piso, meio e teto das classes.
+        labels: [
+          `<${formatBreak(breaks[0])}`,
+          formatBreak(breaks[Math.floor(breaks.length / 2)]),
+          `${formatBreak(breaks[breaks.length - 1])}+`
+        ],
+        stepped: true,
+        sourceIds: isCityScope
+          ? (hasCityData ? ["ipsBrasilCities", "ipsBrasilImazon"] : ["ipsBrasilImazon", "ipsCityProxy"])
+          : ["ipsBrasilImazon"]
       };
     }
 
@@ -4151,11 +4646,14 @@
       const isActive = bar.dataset.active === "true";
       const isMock = bar.dataset.mock === "true";
       const isHdi = bar.dataset.kind === "hdi";
+      const isIps = bar.dataset.kind === "ips";
+      const activeColor = isIps ? "#4f9bd9" : (isHdi ? "#a9d65c" : "var(--gold)");
+      const idleColor = isIps
+        ? "rgba(79,155,217,0.45)"
+        : (isHdi ? "rgba(169,214,92,0.45)" : "rgba(242,193,78,0.45)");
       bar.style.flex = "1";
       bar.style.height = h + "%";
-      bar.style.background = isActive
-        ? (isHdi ? "#a9d65c" : "var(--gold)")
-        : (isMock ? "rgba(242,193,78,0.15)" : (isHdi ? "rgba(169,214,92,0.45)" : "rgba(242,193,78,0.45)"));
+      bar.style.background = isActive ? activeColor : (isMock ? "rgba(242,193,78,0.15)" : idleColor);
       bar.style.borderRadius = "2px";
       bar.style.transition = "all 0.2s";
     });
@@ -4175,6 +4673,7 @@
     }).join("");
     applyGdpHistoryStyles("gdp-history-chart");
     applyGdpHistoryStyles("hdi-history-chart");
+    applyGdpHistoryStyles("ips-history-chart");
     applySseBarStyles();
     if (window.lucide) window.lucide.createIcons();
   }
@@ -4195,6 +4694,7 @@
     }).join("");
     applyGdpHistoryStyles("gdp-history-chart");
     applyGdpHistoryStyles("hdi-history-chart");
+    applyGdpHistoryStyles("ips-history-chart");
     applySseBarStyles();
     if (window.lucide) window.lucide.createIcons();
   }
@@ -4264,6 +4764,7 @@
   function analysisCards(scope, data) {
     if (activeAnalysis === "gdp") return gdpCards(scope, data);
     if (activeAnalysis === "hdi") return hdiCards(scope, data);
+    if (activeAnalysis === "ips") return ipsCards(scope, data);
     if (activeAnalysis === "politics") return politicsCards(scope, data);
     if (activeAnalysis === "education") return educationCards(scope, data);
     if (activeAnalysis === "security") return securityCards(scope, data);
@@ -4572,6 +5073,122 @@
     ];
   }
 
+  function ipsCards(scope, data) {
+    const edition = ipsEdition();
+    const brazil = ipsBrazilForYear(edition);
+    const dimensionLabels = (ipsBrazilData && ipsBrazilData.dimensionLabels) || {
+      basicNeeds: "Necessidades Humanas Básicas",
+      wellbeing: "Fundamentos do Bem-estar",
+      opportunity: "Oportunidades"
+    };
+    // O card destaca o indicador escolhido no seletor, mas sempre mostra os quatro.
+    const activeKey = ipsMetricKey();
+    const highlight = (key, label) => (key === activeKey ? `${label} (no mapa)` : label);
+
+    if (scope === "state") {
+      const value = data.ips || 0;
+      const rank = data.ipsRank || 0;
+      const dimensions = data.ipsDimensions || {};
+      return [
+        { label: highlight("ipsGeral", `IPS ${edition}`), value: formatIps(value) },
+        { label: "Ranking entre UFs", value: rank ? `${rank}º de 27` : "-" },
+        { label: highlight("basicNeeds", dimensionLabels.basicNeeds), value: formatIps(dimensions.basicNeeds) },
+        { label: highlight("wellbeing", dimensionLabels.wellbeing), value: formatIps(dimensions.wellbeing) },
+        { label: highlight("opportunity", dimensionLabels.opportunity), value: formatIps(dimensions.opportunity) },
+        { label: "Brasil", value: brazil ? formatIps(brazil.ips) : "-" },
+        { label: "Diferença p/ o Brasil", value: (value && brazil) ? `${value >= brazil.ips ? "+" : ""}${(value - brazil.ips).toFixed(2).replace(".", ",")}` : "-" },
+        { label: "Fonte", value: compactSourceLine(isLatestIpsYear() ? ["ipsBrasilImazon"] : ["ipsBrasilCities"]) },
+        { label: "Histórico BR", value: renderIpsHistoryChart(), isHtml: true }
+      ];
+    }
+
+    if (scope === "city") {
+      const value = data.ips || 0;
+      if (!data.ipsReal) {
+        return [
+          { label: `IPS ${edition}`, value: `${formatIps(value)} (proxy UF)` },
+          { label: "Nível do dado", value: "UF, não cidade" },
+          { label: "UF usada", value: `${data.stateName || ""} (${data.uf || ""})` },
+          { label: "Brasil", value: brazil ? formatIps(brazil.ips) : "-" },
+          { label: "Fonte", value: compactSourceLine(["ipsBrasilImazon", "ipsCityProxy"]) }
+        ];
+      }
+
+      const dimensions = data.ipsDimensions || {};
+      const total = ipsCityCount();
+      const stateValue = data.ipsStateValue || 0;
+      return [
+        { label: highlight("ipsGeral", `IPS ${data.ipsYear || edition}`), value: formatIps(value) },
+        { label: "Ranking nacional", value: data.ipsRank ? `${formatNumber(data.ipsRank)}º de ${formatNumber(total)}` : "-" },
+        { label: highlight("basicNeeds", dimensionLabels.basicNeeds), value: formatIps(dimensions.basicNeeds) },
+        { label: highlight("wellbeing", dimensionLabels.wellbeing), value: formatIps(dimensions.wellbeing) },
+        { label: highlight("opportunity", dimensionLabels.opportunity), value: formatIps(dimensions.opportunity) },
+        { label: `Média da UF (${data.uf || ""})`, value: stateValue ? formatIps(stateValue) : "-" },
+        { label: "Diferença p/ a UF", value: (value && stateValue) ? `${value >= stateValue ? "+" : ""}${(value - stateValue).toFixed(2).replace(".", ",")}` : "-" },
+        { label: "Brasil", value: brazil ? formatIps(brazil.ips) : "-" },
+        { label: "Fonte", value: compactSourceLine(["ipsBrasilCities"]) }
+      ];
+    }
+
+    if (!brazil) {
+      return [{ label: "IPS Brasil", value: "sem dado carregado" }];
+    }
+
+    const states = ipsBrazilData ? Object.values(ipsBrazilData.states) : [];
+    const best = states.find((row) => row.rank === 1);
+    const worst = states.find((row) => row.rank === states.length);
+    const cityRows = ipsBrazilCitiesData ? Object.values(ipsBrazilCitiesData.cities || {}) : [];
+    const bestCity = cityRows.find((row) => row.rank === 1);
+    const worstCity = cityRows.find((row) => row.rank === cityRows.length);
+    return [
+      { label: `IPS Brasil ${edition}`, value: formatIps(brazil.ips) },
+      { label: dimensionLabels.basicNeeds, value: formatIps(brazil.dimensions && brazil.dimensions.basicNeeds) },
+      { label: dimensionLabels.wellbeing, value: formatIps(brazil.dimensions && brazil.dimensions.wellbeing) },
+      { label: dimensionLabels.opportunity, value: formatIps(brazil.dimensions && brazil.dimensions.opportunity) },
+      { label: "Melhor UF", value: best ? `${best.uf} ${formatIps(best.ips)}` : "-" },
+      { label: "Menor UF", value: worst ? `${worst.uf} ${formatIps(worst.ips)}` : "-" },
+      { label: "Melhor município", value: bestCity ? `${bestCity.name} ${formatIps(bestCity.ips)}` : "-" },
+      { label: "Menor município", value: worstCity ? `${worstCity.name} ${formatIps(worstCity.ips)}` : "-" },
+      { label: "Municípios cobertos", value: cityRows.length ? formatNumber(cityRows.length) : "-" },
+      { label: "Edições disponíveis", value: availableIpsYears.slice().reverse().join(" | ") || "-" },
+      { label: "Fonte", value: compactSourceLine(cityRows.length ? ["ipsBrasilImazon", "ipsBrasilCities"] : ["ipsBrasilImazon"]) },
+      { label: "Histórico BR", value: renderIpsHistoryChart(), isHtml: true }
+    ];
+  }
+
+  function renderIpsHistoryChart() {
+    // Usa a série RECALCULADA do relatório, não os valores por edição: só ela é
+    // comparável entre anos (a fonte é explícita sobre isso).
+    const history = ipsBrazilData && ipsBrazilData.brazil ? ipsBrazilData.brazil.recalculatedSeries : null;
+    if (!history) return "";
+    const years = Object.keys(history).sort((a, b) => Number(a) - Number(b));
+    if (years.length < 2) return "";
+
+    const values = years.map((year) => Number(history[year].ips) || 0).filter((value) => value > 0);
+    if (values.length !== years.length) return "";
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const span = Math.max(max - min, 0.5);
+
+    return `
+      <div class="mt-12 pt-10 border-top-line w-full">
+        <div class="pib-history-header">IPS Brasil | série recalculada (comparável)</div>
+        <div class="pib-history-container" id="ips-history-chart">
+          ${years.map((year) => {
+            const value = Number(history[year].ips) || 0;
+            const height = Math.max(8, ((value - min) / span) * 92 + 8);
+            const isActive = String(year) === ipsEdition();
+            return `<div class="pib-history-bar" title="${escapeHtml(year)}: ${escapeHtml(formatIps(value))}" data-kind="ips" data-h="${height}" data-active="${isActive}" data-mock="false"></div>`;
+          }).join("")}
+        </div>
+        <div class="pib-history-footer">
+          <span>${escapeHtml(String(years[0]))}</span>
+          <span>${escapeHtml(String(years[years.length - 1]))}</span>
+        </div>
+      </div>
+    `;
+  }
+
   function gdpCards(scope, data) {
     if (scope === "state") {
       const perCapitaValue = perCapita(data.gdp, data.pop);
@@ -4836,7 +5453,13 @@
     const healthWarning = activeAnalysis === "health"
       ? ` Indicador ativo: ${activeHealthSubMetric || "bedsPer1000"}.${activeView === "cities" ? " Em cidades, usa dado municipal quando disponivel; quando ausente, usa proxy UF." : ""}`
       : "";
-    return `${config.note}${projectionWarning}${hdiWarning}${securityWarning}${healthWarning} Fonte/procedência: ${sourceDetailsLine()}.`;
+    const ipsComparability = activeAnalysis === "ips" && ipsBrazilData && availableIpsYears.length > 1
+      ? ` As edições ${availableIpsYears.slice().reverse().join(", ")} não são estritamente comparáveis entre si (mudaram indicadores e tratamentos estatísticos); para tendência, use a série recalculada do Brasil no card de histórico.${isLatestIpsYear() ? "" : ` A edição ${ipsEdition()} não é a vigente: nela as UFs vêm da agregação municipal ponderada, já que só o relatório da edição vigente está integrado.`}`
+      : "";
+    const ipsWarning = activeAnalysis === "ips"
+      ? ` Edição ${ipsEdition() || "N/D"}.${activeView === "cities" ? (ipsCityCount() ? ` Em cidades, IPS municipal oficial dos ${formatNumber(ipsCityCount())} municípios.` : " Em cidades, o valor é proxy pela UF.") : ""}${activeView === "world" ? " No Globo não há camada de IPS: o IPS Brasil é índice nacional/municipal e não é comparável ao IPS Global (Brasil marca 72,74 no Global 2026 e 63,40 no IPS Brasil 2026)." : ""}${ipsComparability}`
+      : "";
+    return `${config.note}${projectionWarning}${hdiWarning}${securityWarning}${healthWarning}${ipsWarning} Fonte/procedência: ${sourceDetailsLine()}.`;
   }
 
   function renderStateChart() {
@@ -4917,6 +5540,16 @@
         caption: "maior desenvolvimento humano | top 10",
         value: (row) => row.hdi || 0,
         format: formatHdi
+      };
+    }
+    if (activeAnalysis === "ips") {
+      const metricConfig = ANALYSIS_CATALOG.ips.metrics[activeIpsSubMetric] || ANALYSIS_CATALOG.ips.metrics.ipsGeral;
+      const field = ipsMetricField();
+      return {
+        title: `Estados por ${metricConfig.metric} ${ipsEdition()}`,
+        caption: "maior pontuação | top 10",
+        value: (row) => row[field] || 0,
+        format: formatIps
       };
     }
     if (activeAnalysis === "politics") {
@@ -5014,6 +5647,17 @@
         caption: "proxy pela UF; não é ranking municipal real",
         value: (row) => row.hdi || 0,
         format: (v) => `${formatHdi(v)} proxy`
+      };
+    }
+    if (activeAnalysis === "ips") {
+      const hasCityData = ipsCityCount() > 0;
+      const metricConfig = ANALYSIS_CATALOG.ips.metrics[activeIpsSubMetric] || ANALYSIS_CATALOG.ips.metrics.ipsGeral;
+      const field = ipsMetricField();
+      return {
+        title: `Cidades de ${uf} por ${metricConfig.metric}`,
+        caption: hasCityData ? `municipal ${ipsEdition()} | top 10` : "proxy pela UF; não é ranking municipal real",
+        value: (row) => row[field] || 0,
+        format: (value) => (hasCityData ? formatIps(value) : `${formatIps(value)} proxy`)
       };
     }
     if (activeAnalysis === "politics") {
@@ -5274,6 +5918,7 @@
     const stateForCards = stateById.get(String(props.id || "")) || { id: String(props.id || ""), sigla: props.uf || "", nome: props.name || "", pop: props.pop || 0, gdp: props.gdp || 0, gdpYear: props.gdpYear || "" };
     if (activeAnalysis === "gdp") return gdpCards("state", stateForCards);
     if (activeAnalysis === "hdi") return hdiCards("state", stateForCards);
+    if (activeAnalysis === "ips") return ipsCards("state", stateForCards);
     if (activeAnalysis === "politics") return politicsCards("state", stateForCards);
     if (activeAnalysis === "education") return educationCards("state", stateForCards);
     if (activeAnalysis === "security") return securityCards("state", stateForCards);
@@ -5305,6 +5950,7 @@
   function municipalityPopupRows(props) {
     if (activeAnalysis === "gdp") return gdpCards("city", props);
     if (activeAnalysis === "hdi") return hdiCards("city", props);
+    if (activeAnalysis === "ips") return ipsCards("city", props);
     if (activeAnalysis === "politics") return politicsCards("city", props);
     if (activeAnalysis === "education") return educationCards("city", props);
     if (activeAnalysis === "security") return securityCards("city", props);
@@ -5344,6 +5990,7 @@
 
     applyGdpHistoryStyles("gdp-history-chart");
     applyGdpHistoryStyles("hdi-history-chart");
+    applyGdpHistoryStyles("ips-history-chart");
     applySseBarStyles();
 
     if (window.lucide) window.lucide.createIcons();
@@ -5605,6 +6252,8 @@
         hdiYear: activeHdiYear,
         securitySubMetric: activeSecuritySubMetric,
         healthSubMetric: activeHealthSubMetric,
+        ipsSubMetric: activeIpsSubMetric,
+        ipsYear: activeIpsYear,
         sourceSelections: activeSourceSelections,
         worldMetric: activeWorldMetric,
         view: activeView,
@@ -6692,7 +7341,26 @@
       getUsdValueInActiveCurrency,
       getActiveCurrency: () => activeCurrency,
       setActiveCurrency: (curr) => { activeCurrency = curr; },
-      USD_BRL_RATE
+      USD_BRL_RATE,
+      formatIps,
+      ipsMetricField,
+      ipsEdition,
+      mergeIpsBrazil,
+      mergeIpsBrazilCities,
+      cityMapPropertiesForTests: cityMapProperties,
+      getStateById: (id) => stateById.get(String(id)),
+      seedStateForTests: (state) => { stateById.set(String(state.id), state); },
+      setActiveAnalysis: (analysis) => { activeAnalysis = analysis; },
+      setActiveIpsSubMetric: (metric) => { activeIpsSubMetric = metric; },
+      setActiveIpsYear: (year) => { activeIpsYear = String(year); syncIpsToActiveYear(); },
+      getAvailableIpsYears: () => availableIpsYears.slice(),
+      ipsClassBreaks,
+      territoryHeatColorExpression,
+      dropIpsClassBreaksForTests: () => {
+        if (ipsBrazilData) delete ipsBrazilData.classBreaks;
+        ipsDerivedBreaks.clear();
+      },
+      analysisMetricExpression
     };
   }
 

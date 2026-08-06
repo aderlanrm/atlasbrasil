@@ -209,6 +209,301 @@ test('app busca PIB municipal oficial de 2023 sem cair para 2021', () => {
     assert.doesNotMatch(appSource, /last\/1"\s*\?\s*"2021"/);
 });
 
+// IPS - Índice de Progresso Social (data/ips_brazil.json)
+
+function loadIpsData() {
+    return JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'ips_brazil.json'), 'utf8'));
+}
+
+test('IPS - data/ips_brazil.json tem o contrato que o app consome', () => {
+    const data = loadIpsData();
+
+    assert.equal(typeof data.edition, 'number');
+    assert.deepEqual(data.editions, ['2024', '2025', '2026']);
+    assert.equal(data.latestYear, 2026);
+    assert.ok(data.comparabilityWarning.length > 0, 'o aviso de comparabilidade da fonte tem que estar no JSON');
+    assert.deepEqual(Object.keys(data.dimensionLabels).sort(), ['basicNeeds', 'opportunity', 'wellbeing']);
+
+    for (const year of data.editions) {
+        const brazilYear = data.brazil.byYear[year];
+        assert.ok(brazilYear.ips > 0 && brazilYear.ips <= 100, `IPS do Brasil fora da escala em ${year}`);
+        assert.deepEqual(Object.keys(brazilYear.dimensions).sort(), ['basicNeeds', 'opportunity', 'wellbeing']);
+    }
+
+    const states = Object.entries(data.states);
+    assert.equal(states.length, 27, 'devem ser 26 estados + DF');
+    for (const [code, row] of states) {
+        assert.match(code, /^\d{2}$/, `código IBGE inválido: ${code}`);
+        for (const year of data.editions) {
+            const entry = row.byYear[year];
+            assert.ok(entry, `${row.uf} sem dado em ${year}`);
+            assert.ok(entry.ips > 0 && entry.ips <= 100, `IPS fora da escala em ${row.uf}/${year}`);
+            assert.ok(entry.rank >= 1 && entry.rank <= 27, `ranking fora do intervalo em ${row.uf}/${year}`);
+        }
+    }
+
+    // Em cada edição o ranking vai de 1 a 27 sem repetir.
+    for (const year of data.editions) {
+        const ranks = states.map(([, row]) => row.byYear[year].rank).sort((a, b) => a - b);
+        assert.deepEqual(ranks, Array.from({ length: 27 }, (_, i) => i + 1), `ranking inconsistente em ${year}`);
+    }
+});
+
+test('IPS - valores conferem com o relatório oficial do IPS Brasil 2026', () => {
+    const data = loadIpsData();
+
+    // Âncoras do Quadro 11 e da seção Resultados do relatório geral.
+    assert.equal(data.brazil.byYear['2026'].ips, 63.40);
+    assert.equal(data.brazil.byYear['2026'].dimensions.basicNeeds, 74.58);
+    assert.equal(data.brazil.byYear['2026'].dimensions.wellbeing, 68.81);
+    assert.equal(data.brazil.byYear['2026'].dimensions.opportunity, 46.82);
+
+    assert.equal(data.states['53'].byYear['2026'].ips, 70.73); // Distrito Federal, 1º
+    assert.equal(data.states['53'].byYear['2026'].rank, 1);
+    assert.equal(data.states['35'].byYear['2026'].ips, 67.96); // São Paulo, 2º
+    assert.equal(data.states['15'].byYear['2026'].ips, 55.80); // Pará, 27º
+    assert.equal(data.states['15'].byYear['2026'].rank, 27);
+
+    // O ranking tem que ser coerente com a nota: 1º = maior IPS.
+    const rows = Object.values(data.states).map((row) => ({ uf: row.uf, ...row.byYear['2026'] }))
+        .sort((a, b) => a.rank - b.rank);
+    for (let i = 1; i < rows.length; i++) {
+        assert.ok(rows[i - 1].ips >= rows[i].ips, `ranking inconsistente entre ${rows[i - 1].uf} e ${rows[i].uf}`);
+    }
+});
+
+test('IPS - série recalculada é separada dos valores por edição (comparabilidade)', () => {
+    const data = loadIpsData();
+
+    // A série recalculada do relatório usa os parâmetros da edição vigente.
+    assert.equal(data.brazil.recalculatedSeries['2024'].ips, 62.85);
+    assert.equal(data.brazil.recalculatedSeries['2025'].ips, 63.05);
+    assert.equal(data.brazil.recalculatedSeries['2026'].ips, 63.40);
+
+    // Os valores POR EDIÇÃO são os publicados na época e diferem da série
+    // recalculada nos anos anteriores. Misturar os dois seria erro de leitura.
+    assert.notEqual(data.brazil.byYear['2024'].ips, data.brazil.recalculatedSeries['2024'].ips);
+    assert.notEqual(data.brazil.byYear['2025'].ips, data.brazil.recalculatedSeries['2025'].ips);
+    // Na edição vigente os dois coincidem, por construção.
+    assert.equal(data.brazil.byYear['2026'].ips, data.brazil.recalculatedSeries['2026'].ips);
+});
+
+test('IPS - mergeIpsBrazil hidrata os estados no ano ativo e formatIps usa vírgula', () => {
+    const data = loadIpsData();
+
+    utils.seedStateForTests({ id: '53', sigla: 'DF', nome: 'Distrito Federal' });
+    utils.seedStateForTests({ id: '15', sigla: 'PA', nome: 'Pará' });
+    utils.mergeIpsBrazil(data);
+
+    // Sem escolha explícita, cai na edição vigente.
+    assert.equal(utils.ipsEdition(), '2026');
+    assert.equal(utils.getStateById('53').ips, 70.73);
+    assert.equal(utils.getStateById('53').ipsRank, 1);
+    assert.equal(utils.getStateById('15').ips, 55.80);
+
+    // Trocar o ano re-hidrata os estados com os valores daquela edição.
+    utils.setActiveIpsYear('2024');
+    assert.equal(utils.ipsEdition(), '2024');
+    assert.equal(utils.getStateById('53').ips, data.states['53'].byYear['2024'].ips);
+    assert.notEqual(utils.getStateById('53').ips, 70.73);
+
+    utils.setActiveIpsYear('2026');
+    assert.equal(utils.getStateById('53').ips, 70.73);
+
+    assert.equal(utils.formatIps(70.73), '70,73');
+    assert.equal(utils.formatIps(55.8), '55,80');
+    assert.equal(utils.formatIps(0), 'sem dado');
+    assert.equal(utils.formatIps(null), 'sem dado');
+});
+
+test('IPS municipal - cobre os 5.570 municípios com código IBGE válido', () => {
+    const data = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'ips_brazil_cities_2026.json'), 'utf8'));
+
+    const codes = Object.keys(data.cities);
+    assert.equal(codes.length, 5570);
+    assert.equal(data.count, 5570);
+
+    for (const code of codes) {
+        assert.match(code, /^\d{7}$/, `código IBGE inválido: ${code}`);
+    }
+
+    const ranks = new Set();
+    for (const [code, row] of Object.entries(data.cities)) {
+        assert.ok(row.ips > 0 && row.ips <= 100, `IPS fora da escala em ${code}`);
+        assert.ok(row.rank >= 1 && row.rank <= 5570, `ranking fora do intervalo em ${code}`);
+        assert.ok(!ranks.has(row.rank), `ranking repetido: ${row.rank}`);
+        ranks.add(row.rank);
+        assert.deepEqual(Object.keys(row.dimensions).sort(), ['basicNeeds', 'opportunity', 'wellbeing']);
+    }
+    assert.equal(ranks.size, 5570);
+});
+
+test('IPS municipal - notas conferem com os municípios citados no relatório', () => {
+    const data = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'ips_brazil_cities_2026.json'), 'utf8'));
+
+    // Âncoras dos quadros de melhores/piores desempenhos do relatório geral.
+    assert.equal(data.cities['3516853'].ips, 73.10); // Gavião Peixoto (SP), melhor do país
+    assert.equal(data.cities['3516853'].rank, 1);
+    assert.equal(data.cities['3525904'].ips, 71.80); // Jundiaí (SP)
+    assert.equal(data.cities['3543402'].ips, 70.80); // Ribeirão Preto (SP)
+    assert.equal(data.cities['1501808'].ips, 49.66); // Breves (PA)
+    assert.equal(data.cities['1501253'].ips, 47.23); // Bannach (PA)
+
+    // A média ponderada por população é como o relatório define a nota do Brasil.
+    // Aqui checamos o efeito disso: o topo e a base batem com o intervalo publicado.
+    const values = Object.values(data.cities).map((row) => row.ips);
+    assert.equal(Math.max(...values), 73.10);
+    assert.ok(Math.min(...values) >= 40 && Math.min(...values) < 50);
+});
+
+test('IPS - cidade usa dado municipal real, e proxy da UF só como fallback', () => {
+    const cityData = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'ips_brazil_cities_2026.json'), 'utf8'));
+    utils.mergeIpsBrazil(loadIpsData());
+    utils.setActiveIpsYear('2026');
+    utils.mergeIpsBrazilCities(cityData);
+
+    // Município que existe na base: valor real, com ranking nacional.
+    const saoPaulo = utils.cityMapPropertiesForTests({ id: '3550308', uf: 'SP', stateId: '35', pop: 11451245 });
+    assert.equal(saoPaulo.ipsReal, true);
+    assert.equal(saoPaulo.ipsProxy, false);
+    assert.equal(saoPaulo.ips, cityData.cities['3550308'].ips);
+    assert.ok(saoPaulo.ipsRank >= 1 && saoPaulo.ipsRank <= 5570);
+
+    // Município fora da base cai no IPS da UF e é marcado como proxy.
+    utils.seedStateForTests({ id: '35', sigla: 'SP', nome: 'São Paulo', ips: 67.96, ipsRank: 2 });
+    const inexistente = utils.cityMapPropertiesForTests({ id: '9999999', uf: 'SP', stateId: '35', pop: 1000 });
+    assert.equal(inexistente.ipsReal, false);
+    assert.equal(inexistente.ipsProxy, true);
+    assert.equal(inexistente.ips, 67.96);
+});
+
+test('IPS - o mapa lê o campo do indicador ativo (dropdown da legenda)', () => {
+    utils.setActiveAnalysis('ips');
+    utils.setActiveIpsSubMetric('ipsGeral');
+    assert.equal(utils.ipsMetricField(), 'ips');
+    assert.deepEqual(utils.analysisMetricExpression(), ['to-number', ['get', 'ips'], 0]);
+
+    // As 3 dimensões viram campos achatados nas properties do mapa.
+    utils.setActiveIpsSubMetric('basicNeeds');
+    assert.equal(utils.ipsMetricField(), 'ipsBasicNeeds');
+    utils.setActiveIpsSubMetric('wellbeing');
+    assert.equal(utils.ipsMetricField(), 'ipsWellbeing');
+    utils.setActiveIpsSubMetric('opportunity');
+    assert.equal(utils.ipsMetricField(), 'ipsOpportunity');
+    assert.deepEqual(utils.analysisMetricExpression(), ['to-number', ['get', 'ipsOpportunity'], 0]);
+
+    // Indicador desconhecido não pode quebrar o mapa: cai no IPS geral.
+    utils.setActiveIpsSubMetric('naoExiste');
+    assert.equal(utils.ipsMetricField(), 'ips');
+
+    utils.setActiveIpsSubMetric('ipsGeral');
+    utils.setActiveAnalysis('general');
+});
+
+test('IPS - cada indicador tem cortes de classe na sua própria faixa', () => {
+    const data = loadIpsData();
+    assert.equal(data.classCount, 9);
+
+    const keys = ['ips', 'basicNeeds', 'wellbeing', 'opportunity'];
+    for (const key of keys) {
+        const entry = data.classBreaks[key];
+        assert.ok(entry, `sem cortes para ${key}`);
+        assert.equal(entry.breaks.length, 8, `${key} devia ter 8 cortes para 9 classes`);
+        for (let i = 1; i < entry.breaks.length; i++) {
+            assert.ok(entry.breaks[i] > entry.breaks[i - 1], `cortes de ${key} não são crescentes`);
+        }
+    }
+
+    // O ponto do bug: dimensões vivem em faixas diferentes. Se todas usassem os
+    // cortes do IPS geral, Necessidades ficaria toda no topo e Oportunidades no fundo.
+    // As faixas podem até se tocar nas pontas; o que importa é o centro de cada uma.
+    const center = (key) => {
+        const list = data.classBreaks[key].breaks;
+        return (list[Math.floor((list.length - 1) / 2)] + list[Math.ceil((list.length - 1) / 2)]) / 2;
+    };
+    assert.ok(center('basicNeeds') > center('ips'), 'Necessidades Básicas fica acima da faixa do IPS geral');
+    assert.ok(center('ips') > center('opportunity'), 'Oportunidades fica abaixo da faixa do IPS geral');
+    assert.ok(center('basicNeeds') - center('opportunity') > 20, 'a distância entre as dimensões justifica cortes próprios');
+});
+
+// Aplica uma expressão ["step", input, c0, s1, c1, ...] como o MapLibre faria.
+function applyStepExpression(expression, value) {
+    assert.equal(expression[0], 'step', 'o IPS tem que usar mapa classificado, não gradiente');
+    let color = expression[2];
+    for (let i = 3; i < expression.length; i += 2) {
+        if (value >= expression[i]) color = expression[i + 1];
+    }
+    return color;
+}
+
+test('IPS - a expressão de cor do mapa gera classes distintas entre as UFs', () => {
+    const data = loadIpsData();
+    utils.mergeIpsBrazil(data);
+    utils.setActiveIpsYear('2026');
+    utils.setActiveAnalysis('ips');
+
+    const values = Object.values(data.states).map((row) => row.byYear['2026'].ips);
+
+    for (const metric of ['ipsGeral', 'basicNeeds', 'wellbeing', 'opportunity']) {
+        utils.setActiveIpsSubMetric(metric);
+        const expression = utils.territoryHeatColorExpression('state');
+        const metricValues = metric === 'ipsGeral'
+            ? values
+            : Object.values(data.states).map((row) => row.byYear['2026'].dimensions[metric]);
+        const colors = new Set(metricValues.map((value) => applyStepExpression(expression, value)));
+        assert.ok(colors.size >= 5, `${metric}: esperava >=5 cores distintas nas UFs, veio ${colors.size}`);
+    }
+
+    utils.setActiveIpsSubMetric('ipsGeral');
+    utils.setActiveAnalysis('general');
+});
+
+test('IPS - sem classBreaks no JSON (cache antigo), os cortes são derivados do dado', () => {
+    const data = loadIpsData();
+    utils.mergeIpsBrazil(data);
+    utils.setActiveIpsYear('2026');
+    utils.mergeIpsBrazilCities(JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'ips_brazil_cities_2026.json'), 'utf8')));
+
+    utils.setActiveAnalysis('ips');
+
+    // Simula o JSON velho em cache: sem classBreaks.
+    utils.dropIpsClassBreaksForTests();
+
+    // Sem a derivação, uma dimensão cairia nos cortes do IPS geral (48-66) e
+    // achataria o mapa. Com ela, os cortes têm que cair na faixa da dimensão.
+    utils.setActiveIpsSubMetric('basicNeeds');
+    const breaks = utils.ipsClassBreaks();
+    assert.equal(breaks.length, 8);
+    assert.ok(breaks[0] > 55, `corte inferior deveria ficar na faixa de Necessidades Básicas, veio ${breaks[0]}`);
+    assert.ok(breaks[breaks.length - 1] > 70, `corte superior deveria passar de 70, veio ${breaks[breaks.length - 1]}`);
+
+    const values = Object.values(data.states).map((row) => row.byYear['2026'].dimensions.basicNeeds);
+    const expression = utils.territoryHeatColorExpression('state');
+    const colors = new Set(values.map((value) => applyStepExpression(expression, value)));
+    assert.ok(colors.size >= 5, `mesmo sem classBreaks o mapa tem que ter contraste, veio ${colors.size}`);
+
+    utils.setActiveIpsSubMetric('ipsGeral');
+    utils.setActiveAnalysis('general');
+});
+
+test('IPS - as classes separam de fato as UFs (regressão do mapa homogêneo)', () => {
+    const data = loadIpsData();
+    const breaks = data.classBreaks.ips.breaks;
+    const classOf = (value) => breaks.reduce((acc, limit) => (value >= limit ? acc + 1 : acc), 0);
+
+    const values = Object.values(data.states).map((row) => row.byYear['2026'].ips);
+    const classes = new Set(values.map(classOf));
+
+    // Antes, o gradiente contínuo jogava 20 das 27 UFs numa faixa cinza-oliva quase
+    // idêntica. Com classes discretas, tem que sobrar contraste visível.
+    assert.ok(classes.size >= 5, `esperava pelo menos 5 classes distintas entre as UFs, veio ${classes.size}`);
+
+    // E as médias dos 9 grupos oficiais do relatório caem cada uma na sua classe.
+    const officialMeans = [46.50, 50.56, 53.44, 55.80, 57.93, 59.83, 61.89, 64.21, 68.37];
+    const officialClasses = officialMeans.map(classOf);
+    assert.deepEqual(officialClasses, [0, 1, 2, 3, 4, 5, 6, 7, 8]);
+});
+
 test('Multi-moeda - getBrlValueInActiveCurrency e getUsdValueInActiveCurrency com câmbio fixo de 5.0', () => {
     // Configura moeda ativa como BRL
     utils.setActiveCurrency("BRL");

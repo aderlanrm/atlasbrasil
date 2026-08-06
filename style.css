@@ -1076,6 +1076,23 @@ h1 {
   font-family: inherit;
   font-weight: 600;
   outline: none;
+  /* Sem trava, um rótulo longo empurra o seletor de ano para fora da legenda. */
+  max-width: 140px;
+  min-width: 0;
+  text-overflow: ellipsis;
+}
+
+/* Quando há dois controles (indicador + ano), eles quebram a linha em vez de
+   espremer um ao outro. */
+.legend-head .flex-gap-4 {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  row-gap: 6px;
+  min-width: 0;
+}
+
+.legend-head > span {
+  min-width: 0;
 }
 .legend-head select:hover {
   background: rgba(255, 255, 255, 0.1);

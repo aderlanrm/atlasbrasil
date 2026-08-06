@@ -1,0 +1,1080 @@
+{
+  "source": {
+    "label": "IPS Brasil - Instituto IPS Brasil / Imazon (edições 2024-2026)",
+    "url": "https://ipsbrasil.org.br/relatorios",
+    "reportUrl": "https://ipsbrasil.org.br/relatorios/download/IPSBrasil2026_Relatorio%20Geral.pdf",
+    "panelUrl": "https://ipsbrasil.org.br/explore/data",
+    "localFile": "data/ips_brasil_relatorio.pdf (nao versionado; ver .gitignore)",
+    "downloadedAt": "2026-08-06",
+    "note": "Brasil e 27 UFs por edicao. Na edicao 2026, as UFs vem do quadro oficial do relatorio geral; nas anteriores, da agregacao municipal ponderada pela populacao (mesmo calculo que o relatorio usa para a nota nacional, validado contra o quadro oficial de 2026 com diferenca maxima de 0,01). recalculatedSeries traz a serie comparavel que o relatorio publica. Gerado por scripts/generate_ips_brazil.py."
+  },
+  "edition": 2026,
+  "latestYear": 2026,
+  "editions": [
+    "2024",
+    "2025",
+    "2026"
+  ],
+  "years": [
+    "2024",
+    "2025",
+    "2026"
+  ],
+  "comparabilityWarning": "As edições do IPS Brasil não são estritamente comparáveis entre si: cada uma usa os indicadores e tratamentos estatísticos disponíveis na época. Para ver tendência, use a série recalculada do Brasil (recalculatedSeries), que o relatório publica com os parâmetros da edição vigente.",
+  "scale": {
+    "min": 0,
+    "max": 100,
+    "direction": "higher-is-better"
+  },
+  "dimensionLabels": {
+    "basicNeeds": "Necessidades Humanas Básicas",
+    "wellbeing": "Fundamentos do Bem-estar",
+    "opportunity": "Oportunidades"
+  },
+  "classCount": 9,
+  "classBreaks": {
+    "ips": {
+      "breaks": [
+        48.53,
+        52.0,
+        54.62,
+        56.86,
+        58.88,
+        60.86,
+        63.05,
+        66.29
+      ],
+      "method": "pontos médios entre as médias dos 9 grupos oficiais do relatório"
+    },
+    "basicNeeds": {
+      "breaks": [
+        63.89,
+        67.95,
+        70.71,
+        72.99,
+        75.34,
+        77.6,
+        80.04,
+        82.36
+      ],
+      "method": "quantis da distribuição municipal da edição vigente"
+    },
+    "wellbeing": {
+      "breaks": [
+        57.15,
+        59.39,
+        61.16,
+        62.84,
+        64.55,
+        66.25,
+        67.99,
+        70.44
+      ],
+      "method": "quantis da distribuição municipal da edição vigente"
+    },
+    "opportunity": {
+      "breaks": [
+        38.93,
+        40.68,
+        41.99,
+        43.18,
+        44.4,
+        45.75,
+        47.35,
+        49.58
+      ],
+      "method": "quantis da distribuição municipal da edição vigente"
+    }
+  },
+  "coverage": {
+    "brazil": true,
+    "states": true,
+    "cities": true
+  },
+  "brazil": {
+    "ips": 63.4,
+    "dimensions": {
+      "basicNeeds": 74.58,
+      "wellbeing": 68.81,
+      "opportunity": 46.82
+    },
+    "byYear": {
+      "2024": {
+        "ips": 61.83,
+        "dimensions": {
+          "basicNeeds": 73.58,
+          "wellbeing": 67.1,
+          "opportunity": 44.83
+        },
+        "population": 203080756,
+        "origin": "agregacao municipal ponderada"
+      },
+      "2025": {
+        "ips": 61.96,
+        "dimensions": {
+          "basicNeeds": 74.79,
+          "wellbeing": 65.02,
+          "opportunity": 46.07
+        },
+        "population": 212583750,
+        "origin": "agregacao municipal ponderada"
+      },
+      "2026": {
+        "ips": 63.4,
+        "dimensions": {
+          "basicNeeds": 74.58,
+          "wellbeing": 68.81,
+          "opportunity": 46.82
+        },
+        "population": 213415160,
+        "origin": "relatorio"
+      }
+    },
+    "recalculatedSeries": {
+      "2024": {
+        "ips": 62.85,
+        "dimensions": {
+          "basicNeeds": 74.17,
+          "wellbeing": 68.12,
+          "opportunity": 46.28
+        }
+      },
+      "2025": {
+        "ips": 63.05,
+        "dimensions": {
+          "basicNeeds": 74.4,
+          "wellbeing": 67.95,
+          "opportunity": 46.79
+        }
+      },
+      "2026": {
+        "ips": 63.4,
+        "dimensions": {
+          "basicNeeds": 74.58,
+          "wellbeing": 68.81,
+          "opportunity": 46.82
+        }
+      }
+    }
+  },
+  "states": {
+    "11": {
+      "id": "11",
+      "uf": "RO",
+      "name": "Rondônia",
+      "byYear": {
+        "2024": {
+          "ips": 55.67,
+          "rank": 25,
+          "dimensions": {
+            "basicNeeds": 61.72,
+            "wellbeing": 60.25,
+            "opportunity": 45.04
+          }
+        },
+        "2025": {
+          "ips": 56.8,
+          "rank": 23,
+          "dimensions": {
+            "basicNeeds": 64.96,
+            "wellbeing": 58.76,
+            "opportunity": 46.66
+          }
+        },
+        "2026": {
+          "ips": 58.6,
+          "rank": 23,
+          "dimensions": {
+            "basicNeeds": 65.93,
+            "wellbeing": 62.89,
+            "opportunity": 46.97
+          }
+        }
+      }
+    },
+    "12": {
+      "id": "12",
+      "uf": "AC",
+      "name": "Acre",
+      "byYear": {
+        "2024": {
+          "ips": 55.31,
+          "rank": 26,
+          "dimensions": {
+            "basicNeeds": 62.57,
+            "wellbeing": 59.85,
+            "opportunity": 43.52
+          }
+        },
+        "2025": {
+          "ips": 56.29,
+          "rank": 25,
+          "dimensions": {
+            "basicNeeds": 62.75,
+            "wellbeing": 58.33,
+            "opportunity": 47.79
+          }
+        },
+        "2026": {
+          "ips": 58.03,
+          "rank": 25,
+          "dimensions": {
+            "basicNeeds": 64.01,
+            "wellbeing": 61.96,
+            "opportunity": 48.14
+          }
+        }
+      }
+    },
+    "13": {
+      "id": "13",
+      "uf": "AM",
+      "name": "Amazonas",
+      "byYear": {
+        "2024": {
+          "ips": 57.83,
+          "rank": 20,
+          "dimensions": {
+            "basicNeeds": 66.03,
+            "wellbeing": 61.56,
+            "opportunity": 45.89
+          }
+        },
+        "2025": {
+          "ips": 57.9,
+          "rank": 19,
+          "dimensions": {
+            "basicNeeds": 66.84,
+            "wellbeing": 59.73,
+            "opportunity": 47.15
+          }
+        },
+        "2026": {
+          "ips": 59.34,
+          "rank": 20,
+          "dimensions": {
+            "basicNeeds": 67.13,
+            "wellbeing": 64.41,
+            "opportunity": 46.49
+          }
+        }
+      }
+    },
+    "14": {
+      "id": "14",
+      "uf": "RR",
+      "name": "Roraima",
+      "byYear": {
+        "2024": {
+          "ips": 56.83,
+          "rank": 22,
+          "dimensions": {
+            "basicNeeds": 65.97,
+            "wellbeing": 61.36,
+            "opportunity": 43.17
+          }
+        },
+        "2025": {
+          "ips": 57.81,
+          "rank": 20,
+          "dimensions": {
+            "basicNeeds": 66.96,
+            "wellbeing": 59.04,
+            "opportunity": 47.42
+          }
+        },
+        "2026": {
+          "ips": 59.65,
+          "rank": 19,
+          "dimensions": {
+            "basicNeeds": 66.76,
+            "wellbeing": 62.95,
+            "opportunity": 49.25
+          }
+        }
+      }
+    },
+    "15": {
+      "id": "15",
+      "uf": "PA",
+      "name": "Pará",
+      "byYear": {
+        "2024": {
+          "ips": 53.2,
+          "rank": 27,
+          "dimensions": {
+            "basicNeeds": 61.08,
+            "wellbeing": 58.35,
+            "opportunity": 40.18
+          }
+        },
+        "2025": {
+          "ips": 53.71,
+          "rank": 27,
+          "dimensions": {
+            "basicNeeds": 61.49,
+            "wellbeing": 57.21,
+            "opportunity": 42.44
+          }
+        },
+        "2026": {
+          "ips": 55.8,
+          "rank": 27,
+          "dimensions": {
+            "basicNeeds": 62.21,
+            "wellbeing": 61.84,
+            "opportunity": 43.34
+          }
+        }
+      }
+    },
+    "16": {
+      "id": "16",
+      "uf": "AP",
+      "name": "Amapá",
+      "byYear": {
+        "2024": {
+          "ips": 55.76,
+          "rank": 23,
+          "dimensions": {
+            "basicNeeds": 57.88,
+            "wellbeing": 62.71,
+            "opportunity": 46.68
+          }
+        },
+        "2025": {
+          "ips": 56.72,
+          "rank": 24,
+          "dimensions": {
+            "basicNeeds": 56.17,
+            "wellbeing": 61.07,
+            "opportunity": 52.92
+          }
+        },
+        "2026": {
+          "ips": 58.1,
+          "rank": 24,
+          "dimensions": {
+            "basicNeeds": 57.13,
+            "wellbeing": 63.92,
+            "opportunity": 53.24
+          }
+        }
+      }
+    },
+    "17": {
+      "id": "17",
+      "uf": "TO",
+      "name": "Tocantins",
+      "byYear": {
+        "2024": {
+          "ips": 58.23,
+          "rank": 18,
+          "dimensions": {
+            "basicNeeds": 70.35,
+            "wellbeing": 63.57,
+            "opportunity": 40.78
+          }
+        },
+        "2025": {
+          "ips": 58.76,
+          "rank": 18,
+          "dimensions": {
+            "basicNeeds": 71.91,
+            "wellbeing": 60.73,
+            "opportunity": 43.63
+          }
+        },
+        "2026": {
+          "ips": 60.5,
+          "rank": 17,
+          "dimensions": {
+            "basicNeeds": 72.15,
+            "wellbeing": 64.22,
+            "opportunity": 45.15
+          }
+        }
+      }
+    },
+    "21": {
+      "id": "21",
+      "uf": "MA",
+      "name": "Maranhão",
+      "byYear": {
+        "2024": {
+          "ips": 55.72,
+          "rank": 24,
+          "dimensions": {
+            "basicNeeds": 63.05,
+            "wellbeing": 61.4,
+            "opportunity": 42.71
+          }
+        },
+        "2025": {
+          "ips": 55.96,
+          "rank": 26,
+          "dimensions": {
+            "basicNeeds": 64.24,
+            "wellbeing": 58.75,
+            "opportunity": 44.89
+          }
+        },
+        "2026": {
+          "ips": 57.59,
+          "rank": 26,
+          "dimensions": {
+            "basicNeeds": 63.84,
+            "wellbeing": 62.13,
+            "opportunity": 46.79
+          }
+        }
+      }
+    },
+    "22": {
+      "id": "22",
+      "uf": "PI",
+      "name": "Piauí",
+      "byYear": {
+        "2024": {
+          "ips": 59.3,
+          "rank": 16,
+          "dimensions": {
+            "basicNeeds": 67.99,
+            "wellbeing": 62.61,
+            "opportunity": 47.31
+          }
+        },
+        "2025": {
+          "ips": 59.17,
+          "rank": 17,
+          "dimensions": {
+            "basicNeeds": 70.65,
+            "wellbeing": 60.22,
+            "opportunity": 46.62
+          }
+        },
+        "2026": {
+          "ips": 60.48,
+          "rank": 18,
+          "dimensions": {
+            "basicNeeds": 69.53,
+            "wellbeing": 63.77,
+            "opportunity": 48.13
+          }
+        }
+      }
+    },
+    "23": {
+      "id": "23",
+      "uf": "CE",
+      "name": "Ceará",
+      "byYear": {
+        "2024": {
+          "ips": 59.71,
+          "rank": 14,
+          "dimensions": {
+            "basicNeeds": 68.45,
+            "wellbeing": 67.27,
+            "opportunity": 43.43
+          }
+        },
+        "2025": {
+          "ips": 60.03,
+          "rank": 14,
+          "dimensions": {
+            "basicNeeds": 70.23,
+            "wellbeing": 64.63,
+            "opportunity": 45.23
+          }
+        },
+        "2026": {
+          "ips": 61.22,
+          "rank": 15,
+          "dimensions": {
+            "basicNeeds": 69.53,
+            "wellbeing": 67.49,
+            "opportunity": 46.66
+          }
+        }
+      }
+    },
+    "24": {
+      "id": "24",
+      "uf": "RN",
+      "name": "Rio Grande do Norte",
+      "byYear": {
+        "2024": {
+          "ips": 59.52,
+          "rank": 15,
+          "dimensions": {
+            "basicNeeds": 71.1,
+            "wellbeing": 62.32,
+            "opportunity": 45.14
+          }
+        },
+        "2025": {
+          "ips": 60.04,
+          "rank": 13,
+          "dimensions": {
+            "basicNeeds": 71.79,
+            "wellbeing": 61.04,
+            "opportunity": 47.29
+          }
+        },
+        "2026": {
+          "ips": 61.83,
+          "rank": 13,
+          "dimensions": {
+            "basicNeeds": 72.25,
+            "wellbeing": 64.68,
+            "opportunity": 48.57
+          }
+        }
+      }
+    },
+    "25": {
+      "id": "25",
+      "uf": "PB",
+      "name": "Paraíba",
+      "byYear": {
+        "2024": {
+          "ips": 60.11,
+          "rank": 13,
+          "dimensions": {
+            "basicNeeds": 71.67,
+            "wellbeing": 63.59,
+            "opportunity": 45.06
+          }
+        },
+        "2025": {
+          "ips": 61.09,
+          "rank": 11,
+          "dimensions": {
+            "basicNeeds": 73.08,
+            "wellbeing": 62.12,
+            "opportunity": 48.06
+          }
+        },
+        "2026": {
+          "ips": 62.39,
+          "rank": 11,
+          "dimensions": {
+            "basicNeeds": 72.97,
+            "wellbeing": 65.14,
+            "opportunity": 49.06
+          }
+        }
+      }
+    },
+    "26": {
+      "id": "26",
+      "uf": "PE",
+      "name": "Pernambuco",
+      "byYear": {
+        "2024": {
+          "ips": 59.22,
+          "rank": 17,
+          "dimensions": {
+            "basicNeeds": 67.56,
+            "wellbeing": 66.44,
+            "opportunity": 43.65
+          }
+        },
+        "2025": {
+          "ips": 59.56,
+          "rank": 16,
+          "dimensions": {
+            "basicNeeds": 68.6,
+            "wellbeing": 64.56,
+            "opportunity": 45.51
+          }
+        },
+        "2026": {
+          "ips": 60.58,
+          "rank": 16,
+          "dimensions": {
+            "basicNeeds": 68.41,
+            "wellbeing": 66.89,
+            "opportunity": 46.45
+          }
+        }
+      }
+    },
+    "27": {
+      "id": "27",
+      "uf": "AL",
+      "name": "Alagoas",
+      "byYear": {
+        "2024": {
+          "ips": 57.43,
+          "rank": 21,
+          "dimensions": {
+            "basicNeeds": 66.61,
+            "wellbeing": 62.79,
+            "opportunity": 42.87
+          }
+        },
+        "2025": {
+          "ips": 57.7,
+          "rank": 21,
+          "dimensions": {
+            "basicNeeds": 67.7,
+            "wellbeing": 61.03,
+            "opportunity": 44.37
+          }
+        },
+        "2026": {
+          "ips": 58.97,
+          "rank": 21,
+          "dimensions": {
+            "basicNeeds": 67.27,
+            "wellbeing": 64.25,
+            "opportunity": 45.39
+          }
+        }
+      }
+    },
+    "28": {
+      "id": "28",
+      "uf": "SE",
+      "name": "Sergipe",
+      "byYear": {
+        "2024": {
+          "ips": 61.2,
+          "rank": 11,
+          "dimensions": {
+            "basicNeeds": 71.04,
+            "wellbeing": 64.75,
+            "opportunity": 47.81
+          }
+        },
+        "2025": {
+          "ips": 60.6,
+          "rank": 12,
+          "dimensions": {
+            "basicNeeds": 71.1,
+            "wellbeing": 62.56,
+            "opportunity": 48.14
+          }
+        },
+        "2026": {
+          "ips": 62.1,
+          "rank": 12,
+          "dimensions": {
+            "basicNeeds": 71.9,
+            "wellbeing": 66.06,
+            "opportunity": 48.33
+          }
+        }
+      }
+    },
+    "29": {
+      "id": "29",
+      "uf": "BA",
+      "name": "Bahia",
+      "byYear": {
+        "2024": {
+          "ips": 57.85,
+          "rank": 19,
+          "dimensions": {
+            "basicNeeds": 67.52,
+            "wellbeing": 61.49,
+            "opportunity": 44.53
+          }
+        },
+        "2025": {
+          "ips": 57.67,
+          "rank": 22,
+          "dimensions": {
+            "basicNeeds": 68.73,
+            "wellbeing": 60.05,
+            "opportunity": 44.22
+          }
+        },
+        "2026": {
+          "ips": 58.72,
+          "rank": 22,
+          "dimensions": {
+            "basicNeeds": 68.72,
+            "wellbeing": 63.12,
+            "opportunity": 44.32
+          }
+        }
+      }
+    },
+    "31": {
+      "id": "31",
+      "uf": "MG",
+      "name": "Minas Gerais",
+      "byYear": {
+        "2024": {
+          "ips": 63.11,
+          "rank": 5,
+          "dimensions": {
+            "basicNeeds": 76.82,
+            "wellbeing": 68.8,
+            "opportunity": 43.72
+          }
+        },
+        "2025": {
+          "ips": 63.04,
+          "rank": 5,
+          "dimensions": {
+            "basicNeeds": 78.66,
+            "wellbeing": 66.08,
+            "opportunity": 44.38
+          }
+        },
+        "2026": {
+          "ips": 64.66,
+          "rank": 5,
+          "dimensions": {
+            "basicNeeds": 78.35,
+            "wellbeing": 69.87,
+            "opportunity": 45.77
+          }
+        }
+      }
+    },
+    "32": {
+      "id": "32",
+      "uf": "ES",
+      "name": "Espírito Santo",
+      "byYear": {
+        "2024": {
+          "ips": 61.22,
+          "rank": 10,
+          "dimensions": {
+            "basicNeeds": 72.94,
+            "wellbeing": 68.93,
+            "opportunity": 41.77
+          }
+        },
+        "2025": {
+          "ips": 62.23,
+          "rank": 9,
+          "dimensions": {
+            "basicNeeds": 74.38,
+            "wellbeing": 66.82,
+            "opportunity": 45.5
+          }
+        },
+        "2026": {
+          "ips": 63.61,
+          "rank": 8,
+          "dimensions": {
+            "basicNeeds": 73.91,
+            "wellbeing": 70.2,
+            "opportunity": 46.73
+          }
+        }
+      }
+    },
+    "33": {
+      "id": "33",
+      "uf": "RJ",
+      "name": "Rio de Janeiro",
+      "byYear": {
+        "2024": {
+          "ips": 62.11,
+          "rank": 8,
+          "dimensions": {
+            "basicNeeds": 72.98,
+            "wellbeing": 68.2,
+            "opportunity": 45.15
+          }
+        },
+        "2025": {
+          "ips": 62.38,
+          "rank": 8,
+          "dimensions": {
+            "basicNeeds": 73.58,
+            "wellbeing": 65.85,
+            "opportunity": 47.7
+          }
+        },
+        "2026": {
+          "ips": 63.47,
+          "rank": 9,
+          "dimensions": {
+            "basicNeeds": 72.95,
+            "wellbeing": 69.75,
+            "opportunity": 47.71
+          }
+        }
+      }
+    },
+    "35": {
+      "id": "35",
+      "uf": "SP",
+      "name": "São Paulo",
+      "byYear": {
+        "2024": {
+          "ips": 66.25,
+          "rank": 2,
+          "dimensions": {
+            "basicNeeds": 80.9,
+            "wellbeing": 71.84,
+            "opportunity": 46.02
+          }
+        },
+        "2025": {
+          "ips": 66.45,
+          "rank": 2,
+          "dimensions": {
+            "basicNeeds": 81.85,
+            "wellbeing": 70.07,
+            "opportunity": 47.42
+          }
+        },
+        "2026": {
+          "ips": 67.96,
+          "rank": 2,
+          "dimensions": {
+            "basicNeeds": 81.59,
+            "wellbeing": 74.34,
+            "opportunity": 47.95
+          }
+        }
+      }
+    },
+    "41": {
+      "id": "41",
+      "uf": "PR",
+      "name": "Paraná",
+      "byYear": {
+        "2024": {
+          "ips": 63.49,
+          "rank": 4,
+          "dimensions": {
+            "basicNeeds": 77.14,
+            "wellbeing": 69.86,
+            "opportunity": 43.48
+          }
+        },
+        "2025": {
+          "ips": 63.83,
+          "rank": 4,
+          "dimensions": {
+            "basicNeeds": 79.29,
+            "wellbeing": 67.24,
+            "opportunity": 44.95
+          }
+        },
+        "2026": {
+          "ips": 65.21,
+          "rank": 4,
+          "dimensions": {
+            "basicNeeds": 78.93,
+            "wellbeing": 71.39,
+            "opportunity": 45.32
+          }
+        }
+      }
+    },
+    "42": {
+      "id": "42",
+      "uf": "SC",
+      "name": "Santa Catarina",
+      "byYear": {
+        "2024": {
+          "ips": 64.24,
+          "rank": 3,
+          "dimensions": {
+            "basicNeeds": 78.16,
+            "wellbeing": 69.45,
+            "opportunity": 45.12
+          }
+        },
+        "2025": {
+          "ips": 64.0,
+          "rank": 3,
+          "dimensions": {
+            "basicNeeds": 79.7,
+            "wellbeing": 67.36,
+            "opportunity": 44.92
+          }
+        },
+        "2026": {
+          "ips": 65.58,
+          "rank": 3,
+          "dimensions": {
+            "basicNeeds": 79.56,
+            "wellbeing": 71.58,
+            "opportunity": 45.58
+          }
+        }
+      }
+    },
+    "43": {
+      "id": "43",
+      "uf": "RS",
+      "name": "Rio Grande do Sul",
+      "byYear": {
+        "2024": {
+          "ips": 62.28,
+          "rank": 7,
+          "dimensions": {
+            "basicNeeds": 74.88,
+            "wellbeing": 66.01,
+            "opportunity": 45.95
+          }
+        },
+        "2025": {
+          "ips": 62.09,
+          "rank": 10,
+          "dimensions": {
+            "basicNeeds": 76.74,
+            "wellbeing": 63.88,
+            "opportunity": 45.64
+          }
+        },
+        "2026": {
+          "ips": 63.39,
+          "rank": 10,
+          "dimensions": {
+            "basicNeeds": 76.29,
+            "wellbeing": 67.44,
+            "opportunity": 46.43
+          }
+        }
+      }
+    },
+    "50": {
+      "id": "50",
+      "uf": "MS",
+      "name": "Mato Grosso do Sul",
+      "byYear": {
+        "2024": {
+          "ips": 61.35,
+          "rank": 9,
+          "dimensions": {
+            "basicNeeds": 75.65,
+            "wellbeing": 64.23,
+            "opportunity": 44.16
+          }
+        },
+        "2025": {
+          "ips": 62.81,
+          "rank": 6,
+          "dimensions": {
+            "basicNeeds": 77.63,
+            "wellbeing": 61.87,
+            "opportunity": 48.94
+          }
+        },
+        "2026": {
+          "ips": 64.14,
+          "rank": 7,
+          "dimensions": {
+            "basicNeeds": 77.55,
+            "wellbeing": 65.8,
+            "opportunity": 49.07
+          }
+        }
+      }
+    },
+    "51": {
+      "id": "51",
+      "uf": "MT",
+      "name": "Mato Grosso",
+      "byYear": {
+        "2024": {
+          "ips": 60.15,
+          "rank": 12,
+          "dimensions": {
+            "basicNeeds": 71.86,
+            "wellbeing": 61.52,
+            "opportunity": 47.06
+          }
+        },
+        "2025": {
+          "ips": 59.78,
+          "rank": 15,
+          "dimensions": {
+            "basicNeeds": 74.03,
+            "wellbeing": 59.99,
+            "opportunity": 45.31
+          }
+        },
+        "2026": {
+          "ips": 61.38,
+          "rank": 14,
+          "dimensions": {
+            "basicNeeds": 72.94,
+            "wellbeing": 65.03,
+            "opportunity": 46.17
+          }
+        }
+      }
+    },
+    "52": {
+      "id": "52",
+      "uf": "GO",
+      "name": "Goiás",
+      "byYear": {
+        "2024": {
+          "ips": 62.78,
+          "rank": 6,
+          "dimensions": {
+            "basicNeeds": 75.57,
+            "wellbeing": 68.35,
+            "opportunity": 44.43
+          }
+        },
+        "2025": {
+          "ips": 62.63,
+          "rank": 7,
+          "dimensions": {
+            "basicNeeds": 75.97,
+            "wellbeing": 66.01,
+            "opportunity": 45.91
+          }
+        },
+        "2026": {
+          "ips": 64.52,
+          "rank": 6,
+          "dimensions": {
+            "basicNeeds": 76.41,
+            "wellbeing": 69.99,
+            "opportunity": 47.16
+          }
+        }
+      }
+    },
+    "53": {
+      "id": "53",
+      "uf": "DF",
+      "name": "Distrito Federal",
+      "byYear": {
+        "2024": {
+          "ips": 71.25,
+          "rank": 1,
+          "dimensions": {
+            "basicNeeds": 79.16,
+            "wellbeing": 73.76,
+            "opportunity": 60.84
+          }
+        },
+        "2025": {
+          "ips": 69.04,
+          "rank": 1,
+          "dimensions": {
+            "basicNeeds": 80.37,
+            "wellbeing": 71.46,
+            "opportunity": 55.3
+          }
+        },
+        "2026": {
+          "ips": 70.73,
+          "rank": 1,
+          "dimensions": {
+            "basicNeeds": 80.35,
+            "wellbeing": 74.87,
+            "opportunity": 56.98
+          }
+        }
+      }
+    }
+  }
+}
