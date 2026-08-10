@@ -4,9 +4,8 @@ CNES group 'PF' lists each professional x establishment vinculo. Schema
 (relevant columns):
     CODUFMUN : 6-digit IBGE municipality of the establishment
     CBO      : 6-digit CBO 2002 occupation code
-    CNS_PROF : Cartao Nacional de Saude, unique professional identifier
-               (CNS_PROF in the raw export is anonymized to '1' and unusable
-                for deduplication)
+    CNS_PROF : Cartao Nacional de Saude, identificador usado para eliminar
+               vinculos duplicados do mesmo profissional no municipio
 
 CBO categories used here:
     Medicos     : prefix '225' (cliniccos, cirurgicos, especialistas) +
@@ -18,9 +17,8 @@ CBO categories used here:
 
 import pandas as pd
 
-from pysus import cnes
-
 from . import UFS
+from .source import CNES_DIRECTORY, DatasusFTPSource, cnes_filename
 
 
 MEDICO_PREFIXES = ("225", "2231")
@@ -30,11 +28,16 @@ ENFERMEIRO_PREFIXES = ("2235",)
 def fetch_cnes_profissionais(year: int, month: int, ufs=None) -> pd.DataFrame:
     target_ufs = ufs or UFS
     frames = []
-    for uf in target_ufs:
-        df = cnes(state=uf, year=year, month=month, group="PF")
-        if df is None or df.empty:
-            continue
-        frames.append(df[["CODUFMUN", "CBO", "CNS_PROF"]])
+    columns = ["CODUFMUN", "CBO", "CNS_PROF"]
+    with DatasusFTPSource() as source:
+        for uf in target_ufs:
+            filename = cnes_filename("PF", uf, year, month)
+            try:
+                df = source.read_table(f"{CNES_DIRECTORY}/PF", filename, columns)
+            except FileNotFoundError:
+                continue
+            if not df.empty:
+                frames.append(df)
     if not frames:
         return pd.DataFrame()
     combined = pd.concat(frames, ignore_index=True)
@@ -81,6 +84,40 @@ def aggregate_profissionais_by_municipality(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+def fetch_cnes_profissionais_aggregated(
+    year: int,
+    month: int,
+    ufs=None,
+    progress: bool = False,
+) -> pd.DataFrame:
+    """Baixe e agregue PF por UF, sem acumular o cadastro nacional bruto."""
+    target_ufs = ufs or UFS
+    columns = ["CODUFMUN", "CBO", "CNS_PROF"]
+    frames = []
+    with DatasusFTPSource() as source:
+        for uf in target_ufs:
+            filename = cnes_filename("PF", uf, year, month)
+            if progress:
+                print(f"      PF {uf}: lendo {filename}...", end="", flush=True)
+            try:
+                raw = source.read_table(f"{CNES_DIRECTORY}/PF", filename, columns)
+            except FileNotFoundError:
+                if progress:
+                    print(" não encontrado")
+                continue
+            raw["CBO"] = raw["CBO"].str.strip()
+            aggregated = aggregate_profissionais_by_municipality(raw)
+            del raw
+            if not aggregated.empty:
+                frames.append(aggregated)
+            if progress:
+                print(f" {len(aggregated):,} municípios")
+
+    if not frames:
+        return pd.DataFrame(columns=["medicos", "enfermeiros"])
+    return pd.concat(frames).groupby(level=0).sum().astype(int)
+
+
 def compute_rates(profs: pd.DataFrame, six_to_seven: dict, population: dict):
     """Return {ibge7: {medicos, enfermeiros, doctorsPer1000, nursesPer1000}}."""
     result = {}
@@ -113,9 +150,7 @@ if __name__ == "__main__":
     parser.add_argument("--ufs", nargs="*")
     args = parser.parse_args()
 
-    df = fetch_cnes_profissionais(args.year, args.month, args.ufs)
-    print(f"PF rows: {len(df):,}")
-    agg = aggregate_profissionais_by_municipality(df)
+    agg = fetch_cnes_profissionais_aggregated(args.year, args.month, args.ufs)
     print(f"Aggregated municipalities: {len(agg):,}")
 
     pop = fetch_population_by_ibge()

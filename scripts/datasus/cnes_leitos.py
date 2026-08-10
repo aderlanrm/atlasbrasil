@@ -14,9 +14,8 @@ CNES facility x bed type. Schema (relevant columns):
 
 import pandas as pd
 
-from pysus import cnes
-
 from . import UFS
+from .source import CNES_DIRECTORY, DatasusFTPSource, cnes_filename
 
 
 def fetch_cnes_leitos(year: int, month: int, ufs=None) -> pd.DataFrame:
@@ -27,11 +26,18 @@ def fetch_cnes_leitos(year: int, month: int, ufs=None) -> pd.DataFrame:
     """
     target_ufs = ufs or UFS
     frames = []
-    for uf in target_ufs:
-        df = cnes(state=uf, year=year, month=month, group="LT")
-        if df is None or df.empty:
-            continue
-        frames.append(df)
+    columns = [
+        "CODUFMUN", "TP_LEITO", "CODLEITO", "QT_EXIST", "QT_SUS", "QT_NSUS",
+    ]
+    with DatasusFTPSource() as source:
+        for uf in target_ufs:
+            filename = cnes_filename("LT", uf, year, month)
+            try:
+                df = source.read_table(f"{CNES_DIRECTORY}/LT", filename, columns)
+            except FileNotFoundError:
+                continue
+            if not df.empty:
+                frames.append(df)
     if not frames:
         return pd.DataFrame()
 
@@ -66,6 +72,46 @@ def aggregate_leitos_by_municipality(df: pd.DataFrame) -> pd.DataFrame:
     out = pd.concat([total, sus, uti], axis=1).fillna(0).astype(int)
     out.index = out.index.astype(str).str.zfill(6)
     return out
+
+
+def fetch_cnes_leitos_aggregated(
+    year: int,
+    month: int,
+    ufs=None,
+    progress: bool = False,
+) -> pd.DataFrame:
+    """Baixe e agregue LT por UF, liberando as linhas brutas a cada arquivo."""
+    target_ufs = ufs or UFS
+    columns = [
+        "CODUFMUN", "TP_LEITO", "CODLEITO", "QT_EXIST", "QT_SUS", "QT_NSUS",
+    ]
+    frames = []
+    with DatasusFTPSource() as source:
+        for uf in target_ufs:
+            filename = cnes_filename("LT", uf, year, month)
+            if progress:
+                print(f"      LT {uf}: lendo {filename}...", end="", flush=True)
+            try:
+                raw = source.read_table(f"{CNES_DIRECTORY}/LT", filename, columns)
+            except FileNotFoundError:
+                if progress:
+                    print(" não encontrado")
+                continue
+            for column in ("QT_EXIST", "QT_SUS", "QT_NSUS"):
+                raw[column] = (
+                    pd.to_numeric(raw[column], errors="coerce").fillna(0).astype(int)
+                )
+            raw["TP_LEITO"] = pd.to_numeric(raw["TP_LEITO"], errors="coerce")
+            aggregated = aggregate_leitos_by_municipality(raw)
+            del raw
+            if not aggregated.empty:
+                frames.append(aggregated)
+            if progress:
+                print(f" {len(aggregated):,} municípios")
+
+    if not frames:
+        return pd.DataFrame(columns=["leitos_total", "leitos_sus", "leitos_uti"])
+    return pd.concat(frames).groupby(level=0).sum().astype(int)
 
 
 def compute_rates(leitos: pd.DataFrame, six_to_seven: dict, population: dict):
@@ -108,9 +154,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     print(f"Fetching CNES LT {args.year}-{args.month:02d} for {args.ufs or 'all UFs'}...")
-    df = fetch_cnes_leitos(args.year, args.month, args.ufs)
-    print(f"  rows: {len(df):,}  municipalities: {df['CODUFMUN'].nunique():,}")
-    agg = aggregate_leitos_by_municipality(df)
+    agg = fetch_cnes_leitos_aggregated(args.year, args.month, args.ufs)
     print(f"  aggregated: {len(agg):,} municipalities")
 
     pop = fetch_population_by_ibge()

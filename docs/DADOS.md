@@ -1,348 +1,132 @@
-# Como subir novos dados no Atlas
+# Dados e atualização do Atlas Brasil
 
-Este projeto usa um catálogo simples em `app.js` para manter análises, dropdowns, legenda e fonte seguindo o mesmo padrão.
+## Contrato da publicação estática
 
-Para a nova frente de saúde/hospitais, consulte o briefing de fontes e variáveis em [SAUDE_HOSPITAIS_DADOS.md](SAUDE_HOSPITAIS_DADOS.md).
+O conteúdo servido ao navegador fica exclusivamente em
+`data/parquet/site/`. Todos os arquivos são Parquet ou GeoParquet comprimidos
+com Zstandard nível 19. O carregador JavaScript lê esse formato diretamente,
+sem API intermediária ou banco de dados. Essa garantia cobre indicadores e
+polígonos; os três mapas-base visuais são tiles online e não fazem parte do ETL.
 
-## 1. Cadastre a fonte
-
-Adicione uma entrada em `DATA_SOURCE_CATALOG`.
-
-```js
-novaFonte: {
-  label: "Nome completo do dado",
-  shortLabel: "Nome curto",
-  provider: "Órgão, API, banco ou arquivo",
-  type: "api", // api, db, json, manual ou computed
-  provenance: "real", // real, estimado, simulado, curado, compilado ou misto
-  freshness: "Ano/base de atualização",
-  url: "https://...",
-  quality: "Oficial",
-  fields: ["campo usado 1", "campo usado 2"],
-  methodology: "Como a consulta, merge, filtro ou cálculo foi feito.",
-  limitations: ["Limitação conhecida ou risco de interpretação."],
-  updatePolicy: "Quando e como atualizar esta fonte.",
-  upstreamLabel: "Fonte original A + Fonte original B",
-  upstreamSources: [
-    { label: "Fonte original A", url: "https://...", fields: "campos usados", usage: "como entrou no dado final" }
-  ],
-  note: "Como o dado foi obtido ou calculado."
-}
+```text
+data/parquet/site/
+├── atlas/                     indicadores nacionais e territoriais
+├── municipalities/UF.parquet malha municipal por estado
+├── sectors/UF/IBGE.parquet   setores de um município
+├── states.parquet            malha das UFs
+└── manifest.parquet          inventário de arquivos, linhas e tamanhos
 ```
 
-Se a fonte vier de outro domínio na nuvem, inclua o domínio em `connect-src` no CSP do `index.html`. Se vier de JSON local, coloque o arquivo em `data/`.
+Os JSONs, CSVs, planilhas, PDFs e ZIPs usados por extratores legados ou como
+entrada transitória não entram no artefato publicado. O script
+`.github/scripts/minify_static.py` aplica essa regra ao montar `dist/`.
 
-Para JSON local, use `provider` para o caminho do arquivo que o site carrega e use `upstreamLabel`/`upstreamSources` para dizer de onde o JSON foi montado originalmente. Exemplo atual:
+## Pipeline recomendado
 
-```js
-localWorldJson: {
-  provider: "data/world_data.geojson",
-  type: "json",
-  provenance: "compilado",
-  upstreamLabel: "datasets/geo-countries + RestCountries + World Bank",
-  upstreamSources: [
-    { label: "datasets/geo-countries", fields: "geometria e códigos ISO" },
-    { label: "RestCountries", fields: "população, área, região e nomes em português" },
-    { label: "World Bank API", fields: "PIB nominal em US$" }
-  ]
-}
-```
+1. Instale as versões fixadas em `requirements-etl.txt` com Python 3.14.x.
+2. Atualize indicadores globais e nacionais diretamente das fontes oficiais:
 
-## Checklist de qualidade da fonte
-
-Antes de marcar um dado como `real`, confira se a fonte tem:
-
-- `url` apontando para a página, API, documentação ou arquivo auditável;
-- `fields` dizendo exatamente quais campos foram usados;
-- `methodology` explicando filtro, agregação, conversão de unidade e merge;
-- `limitations` deixando claro defasagem, projeção, cobertura parcial ou risco de interpretação;
-- `updatePolicy` explicando como manter o dado atual;
-- `upstreamSources`, quando o dado local foi compilado a partir de outras fontes.
-
-Se algum desses itens faltar, prefira `provenance: "estimado"`, `"curado"`, `"compilado"` ou `"misto"` em vez de `"real"`.
-
-Na interface, o botão `i` ao lado da fonte abre os detalhes e links de auditoria cadastrados nesses campos.
-
-## Fonte alternativa para o mesmo dado
-
-Quando houver mais de uma fonte para a mesma métrica, use `sourceOptions` dentro da análise. Isso cria um seletor padrão de fonte na legenda e mantém a explicação da diferença junto do botão `i`.
-
-```js
-idh: {
-  label: "IDH",
-  sourceOptions: [
-    {
-      id: "undp",
-      label: "UNDP/HDR",
-      scope: ["world"],
-      sourceIds: ["hdiGlobalUndp"],
-      difference: "Fonte primária oficial do Human Development Report."
-    },
-    {
-      id: "owid",
-      label: "Our World in Data",
-      scope: ["world"],
-      sourceIds: ["hdiGlobalOwid"],
-      difference: "Redistribuição do OWID com processamento menor; a fonte original citada continua sendo UNDP/HDR."
-    }
-  ]
-}
-```
-
-Regras:
-
-- Use `sourceOptions` somente quando as fontes medem essencialmente o mesmo dado no mesmo escopo.
-- Use `scope` para evitar mostrar uma fonte onde ela não se aplica. Exemplo: OWID vale para IDH global, mas não para IDHM municipal/estadual brasileiro.
-- Escreva `difference` em linguagem simples: fonte primária, redistribuição, projeção, cobertura, ano, metodologia ou limitação relevante.
-- Cada opção deve apontar para `sourceIds`; cada fonte continua precisando de URL, campos, metodologia e limitações.
-
-## 2. Coloque o dado em uma análise
-
-Cada análise fica em `ANALYSIS_CATALOG`. Para adicionar uma opção ao dropdown de PIB, por exemplo, inclua uma nova métrica em `ANALYSIS_CATALOG.gdp.metrics`:
-
-```js
-growth: {
-  label: "Crescimento",
-  metric: "Crescimento do PIB",
-  sourceIds: ["gdpIbge"]
-}
-```
-
-Depois ajuste as funções que calculam a cor, bolha, cards e ranking para saber ler essa métrica:
-
-- `analysisMetricExpression()`
-- `territoryHeatColorExpression()`
-- `territoryBubbleRadiusExpression()`
-- `gdpCards()`, se precisar aparecer nos cards
-- `stateChartConfig()` e `cityChartConfig()`, se precisar aparecer no ranking
-
-Para o dropdown do Globo, use `WORLD_METRIC_CATALOG` e ajuste `window.updateWorldLayerColor()` para pintar o mapa com a nova propriedade.
-
-## Exemplo: dados de IDH/IDHM
-
-A aba `IDH` usa três fontes cadastradas:
-
-- `hdiGlobalUndp`: IDH global real/oficial do UNDP Human Development Report. O app carrega `data/hdi_global.json`, gerado a partir do CSV oficial `HDR25_Composite_indices_complete_time_series.csv`. Campos usados: `iso3`, `country`, `hdi_1990` a `hdi_2023` e `hdi_rank_2023`.
-- `hdiGlobalOwid`: IDH global via Our World in Data. O app carrega `data/hdi_owid.json`, gerado a partir de `human-development-index.csv` e `human-development-index.metadata.json`. O OWID cita UNDP Human Development Report 2025 como fonte original e aplica processamento menor.
-- `idhmPnudBrazil`: IDHM real/oficial do PNUD Brasil, IPEA, FJP e IBGE/PNAD Contínua. O app carrega `data/idhm_brazil.json` com a série anual **2012-2024** (Radar IDHM 2026, recalculada). Campos por Brasil/UF e ano: `idhm`, `longevity`, `education`, `income` e `adjusted` (IDHMAD; só publicado para o Brasil, fica `null` nas UFs). A fonte preferencial é a planilha `data/idhm_pnud_brazil.xlsx` (via `scripts/generate_idhm_brazil.py`); na edição 2026, como só saiu o relatório em PDF, a série foi extraída de `data/radar_idhm_web.pdf` (via `scripts/extract_idhm_from_radar_pdf.py`).
-- `idhmCityProxy`: proxy calculado. Como a planilha anual carregada cobre Brasil e UFs, mas não municípios, as cidades recebem temporariamente o IDHM da UF. Isso aparece na fonte e nos cards como `proxy UF`; não trate como IDHM municipal real.
-
-No escopo `Globo`, a análise IDH declara `sourceOptions` para permitir alternar entre `UNDP/HDR` e `Our World in Data`. A diferença aparece abaixo da fonte e nos detalhes do botão `i`.
-
-Para atualizar o IDH global:
-
-1. Baixe o CSV mais recente no HDR Data Center do UNDP.
-2. Substitua ou mantenha o bruto em `data/`.
-3. Regenere `data/hdi_global.json` mantendo `latestYear`, `years` e `countries[ISO3].history`.
-4. Confira se os códigos ISO3 batem com `data/world_data.geojson`.
-5. Atualize `DATA_SOURCE_CATALOG.hdiGlobalUndp.freshness`, `url`, `fields`, `methodology` e `limitations`.
-
-Para atualizar a versão OWID do IDH global:
-
-1. Baixe `https://ourworldindata.org/grapher/human-development-index.csv`.
-2. Baixe `https://ourworldindata.org/grapher/human-development-index.metadata.json`.
-3. Regenere `data/hdi_owid.json` mantendo `latestYear`, `years`, `countries[ISO3].history` e região OWID.
-4. Atualize `DATA_SOURCE_CATALOG.hdiGlobalOwid`, especialmente `freshness`, `methodology`, `limitations` e metadados de atualização.
-
-Para atualizar o IDHM do Brasil, use o script `scripts/generate_idhm_brazil.py` (ele faz o download, parse e geração do JSON no formato exato do app):
-
-1. Abra a página "Base de dados (xls)" do Painel IDHM/PNUD Brasil e copie o link direto do `.xlsx`
-   (`https://www.undp.org/pt/brazil/desenvolvimento-humano/publications/base-de-dados-xls`).
-   Cada edição do Radar IDHM publica uma planilha nova; a edição 2026 estendeu e recalculou a série para 2012-2024.
-2. Rode o gerador passando a URL (ele baixa para `data/idhm_pnud_brazil.xlsx` e regenera o JSON):
+   ```powershell
+   python scripts/generate_atlas_indicators.py --datasets all
+   python scripts/fetch_world_data.py
+   python scripts/generate_security_brazil_cities.py
+   python scripts/build_health_brazil_cities.py
+   python scripts/build_atlas_master.py
    ```
-   python scripts/generate_idhm_brazil.py --url "<URL_DO_XLSX>"
+
+   A etapa municipal de saúde consulta arquivos extensos do DATASUS e costuma
+   ser a parte mais demorada. Para uma validação curta do extrator, use
+   `--ufs PE`; não publique esse resultado parcial como atualização nacional.
+   A malha mundial vem do projeto `geo-countries`; população e PIB vêm da API
+   pública do Banco Mundial, e a área é calculada geodesicamente a partir dos
+   polígonos. O ETL não depende de chave do RestCountries.
+
+3. Atualize setores e agregações. Sem UFs explícitas, todas são processadas:
+
+   ```powershell
+   python scripts/generate_census_tracts.py --profile map
    ```
-   Sem `--url`, ele usa a planilha local já em `data/idhm_pnud_brazil.xlsx`.
-   Com `--check`, ele só compara o JSON atual com a planilha, sem escrever.
-3. Confira o resumo impresso (anos, `latestYear`, IDHM do Brasil no último ano) com a fonte oficial.
-4. Atualize `DATA_SOURCE_CATALOG.idhmPnudBrazil` em `app.js`: `freshness` (ex.: "IDHM anual 2012-2024..."),
-   `url`/`fileUrl` e, se a metodologia/cobertura mudou, `methodology`/`limitations`/`note`.
 
-O mapeamento coluna→campo (`IDHM→idhm`, `IDHM_L→longevity`, `IDHM_E→education`, `IDHM_R→income`,
-`IDHMAD→adjusted`, `ESPVIDA→lifeExpectancy`, `RDPC→incomePerCapita`, `GINI→gini`) está documentado no topo do script.
+   O perfil `map` traz os temas prioritários descritos no catálogo censitário:
+   população e domicílios, idade, sexo, alfabetização, cor ou raça, renda,
+   saneamento e características territoriais. `--profile all` preserva o
+   universo completo para pesquisa e ETL, mas não deve ser publicado sem uma
+   revisão do tamanho e da utilidade dos indicadores.
 
-Quando uma edição nova sair só como **relatório em PDF** (sem planilha), como o Radar IDHM 2026,
-use `scripts/extract_idhm_from_radar_pdf.py` (padrão: `data/radar_idhm_web.pdf`, baixado de
-`https://www.undp.org/pt/brazil/publications/radar-idhm-evolucao-do-idhm-e-de-seus-componentes-periodo-de-2012-2024`;
-o PDF tem ~85 MB e **não é versionado** — está no `.gitignore`). Ele localiza as
-tabelas-anexo pela legenda, extrai IDHM e subíndices por UF e Brasil (e o IDHMAD do Brasil), **valida
-contra valores-âncora oficiais** (ex.: Brasil 2024 = 0,805) e só então escreve o JSON. Rode com
-`--check` para validar sem escrever. Assim que a planilha oficial for publicada, volte a usar o
-`generate_idhm_brazil.py`. Obs.: o app só exibe `idhm/longevity/education/income/adjusted` no IDH;
-os campos `lifeExpectancy/incomePerCapita/gini` não são usados nessa aba.
+4. Quando houver nova edição do IPS, atualize e valide a fonte oficial. O JSON
+   produzido por esse gerador é apenas uma entrada transitória e não entra no
+   site:
 
-Para trocar o proxy de cidades por IDHM municipal real:
+   ```powershell
+   python scripts/generate_ips_brazil.py --download
+   ```
 
-1. Integre uma base municipal auditável, preferencialmente Atlas Brasil/PNUD/IPEA/FJP para anos censitários.
-2. Crie um JSON municipal por código IBGE de 7 dígitos, por exemplo `data/idhm_municipios.json`.
-3. Cadastre uma nova fonte, por exemplo `idhmMunicipalAtlas`, com `provenance: "real"`, URL pública, campos, metodologia e limitações.
-4. Ajuste `cityMapProperties()` para ler o IDHM municipal real antes de cair no proxy da UF.
-5. Remova `idhmCityProxy` dos `sourceIds` quando a cidade tiver dado municipal real.
+   A geração de histórias por IA é opcional e não faz parte da atualização
+   mensal dos indicadores oficiais. Se não for executada, o publicador conserva
+   as histórias já revisadas no repositório.
 
-## Exemplo: IPS (Índice de Progresso Social)
+5. Converta os conjuntos próprios para a área intermediária do ETL e prepare
+   do zero a publicação particionada:
 
-A aba `IPS` usa três fontes cadastradas:
+   ```powershell
+   python scripts/build_static_extras.py
+   python scripts/build_static_site_data.py --clean-output --workers 8
+   ```
 
-- `ipsBrasilImazon`: IPS Brasil real/oficial (Instituto IPS Brasil, Imazon, Amazônia 2030 e Social Progress
-  Imperative). O app carrega `data/ips_brazil.json` com Brasil e 27 UFs **nas três edições (2024, 2025, 2026)**
-  em `byYear`, mais a série recalculada em `recalculatedSeries`. Escala 0-100, maior = melhor.
-- `ipsBrasilCities`: IPS municipal real/oficial dos **5.570 municípios**, um arquivo por edição
-  (`data/ips_brazil_cities_2024.json`, `_2025`, `_2026`), indexado por código IBGE de 7 dígitos, com IPS geral,
-  ranking nacional (x/5.570) e as 3 dimensões. O app baixa a edição vigente no load e as outras sob demanda,
-  quando o usuário troca o ano no seletor da legenda.
+   Execute `build_static_extras.py` antes do publicador. Suas saídas ficam em
+   `data/parquet/` e são copiadas para `site/atlas` durante a publicação; assim
+   `--clean-output` não apaga IPS, histórias ou catálogos.
 
-### Comparabilidade entre edições (leia antes de comparar anos)
+6. Execute os testes, confira `data/parquet/site/manifest.parquet`, sirva o site
+   localmente e valide pelo menos uma UF, um município e seus setores. O roteiro
+   verificável está em [TESTE_MANUAL_E_COMMIT.md](TESTE_MANUAL_E_COMMIT.md).
 
-A fonte é explícita: **as edições 2024, 2025 e 2026 não são estritamente comparáveis** — cada uma usa os
-indicadores e tratamentos disponíveis na época. Existem, portanto, dois conjuntos de números diferentes, e
-misturá-los é erro de leitura:
+O publicador aceita `--source CAMINHO` para receber os Parquets de outro
+diretório de ETL. `--clean-output` remove somente uma saída validada cujo nome
+é `site`; use-o quando for necessária uma reconstrução integral. Antes da
+remoção, o script exige as 19 tabelas do site e as partições das 27 UFs, para
+não produzir silenciosamente um pacote parcial.
 
-| | 2024 | 2025 | 2026 |
-|---|---|---|---|
-| **Por edição** (`brazil.byYear`) — o que foi publicado na época, alimenta o mapa | 61,83 | 61,96 | 63,40 |
-| **Recalculada** (`brazil.recalculatedSeries`) — parâmetros de 2026, comparável, alimenta o gráfico | 62,85 | 63,05 | 63,40 |
+## Proveniência e interpretação
 
-O app usa a série por edição no mapa e nos cards (é o dado daquele ano) e a recalculada no gráfico de
-histórico, rotulado como "série recalculada (comparável)". O aviso da fonte aparece na nota da análise.
+Cada indicador deve registrar fonte, ano, unidade, nível territorial e regra de
+agregação no catálogo. Totais podem ser distribuídos com conservação exata;
+taxas e índices herdados de município ou UF devem permanecer identificados como
+`proxy` e nunca ser divididos como totais. Valores observados, estimados,
+imputados ou simulados não podem ser apresentados como equivalentes.
 
-### UF nas edições anteriores
+As páginas externas indicadas na interface são links de auditoria. Elas não são
+fontes dos indicadores em tempo de execução: esses downloads acontecem apenas
+nos scripts de ETL. Durante a navegação, somente os tiles Esri World Imagery,
+OpenStreetMap e CARTO Dark Matter são consultados, conforme a escolha de fundo.
+As atribuições permanecem visíveis no mapa. Não faça download em massa,
+pré-carregamento ou cache offline dos tiles; consulte as políticas dos
+provedores antes de qualquer automação desse tráfego.
 
-Só o relatório da edição vigente está integrado, então as UFs de 2024 e 2025 vêm da **agregação municipal
-ponderada pela população** — o mesmo cálculo que o relatório usa para a nota do Brasil. O método é validado
-na edição vigente: a derivação reproduz o Quadro oficial das UFs com diferença máxima de **0,01**. Se algum
-dia divergir mais que 0,02, o script aborta (`validate_derived_states`).
-- `ipsCityProxy`: fallback. Só entra em cena se o JSON municipal não carregar ou um município faltar nele —
-  aí a cidade recebe o IPS da UF e é marcada como `proxy UF`.
+## Sugestão de atualização mensal no GitHub Actions
 
-### De onde vem a planilha municipal (importante para a próxima edição)
+Não foi criado nem alterado um workflow de atualização automática. Se o
+proprietário optar por automatizar, recomenda-se um workflow mensal separado,
+com acionamento manual adicional, que:
 
-O painel `https://ipsbrasil.org.br/explore/data` é **Phoenix LiveView**: o botão *Download* é um evento de
-LiveView, então a URL da planilha **não está no HTML**. Ela aparece no diff que o servidor manda ao receber o
-evento `open_download_modal`. Hoje o modal expõe duas saídas:
+1. faça checkout e configure a versão Python 3.14 disponível;
+2. instale `requirements-etl.txt`;
+3. restaure um cache opcional dos downloads oficiais;
+4. execute os comandos da seção “Pipeline recomendado”;
+5. rode testes e valide o manifesto e o limite de tamanho do Pages;
+6. abra uma Pull Request com os Parquets atualizados, em vez de publicar
+   diretamente na branch principal.
 
-- **XLSX completo (todos os municípios)** — URL estática, é a que o script usa. O ano é parte do caminho,
-  então dá para baixar as edições anteriores trocando só o número:
-  `https://ips-brasil.fly.storage.tigris.dev/downloads/ips-brasil-<ano>-tabela.xlsx` (confirmado para 2024, 2025 e 2026)
-- **CSV filtrado pela seleção atual** — `/explore/data/export?edition_id=<uuid>`
+Exemplo de gatilho a ser avaliado pelo proprietário:
 
-Se a URL do XLSX mudar numa edição futura, o caminho para achar a nova é falar o protocolo LiveView:
-GET da página (pega `csrf-token`, `data-phx-session`, `data-phx-static`) → WebSocket em
-`wss://ipsbrasil.org.br/live/websocket?_csrf_token=...&vsn=2.0.0` → `phx_join` no tópico `lv:<id>` →
-push do evento `open_download_modal` → ler o diff.
-
-A planilha traz `Município` e `UF`, mas **não traz código IBGE**. O script casa por nome normalizado contra a
-API de localidades do IBGE; cinco municípios têm grafia diferente e estão em `CITY_NAME_ALIASES`
-(Gracho/Graccho Cardoso, Arês/Arez, Açu/Assú, Barão de/do Monte Alto, São Luiz/São Luiz do Anauá). Se sobrar
-qualquer município sem código, o script **aborta** em vez de gravar cobertura parcial.
-
-O JSON municipal sai com IPS geral + ranking + 3 dimensões (706 KB, ~144 KB com gzip). Os 12 componentes
-existem na planilha e saem com `--full`, mas triplicam o arquivo (para ~1,8 MB) — como o app baixa esse
-arquivo no carregamento, inclusive no celular, eles ficam de fora até virarem opção de verdade na tela.
-
-Estrutura do índice: 3 dimensões — Necessidades Humanas Básicas, Fundamentos do Bem-estar e Oportunidades —
-e 12 componentes, somando 57 indicadores. O seletor da legenda (`#legend-ips-selector`) já traz **o IPS geral
-e as 3 dimensões**. Para acrescentar um componente:
-
-1. Adicionar a chave em `ANALYSIS_CATALOG.ips.metrics`.
-2. Mapear a chave para o campo achatado em `IPS_METRIC_FIELDS`.
-3. Preencher esse campo em `stateMapProperties()` / `cityMapProperties()`.
-4. Gerar os dados com `--full` (os componentes ficam fora do JSON por padrão) e incluir a chave em
-   `build_class_breaks()` no gerador, para o indicador ganhar cortes de cor na faixa dele.
-
-### Por que o mapa é classificado, e não um gradiente
-
-O mapa oficial do IPS usa **9 classes** (quebras naturais), não interpolação contínua — e há um motivo
-prático: interpolar amarelo → azul em RGB passa por cinza-oliva, e como 20 das 27 UFs caem justamente na
-faixa de 58 a 65, o mapa contínuo ficava visualmente homogêneo mesmo com valores distintos. Com `step` e
-cores discretas, as UFs se espalham por 6 classes bem separadas.
-
-Os cortes ficam em `classBreaks` no `data/ips_brazil.json`, **um conjunto por indicador**, porque as
-dimensões vivem em faixas muito diferentes (Necessidades Básicas gira em torno de 75, Oportunidades de 44):
-usar os cortes do IPS geral em todas pintaria uma toda de azul e outra toda de vermelho.
-
-- `ips`: pontos médios entre as médias dos 9 grupos oficiais do relatório. Cada média publicada cai na sua
-  própria classe — é o que o script checa em `class_breaks_for_ips()`.
-- dimensões: quantis da distribuição municipal da edição vigente.
-
-Os cortes são calculados na edição vigente e aplicados a todas, para a cor não mudar de significado quando
-o usuário troca o ano.
-
-Para atualizar o IPS, use `scripts/generate_ips_brazil.py`:
-
-```
-python scripts/generate_ips_brazil.py                    # baixa o que faltar e regenera todos os JSONs
-python scripts/generate_ips_brazil.py --check            # extrai e valida sem escrever
-python scripts/generate_ips_brazil.py --download         # força rebaixar relatório e planilhas
-python scripts/generate_ips_brazil.py --full             # inclui os 12 componentes nos JSONs municipais
-python scripts/generate_ips_brazil.py --skip-cities      # só Brasil/UFs
-python scripts/generate_ips_brazil.py --editions 2026    # processa só uma edição
+```yaml
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "20 6 1 * *" # dia 1 de cada mês, 06:20 UTC
 ```
 
-Ao sair uma edição nova: acrescente o ano em `EDITIONS`, atualize `REPORT_URL` e as âncoras
-(`DEFAULT_ANCHORS` e `CITY_ANCHORS`, que mudam de município entre edições), e rode com `--download`.
-
-Brasil e UFs vêm do **relatório geral em PDF** (`https://ipsbrasil.org.br/relatorios`); os municípios vêm da
-**planilha oficial** (seção acima). O script localiza as tabelas do PDF pelo texto (não por número de página,
-que muda entre edições) e **valida antes de escrever**:
-
-- âncoras do relatório: Brasil 63,40; DF 70,73; Pará 55,80 (edição 2026);
-- âncoras municipais: Gavião Peixoto 73,10; Jundiaí 71,80; Breves 49,66; Bannach 47,23;
-- os 5.570 municípios casaram com código IBGE, em **todas** as edições;
-- **a média municipal ponderada por população reproduz a nota nacional do PDF** — é o teste mais forte,
-  porque amarra as duas fontes independentes uma na outra (deu 63,40 exato na edição 2026);
-- **a derivação das UFs reproduz o Quadro oficial** (dif. máxima 0,01), o que legitima usá-la nas edições
-  anteriores, cujo relatório não está integrado.
-
-O PDF (~39 MB) e os XLSX (~2 MB cada) ficam em `data/` e **não são versionados**.
-
-Ao trocar de edição, atualize também `DATA_SOURCE_CATALOG.ipsBrasilImazon` (`freshness`, `limitations`) e as
-âncoras em `DEFAULT_ANCHORS` no script. Atenção: o próprio relatório avisa que as edições **não são
-estritamente comparáveis** entre si, e que IPS Brasil e IPS Global medem coisas diferentes (o Brasil marca
-72,74 no IPS Global 2026 e 63,40 no IPS Brasil 2026).
-
-Ao trocar de edição, confira também se as âncoras municipais em `CITY_ANCHORS` continuam publicadas no novo
-relatório (os quadros de melhores/piores desempenhos mudam de município entre edições).
-
-## 3. Crie uma nova análise
-
-Adicione uma entrada em `ANALYSIS_CATALOG`:
-
-```js
-saude: {
-  label: "Saúde",
-  caption: "Saúde",
-  icon: "activity",
-  group: "primary",
-  title: "Indicadores de saúde",
-  defaultMetric: "leitos",
-  sourceIds: ["novaFonte"],
-  note: "O que esta camada mostra e como interpretar.",
-  metrics: {
-    leitos: { label: "Leitos", metric: "Leitos por habitante", sourceIds: ["novaFonte"] }
-  }
-}
-```
-
-O botão aparece automaticamente no grupo definido por `group`: `primary` para Análise ou `explore` para Exploração.
-
-## 4. Identifique a procedência
-
-Toda métrica deve apontar para `sourceIds`. A interface usa isso para mostrar:
-
-- chip de fonte no mapa;
-- rodapé da legenda;
-- nota em "Dados gerais";
-- se o dado é real, estimado, simulado, curado, compilado ou misto.
-
-Evite colocar um dado como `real` se ele foi projetado, calculado localmente ou digitado manualmente. Use `estimado`, `simulado`, `curado` ou `misto` conforme o caso.
-
-## 5. Tipos de origem suportados
-
-- `api`: dados carregados via `fetchJson`, como SIDRA/IBGE.
-- `json`: arquivo local em `data/`.
-- `db`: dado vindo de endpoint próprio que consulta banco. Exponha como API HTTP e cadastre a URL.
-- `manual`: dado curado no código ou em JSON.
-- `computed`: dado calculado no navegador a partir de outros dados.
-
-O padrão recomendado é: buscar ou carregar o dado, normalizar para propriedades do território (`feature.properties`) e deixar mapa, cards e ranking lerem sempre essas propriedades.
+Essa frequência é suficiente para bases anuais ou mensais comuns no Atlas. Um
+job deve falhar, e não publicar silenciosamente, se uma fonte mudar de esquema,
+se a cobertura territorial cair ou se um arquivo ultrapassar o limite aceito
+pelo GitHub.

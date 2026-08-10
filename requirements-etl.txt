@@ -1,0 +1,14 @@
+# Dependências diretas do ETL, validadas com Python 3.14.4.
+climasus_readdbc_py==0.2.0
+geopandas==1.1.4
+httpx==0.28.1
+numpy==2.4.6
+openpyxl==3.1.5
+pandas==3.0.5
+pdfminer.six==20260107
+pdfplumber==0.11.10
+polars==1.43.2
+pyarrow==25.0.0
+requests==2.34.2
+shapely==2.1.2
+truststore==0.10.4

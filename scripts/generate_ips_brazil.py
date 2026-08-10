@@ -54,13 +54,16 @@ USO:
 
 import argparse
 import json
+import os
 import re
+import ssl
 import sys
 import unicodedata
 from datetime import date
 from pathlib import Path
 
 from pdfminer.high_level import extract_text
+import truststore
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_PDF = ROOT / "data" / "ips_brasil_relatorio.pdf"
@@ -182,38 +185,41 @@ def to_float(token):
     return float(token.replace(".", "").replace(",", "."))
 
 
-def download_report(destination):
-    try:
-        import httpx
-    except ImportError:  # pragma: no cover - dependência opcional
-        raise SystemExit(
-            "httpx não instalado. Baixe o relatório manualmente de "
-            f"{REPORT_PAGE} e rode com --pdf <arquivo>."
-        )
-
-    print(f"Baixando relatório de {REPORT_URL} ...")
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    with httpx.stream("GET", REPORT_URL, follow_redirects=True, timeout=600) as response:
-        response.raise_for_status()
-        with destination.open("wb") as handle:
-            for chunk in response.iter_bytes(chunk_size=1 << 20):
-                handle.write(chunk)
-    print(f"  salvo em {destination} ({destination.stat().st_size / 1e6:.1f} MB)")
-
-
-def download_file(url, destination, label):
+def httpx_client(timeout):
     try:
         import httpx
     except ImportError:  # pragma: no cover
-        raise SystemExit(f"httpx não instalado. Baixe {label} manualmente de {url} e passe o caminho.")
+        raise SystemExit(
+            "httpx não instalado. Execute: "
+            "python -m pip install -r requirements-etl.txt"
+        )
+    ssl_context = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    return httpx.Client(
+        verify=ssl_context,
+        follow_redirects=True,
+        timeout=timeout,
+        headers={"User-Agent": "AtlasBrasilETL/1.0"},
+    )
 
+
+def download_report(destination):
+    download_file(REPORT_URL, destination, "relatório geral (PDF)")
+
+def download_file(url, destination, label):
     print(f"Baixando {label} de {url} ...")
     destination.parent.mkdir(parents=True, exist_ok=True)
-    with httpx.stream("GET", url, follow_redirects=True, timeout=600) as response:
-        response.raise_for_status()
-        with destination.open("wb") as handle:
-            for chunk in response.iter_bytes(chunk_size=1 << 20):
-                handle.write(chunk)
+    temporary = destination.with_suffix(destination.suffix + ".part")
+    temporary.unlink(missing_ok=True)
+    try:
+        with httpx_client(600) as client, client.stream("GET", url) as response:
+            response.raise_for_status()
+            with temporary.open("wb") as handle:
+                for chunk in response.iter_bytes(chunk_size=1 << 20):
+                    handle.write(chunk)
+        os.replace(temporary, destination)
+    except Exception:
+        temporary.unlink(missing_ok=True)
+        raise
     print(f"  salvo em {destination} ({destination.stat().st_size / 1e6:.1f} MB)")
 
 
@@ -221,15 +227,11 @@ def ibge_code_index():
     """(sigla da UF, nome normalizado) -> código IBGE de 7 dígitos. Cacheado entre edições."""
     if ibge_code_index.cache:
         return ibge_code_index.cache
-    try:
-        import httpx
-    except ImportError:  # pragma: no cover
-        raise SystemExit("httpx não instalado; necessário para casar municípios com o código IBGE.")
-
     print("Buscando municípios do IBGE para o join por código ...")
-    response = httpx.get(IBGE_MUNICIPALITIES_URL, timeout=300, follow_redirects=True)
-    response.raise_for_status()
-    rows = response.json()
+    with httpx_client(300) as client:
+        response = client.get(IBGE_MUNICIPALITIES_URL)
+        response.raise_for_status()
+        rows = response.json()
 
     index = {}
     for row in rows:

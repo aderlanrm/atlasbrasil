@@ -22,32 +22,48 @@ do not see wild swings driven by a single death.
 
 import pandas as pd
 
-from pysus import sim, sinasc
-
 from . import UFS
+from .source import (
+    SIM_DIRECTORY,
+    SINASC_DIRECTORIES,
+    DatasusFTPSource,
+    sim_filename,
+    sinasc_filename,
+)
 
 
 def _normalize_code(series: pd.Series) -> pd.Series:
     return series.astype(str).str.strip().str.zfill(6)
 
 
-def _fetch_sim_year(year: int, ufs):
+def _fetch_sim_year(year: int, ufs, source: DatasusFTPSource):
     frames = []
+    columns = ["CODMUNRES", "IDADE", "CAUSABAS", "SEXO"]
     for uf in ufs:
-        df = sim(state=uf, year=year)
-        if df is None or df.empty:
+        try:
+            df = source.read_table(
+                SIM_DIRECTORY,
+                sim_filename(uf, year),
+                columns,
+            )
+        except FileNotFoundError:
             continue
-        frames.append(df[["CODMUNRES", "IDADE", "CAUSABAS", "SEXO"]])
+        if not df.empty:
+            frames.append(df)
     return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
 
 
-def _fetch_sinasc_year(year: int, ufs):
+def _fetch_sinasc_year(year: int, ufs, source: DatasusFTPSource):
     frames = []
     for uf in ufs:
-        df = sinasc(state=uf, year=year)
-        if df is None or df.empty:
+        filename = sinasc_filename(uf, year)
+        candidates = ((directory, filename) for directory in SINASC_DIRECTORIES)
+        try:
+            df = source.read_first_available(candidates, ["CODMUNRES"])
+        except FileNotFoundError:
             continue
-        frames.append(df[["CODMUNRES"]])
+        if not df.empty:
+            frames.append(df)
     return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
 
 
@@ -81,7 +97,7 @@ def aggregate_births(sinasc_df: pd.DataFrame):
     return codes.value_counts().rename("live_births")
 
 
-def fetch_mortality_3yr_avg(end_year: int, ufs=None):
+def fetch_mortality_3yr_avg(end_year: int, ufs=None, progress: bool = False):
     """Fetch (end_year, end_year-1, end_year-2) and aggregate.
 
     Returns DataFrame indexed by 6-digit IBGE with:
@@ -92,15 +108,27 @@ def fetch_mortality_3yr_avg(end_year: int, ufs=None):
 
     death_frames = []
     birth_series = []
-    for year in years:
-        sim_df = _fetch_sim_year(year, target_ufs)
-        agg = aggregate_deaths(sim_df)
-        if not agg.empty:
-            death_frames.append(agg)
-        sinasc_df = _fetch_sinasc_year(year, target_ufs)
-        births = aggregate_births(sinasc_df)
-        if not births.empty:
-            birth_series.append(births)
+    with DatasusFTPSource() as source:
+        for year in years:
+            for uf in target_ufs:
+                sim_df = _fetch_sim_year(year, [uf], source)
+                agg = aggregate_deaths(sim_df)
+                sim_rows = len(sim_df)
+                del sim_df
+                if not agg.empty:
+                    death_frames.append(agg)
+                sinasc_df = _fetch_sinasc_year(year, [uf], source)
+                births = aggregate_births(sinasc_df)
+                sinasc_rows = len(sinasc_df)
+                del sinasc_df
+                if not births.empty:
+                    birth_series.append(births)
+                if progress:
+                    print(
+                        f"      {year} {uf}: SIM {sim_rows:,} / "
+                        f"SINASC {sinasc_rows:,} registros",
+                        flush=True,
+                    )
 
     if death_frames:
         deaths_3y = (

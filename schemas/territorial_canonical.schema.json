@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Esquema Territorial Canônico do Atlas",
+  "type": "object",
+  "properties": {
+    "territoryId": { "type": "string" },
+    "name": { "type": "string" },
+    "territoryType": {
+      "type": "string",
+      "enum": ["country", "region", "state", "municipality", "district", "neighborhood", "census_sector"]
+    },
+    "validFrom": { "type": "integer" },
+    "validTo": { "type": ["integer", "null"] },
+    "geographyVintage": { "type": "string" },
+    "parentId": { "type": ["string", "null"] },
+    "sourceId": { "type": "string" }
+  },
+  "required": ["territoryId", "name", "territoryType", "validFrom", "geographyVintage", "sourceId"]
+}

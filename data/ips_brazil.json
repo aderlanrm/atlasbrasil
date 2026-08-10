@@ -5,7 +5,7 @@
     "reportUrl": "https://ipsbrasil.org.br/relatorios/download/IPSBrasil2026_Relatorio%20Geral.pdf",
     "panelUrl": "https://ipsbrasil.org.br/explore/data",
     "localFile": "data/ips_brasil_relatorio.pdf (nao versionado; ver .gitignore)",
-    "downloadedAt": "2026-08-06",
+    "downloadedAt": "2026-08-08",
     "note": "Brasil e 27 UFs por edicao. Na edicao 2026, as UFs vem do quadro oficial do relatorio geral; nas anteriores, da agregacao municipal ponderada pela populacao (mesmo calculo que o relatorio usa para a nota nacional, validado contra o quadro oficial de 2026 com diferenca maxima de 0,01). recalculatedSeries traz a serie comparavel que o relatorio publica. Gerado por scripts/generate_ips_brazil.py."
   },
   "edition": 2026,

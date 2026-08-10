@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Esquema Canônico de Indicadores do Atlas",
+  "type": "object",
+  "properties": {
+    "indicatorId": { "type": "string" },
+    "territoryId": { "type": "string" },
+    "officialValue": { "type": ["number", "null"] },
+    "childrenRollupValue": { "type": ["number", "null"] },
+    "estimatedValue": { "type": ["number", "null"] },
+    "unit": { "type": "string" },
+    "period": { "type": "string" },
+    "sourceId": { "type": "string" },
+    "denominator": { "type": ["string", "null"] },
+    "aggregationMethod": {
+      "type": "string",
+      "enum": ["sum", "weighted_average", "none"]
+    },
+    "provenanceState": { "type": "string" }
+  },
+  "required": ["indicatorId", "territoryId", "unit", "period", "sourceId", "aggregationMethod", "provenanceState"]
+}

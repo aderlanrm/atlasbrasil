@@ -18,6 +18,7 @@ __pycache__/
 htmlcov/
 dist/
 build/
+.builddeps/
 
 # Node/frontend artifacts, if the project gains a build step later
 node_modules/
@@ -74,5 +75,11 @@ desktop.ini
 data/radar_idhm_web.pdf
 data/ips_brasil_relatorio.pdf
 data/ips_brasil_tabela*.xlsx
+
+# Resultados intermediários dos ETLs; somente data/parquet/site é publicado.
+data/parquet/*.parquet
+data/parquet/setores_census/
+data/parquet/censo_setor_indicadores/
+data/parquet/censo_setor_tematicos/
 
 server.py

@@ -20,35 +20,21 @@
   ];
   // Fallback só para o caso de o JSON não trazer classBreaks (dado antigo em cache).
   const IPS_FALLBACK_BREAKS = [48.53, 52.0, 54.62, 56.86, 58.88, 60.86, 63.05, 66.29];
-  const APP_VERSION = "1.2.1";
+  const APP_VERSION = "2.1.0-parquet";
+
+  const OFFLINE_MAP_STYLE = {
+    version: 8,
+    name: "Atlas Brasil Offline",
+    sources: {},
+    layers: [{
+      id: "offline-background",
+      type: "background",
+      paint: { "background-color": "#07131c" }
+    }]
+  };
 
   const URLS = {
-    mapStyle: "https://tiles.openfreemap.org/styles/liberty",
-    fallbackStyle: "https://demotiles.maplibre.org/style.json",
-    brazilMesh: "https://servicodados.ibge.gov.br/api/v3/malhas/paises/BR?formato=application/vnd.geo%2Bjson&qualidade=minima",
-    statesMesh: "https://servicodados.ibge.gov.br/api/v3/malhas/paises/BR?intrarregiao=UF&formato=application/vnd.geo%2Bjson&qualidade=minima",
-    stateMesh: (stateId) => `https://servicodados.ibge.gov.br/api/v3/malhas/estados/${stateId}?intrarregiao=municipio&formato=application/vnd.geo%2Bjson&qualidade=minima`,
-    statePopulation: "https://apisidra.ibge.gov.br/values/t/4714/n3/all/v/93/p/2022",
-    cityPopulation: "https://apisidra.ibge.gov.br/values/t/4714/n6/all/v/93/p/2022",
-    gdpBrazil: "https://apisidra.ibge.gov.br/values/t/5938/n1/all/v/37/p/all",
-    gdpStates: "https://apisidra.ibge.gov.br/values/t/5938/n3/all/v/37/p/all",
-    cityGdpYear: (year) => `https://apisidra.ibge.gov.br/values/t/5938/n6/all/v/37/p/${year === "last/1" || year === "last" ? LATEST_OFFICIAL_GDP_YEAR : year}`,
-    municipalityGdpHistory: (cityId) => `https://apisidra.ibge.gov.br/values/t/5938/n6/${cityId}/v/37/p/all`,
-    states: "https://servicodados.ibge.gov.br/api/v1/localidades/estados?orderBy=nome",
-    cities: "https://servicodados.ibge.gov.br/api/v1/localidades/municipios?orderBy=nome",
-    hdiGlobal: "./data/hdi_global.json?v=" + APP_VERSION,
-    hdiOwid: "./data/hdi_owid.json?v=" + APP_VERSION,
-    idhmBrazil: "./data/idhm_brazil.json?v=" + APP_VERSION,
-    securityGlobal: "./data/security_global.json?v=" + APP_VERSION,
-    securityBrazil: "./data/security_brazil.json?v=" + APP_VERSION,
-    securityBrazilCities: "./data/security_brazil_cities.json?v=" + APP_VERSION,
-    healthGlobal: "./data/health_global.json?v=" + APP_VERSION,
-    healthBrazil: "./data/health_brazil.json?v=" + APP_VERSION,
-    healthBrazilCities: "./data/health_brazil_cities.json?v=" + APP_VERSION,
-    storiesBrazilCities: "./data/stories_brazil_cities.json?v=" + APP_VERSION,
-    ipsBrazil: "./data/ips_brazil.json?v=" + APP_VERSION,
-    ipsBrazilCities: (year) => `./data/ips_brazil_cities_${year}.json?v=${APP_VERSION}`,
-    worldMesh: "./data/world_data.geojson?v=" + APP_VERSION
+    mapStyle: OFFLINE_MAP_STYLE
   };
 
   const DATA_SOURCE_CATALOG = {
@@ -99,13 +85,13 @@
     },
     localWorldJson: {
       label: "Indicadores globais",
-      shortLabel: "JSON local",
-      provider: "data/world_data.geojson",
-      type: "json",
+      shortLabel: "Parquet local",
+      provider: "data/parquet/site/atlas/world_data.parquet",
+      type: "parquet",
       provenance: "compilado",
       freshness: "Base local versionada no repositório",
-      url: "./data/world_data.geojson",
-      upstreamLabel: "datasets/geo-countries + RestCountries + World Bank",
+      url: "./data/parquet/site/atlas/world_data.parquet",
+      upstreamLabel: "datasets/geo-countries + World Bank",
       upstreamSources: [
         {
           label: "datasets/geo-countries",
@@ -114,30 +100,24 @@
           usage: "base geométrica dos países"
         },
         {
-          label: "RestCountries",
-          url: "https://restcountries.com/",
-          fields: "população, área, região e nomes em português",
-          usage: "enriquecimento descritivo por país"
-        },
-        {
           label: "World Bank API",
           url: "https://api.worldbank.org/v2/country/all/indicator/NY.GDP.MKTP.CD",
-          fields: "PIB nominal em US$",
-          usage: "indicador econômico global"
+          fields: "população e PIB nominal em US$",
+          usage: "indicadores demográfico e econômico globais"
         }
       ],
       quality: "Compilado",
-      fields: ["geometria", "ISO_A3", "população", "área", "região", "nome em português", "PIB nominal em US$"],
-      methodology: "Arquivo gerado por fetch_world_data.py, que baixa a geometria, consulta RestCountries, consulta World Bank e faz merge por código ISO_A3.",
+      fields: ["geometria", "ISO_A3", "população", "área geodésica calculada", "nome", "PIB nominal em US$"],
+      methodology: "Arquivo gerado por fetch_world_data.py: baixa a geometria, calcula a área geodésica, consulta população e PIB no World Bank e faz o merge por código ISO_A3.",
       limitations: ["A precisão depende da atualização de cada fonte original.", "Países sem ISO_A3 compatível podem ficar sem enriquecimento completo.", "O arquivo é local: precisa ser regerado para refletir mudanças nas fontes upstream."],
       updatePolicy: "Reexecutar fetch_world_data.py e revisar o diff do GeoJSON quando quiser atualizar a base global.",
-      note: "GeoJSON local gerado por fetch_world_data.py a partir de fontes externas consolidadas."
+      note: "GeoParquet local gerado por fetch_world_data.py a partir de fontes oficiais consolidadas."
     },
     hdiGlobalUndp: {
       label: "IDH global",
       shortLabel: "UNDP HDR",
       provider: "UNDP Human Development Report Data Center",
-      type: "json",
+      type: "parquet",
       provenance: "real",
       freshness: "IDH 2023; série histórica 1990-2023",
       url: "https://hdr.undp.org/sites/default/files/2025_HDR/HDR25_Composite_indices_complete_time_series.csv",
@@ -153,21 +133,21 @@
           label: "CSV oficial HDR25",
           url: "https://hdr.undp.org/sites/default/files/2025_HDR/HDR25_Composite_indices_complete_time_series.csv",
           fields: "hdi_1990 a hdi_2023 e hdi_rank_2023",
-          usage: "arquivo bruto compactado em data/hdi_global.json"
+          usage: "arquivo bruto convertido para data/parquet/site/atlas/hdi_global.parquet"
         }
       ],
       quality: "Oficial",
       fields: ["ISO3", "país", "IDH anual 1990-2023", "ranking IDH 2023", "categoria HDR"],
-      methodology: "O arquivo data/hdi_global.json foi gerado a partir do CSV oficial de séries temporais do HDR, mantendo apenas os campos de IDH necessários para mapa, ranking e gráfico.",
-      limitations: ["A comparação global usa países com ISO3 compatível no GeoJSON local.", "O ano mais recente disponível nessa base é 2023.", "IDH global e IDHM brasileiro são métricas relacionadas, mas não idênticas metodologicamente."],
-      updatePolicy: "Baixar o CSV mais recente do HDR Data Center, regenerar data/hdi_global.json e conferir ano, ranking e cobertura por ISO3.",
-      note: "Dado real oficial do UNDP/HDR, carregado no site por JSON local versionado."
+      methodology: "O Parquet local foi gerado a partir do CSV oficial de séries temporais do HDR, mantendo apenas os campos de IDH necessários para mapa, ranking e gráfico.",
+      limitations: ["A comparação global usa países com ISO3 compatível no GeoParquet local.", "O ano mais recente disponível nessa base é 2023.", "IDH global e IDHM brasileiro são métricas relacionadas, mas não idênticas metodologicamente."],
+      updatePolicy: "Executar o ETL do HDR, regenerar hdi_global.parquet e conferir ano, ranking e cobertura por ISO3.",
+      note: "Dado real oficial do UNDP/HDR, carregado por Parquet local versionado."
     },
     hdiGlobalOwid: {
       label: "IDH global via OWID",
       shortLabel: "OWID/UNDP",
       provider: "Our World in Data",
-      type: "json",
+      type: "parquet",
       provenance: "compilado",
       freshness: "IDH 2023; série histórica 1990-2023; OWID atualizado em 2025-05-07",
       url: "https://ourworldindata.org/grapher/human-development-index",
@@ -177,7 +157,7 @@
           label: "Our World in Data Grapher",
           url: "https://ourworldindata.org/grapher/human-development-index",
           fields: "Entity, Code, Year, Human Development Index e região OWID",
-          usage: "CSV processado para data/hdi_owid.json"
+          usage: "CSV processado para data/parquet/site/atlas/hdi_owid.parquet"
         },
         {
           label: "Metadados OWID",
@@ -194,16 +174,16 @@
       ],
       quality: "Compilado a partir de fonte oficial",
       fields: ["Entity", "Code", "Year", "Human Development Index", "World region according to OWID"],
-      methodology: "O arquivo data/hdi_owid.json foi gerado a partir do CSV do Grapher do OWID. O OWID cita UNDP/HDR 2025 como fonte original e aplica processamento menor para padronizar a série no ecossistema OWID.",
+      methodology: "O Parquet local foi gerado a partir do CSV do Grapher do OWID. O OWID cita UNDP/HDR 2025 como fonte original e aplica processamento menor para padronizar a série no ecossistema OWID.",
       limitations: ["Não é a fonte primária; é uma redistribuição/processamento do OWID sobre dados UNDP.", "Pode ter cobertura ou metadados ligeiramente diferentes do CSV oficial HDR.", "Use UNDP/HDR quando a prioridade for fonte primária; use OWID quando a prioridade for documentação editorial e integração com séries OWID."],
-      updatePolicy: "Baixar human-development-index.csv e metadata.json do OWID, regenerar data/hdi_owid.json e revisar latestYear/cobertura.",
+      updatePolicy: "Executar o ETL do OWID, regenerar hdi_owid.parquet e revisar latestYear/cobertura.",
       note: "Dado compilado pelo OWID a partir do UNDP/HDR 2025, com metadados editoriais."
     },
     idhmPnudBrazil: {
       label: "IDHM Brasil e UFs",
       shortLabel: "PNUD IDHM",
       provider: "PNUD Brasil, IPEA, FJP e IBGE/PNAD Contínua",
-      type: "json",
+      type: "parquet",
       provenance: "real",
       freshness: "IDHM anual 2012-2024 para Brasil e UFs (Radar IDHM 2026)",
       url: "https://www.undp.org/pt/brazil/desenvolvimento-humano/painel-idhm",
@@ -219,7 +199,7 @@
           label: "Relatório Radar IDHM 2026 (PDF)",
           url: "https://www.undp.org/pt/brazil/publications/radar-idhm-evolucao-do-idhm-e-de-seus-componentes-periodo-de-2012-2024",
           fields: "Tabelas-anexo: IDHM e subíndices (Educação, Longevidade, Renda) por UF e Brasil, 2012 a 2024; IDHMAD do Brasil",
-          usage: "série anual extraída para data/idhm_brazil.json por scripts/extract_idhm_from_radar_pdf.py (PDF baixado dessa URL, não versionado)"
+          usage: "série anual convertida para data/parquet/site/atlas/idhm_brazil.parquet"
         },
         {
           label: "PNAD Contínua/IBGE",
@@ -230,30 +210,30 @@
       ],
       quality: "Oficial",
       fields: ["IDHM", "IDHM Longevidade", "IDHM Educação", "IDHM Renda", "IDHMAD (Brasil)"],
-      methodology: "data/idhm_brazil.json traz a série recalculada 2012-2024 do Radar IDHM 2026. IDHM e os três subíndices vêm das tabelas por UF e do Brasil; o IDHMAD geral só é publicado para o Brasil. O app seleciona o ano ativo e copia os valores para Brasil e UFs.",
+      methodology: "idhm_brazil.parquet traz a série recalculada 2012-2024 do Radar IDHM 2026. IDHM e os três subíndices vêm das tabelas por UF e do Brasil; o IDHMAD geral só é publicado para o Brasil.",
       limitations: ["Série anual cobre Brasil e UFs de 2012 a 2024 (a edição 2026 recalculou toda a série).", "IDHMAD geral não é publicado por UF, só para o Brasil; nas UFs esse campo fica sem dado.", "Não é uma série municipal anual.", "IDHM brasileiro e IDH global não devem ser misturados em ranking único."],
       updatePolicy: "Preferir a planilha oficial: scripts/generate_idhm_brazil.py --url <url do .xlsx do Painel IDHM>. Enquanto só houver o relatório em PDF (como na edição 2026), usar scripts/extract_idhm_from_radar_pdf.py. Veja docs/DADOS.md.",
       note: "Dado real oficial do Radar IDHM 2026 (PNUD/IPEA-FJP/IBGE), série 2012-2024 com componentes."
     },
     idhmCityProxy: {
-      label: "IDHM de cidades",
+      label: "IDHM de municípios",
       shortLabel: "Proxy UF",
       provider: "Cálculo local a partir do IDHM da UF",
       type: "computed",
       provenance: "estimado",
       freshness: "Proxy derivado do ano ativo do IDHM estadual",
       quality: "Proxy transparente",
-      fields: ["IDHM estadual do ano ativo", "código da UF", "cidade selecionada"],
-      methodology: "Como a base anual carregada não traz IDHM municipal, cada cidade recebe temporariamente o IDHM da sua UF para permitir navegação e comparação visual dentro do mapa.",
-      limitations: ["Não é IDHM municipal real.", "Não deve ser usado para ranking municipal, tomada de decisão local ou comparação entre cidades.", "O Atlas Brasil possui IDHM municipal em anos censitários, mas essa base ainda não foi integrada nesta versão."],
+      fields: ["IDHM estadual do ano ativo", "código da UF", "município selecionado"],
+      methodology: "Como a base anual carregada não traz IDHM municipal, cada município recebe temporariamente o IDHM da sua UF para permitir navegação e comparação visual dentro do mapa.",
+      limitations: ["Não é IDHM municipal real.", "Não deve ser usado para ranking municipal, tomada de decisão local ou comparação entre municípios.", "O Atlas Brasil possui IDHM municipal em anos censitários, mas essa base ainda não foi integrada nesta versão."],
       updatePolicy: "Substituir este proxy por uma base municipal auditável, informando anos censitários, arquivo bruto, campos usados e script de normalização.",
-      note: "Marcado como estimado para evitar falsa precisão em cidades."
+      note: "Marcado como estimado para evitar falsa precisão em municípios."
     },
     ipsBrasilImazon: {
       label: "IPS Brasil e UFs",
       shortLabel: "IPS Brasil",
       provider: "Instituto IPS Brasil, Imazon, Amazônia 2030 e Social Progress Imperative",
-      type: "json",
+      type: "parquet",
       provenance: "real",
       freshness: "IPS Brasil 2026 (3ª edição), série recalculada 2024-2026",
       url: "https://ipsbrasil.org.br",
@@ -269,7 +249,7 @@
           label: "Relatório geral IPS Brasil 2026 (PDF)",
           url: "https://ipsbrasil.org.br/relatorios",
           fields: "Quadro 11 (IPS das 27 UFs com ranking), seção Resultados (Brasil e dimensões) e série temporal 2024-2026",
-          usage: "extraído para data/ips_brazil.json por scripts/generate_ips_brazil.py (PDF baixado dessa página, não versionado)"
+          usage: "extraído e convertido para data/parquet/site/atlas/ips_brazil.parquet"
         },
         {
           label: "Social Progress Imperative",
@@ -280,7 +260,7 @@
       ],
       quality: "Oficial",
       fields: ["IPS geral (0-100)", "Necessidades Humanas Básicas", "Fundamentos do Bem-estar", "Oportunidades", "Ranking entre UFs"],
-      methodology: "IPS mede resultados sociais e ambientais (sem indicadores econômicos), em escala 0-100, a partir de 57 indicadores de fontes públicas agrupados em 3 dimensões e 12 componentes. data/ips_brazil.json traz o IPS geral do Brasil e das 27 UFs da edição 2026, mais a série nacional recalculada de 2024 a 2026.",
+      methodology: "IPS mede resultados sociais e ambientais (sem indicadores econômicos), em escala 0-100. O Parquet local traz Brasil, 27 UFs e a série nacional recalculada de 2024 a 2026.",
       limitations: [
         "Esta base cobre Brasil e UFs; o IPS municipal dos 5.570 municípios existe no painel oficial mas ainda não foi integrado.",
         "As edições 2024, 2025 e 2026 não são estritamente comparáveis entre si (mudaram indicadores e tratamentos); a série 2024-2026 publicada no relatório é um recálculo com os parâmetros de 2026.",
@@ -294,7 +274,7 @@
       label: "IPS dos 5.570 municípios",
       shortLabel: "IPS municipal",
       provider: "Instituto IPS Brasil, Imazon, Amazônia 2030 e Social Progress Imperative",
-      type: "json",
+      type: "parquet",
       provenance: "real",
       freshness: "IPS Brasil 2026, tabela municipal completa",
       url: "https://ipsbrasil.org.br/explore/data",
@@ -304,7 +284,7 @@
           label: "Tabela municipal do IPS Brasil (XLSX)",
           url: "https://ips-brasil.fly.storage.tigris.dev/downloads/ips-brasil-2026-tabela.xlsx",
           fields: "IPS geral, 3 dimensões, 12 componentes e 57 indicadores para 5.570 municípios",
-          usage: "convertida para data/ips_brazil_cities.json por scripts/generate_ips_brazil.py"
+          usage: "convertida para Parquet municipal versionado pelo ETL"
         },
         {
           label: "Localidades IBGE",
@@ -315,39 +295,39 @@
       ],
       quality: "Oficial",
       fields: ["IPS geral (0-100)", "Ranking nacional (x/5.570)", "Necessidades Humanas Básicas", "Fundamentos do Bem-estar", "Oportunidades"],
-      methodology: "Planilha municipal oficial da edição vigente, convertida para JSON e indexada por código IBGE. A conversão é validada contra o relatório: a média municipal ponderada pela população reproduz exatamente a nota nacional (63,40 em 2026), e as notas de municípios citados no relatório conferem uma a uma.",
+      methodology: "Planilha municipal oficial da edição vigente, convertida para Parquet e indexada por código IBGE. A conversão é validada contra o relatório e contra municípios de referência.",
       limitations: [
         "5.570 unidades de análise incluem Brasília (DF) e Fernando de Noronha (PE); Boa Esperança do Norte (MT), criado em 2025, não tem IPS.",
         "Edições 2024, 2025 e 2026 não são estritamente comparáveis entre si.",
-        "O JSON publicado traz IPS geral, ranking e as 3 dimensões; os 12 componentes e os 57 indicadores existem na planilha e são gerados com --full.",
+        "O Parquet publicado traz IPS geral, ranking e as 3 dimensões; os componentes adicionais permanecem disponíveis no ETL.",
         "Subnotificação é risco reconhecido pela fonte, sobretudo em Segurança Pessoal e Saúde e Bem-estar."
       ],
       updatePolicy: "Rodar scripts/generate_ips_brazil.py (baixa a planilha, casa com o IBGE e valida contra o relatório). Veja docs/DADOS.md.",
       note: "Dado real oficial por município, não proxy."
     },
     ipsCityProxy: {
-      label: "IPS de cidades (fallback)",
+      label: "IPS de municípios (fallback)",
       shortLabel: "Proxy UF",
       provider: "Cálculo local a partir do IPS da UF",
       type: "computed",
       provenance: "estimado",
       freshness: "Proxy derivado do IPS estadual da edição vigente",
       quality: "Proxy transparente",
-      fields: ["IPS da UF", "código da UF", "cidade selecionada"],
-      methodology: "Fallback: se a base municipal não carregar ou um município não estiver nela, a cidade recebe o IPS da sua UF só para o mapa não ficar vazio.",
+      fields: ["IPS da UF", "código da UF", "município selecionado"],
+      methodology: "Fallback: se a base municipal não carregar ou um município não estiver nela, ele recebe o IPS da sua UF só para o mapa não ficar vazio.",
       limitations: [
         "Não é IPS municipal real: o IPS oficial varia muito dentro de uma mesma UF (de 42 a 73 no país).",
         "Não deve ser usado para ranking municipal nem para decisão local.",
         "Com a base municipal carregada, esse proxy não é usado."
       ],
-      updatePolicy: "Nada a fazer enquanto data/ips_brazil_cities.json estiver publicado; esse caminho só existe como degradação graciosa.",
-      note: "Marcado como estimado para evitar falsa precisão em cidades."
+      updatePolicy: "Regenerar os Parquets municipais do IPS junto com a edição oficial vigente.",
+      note: "Marcado como estimado para evitar falsa precisão em municípios."
     },
     securityGlobalUnodc: {
       label: "Homicídios globais",
       shortLabel: "UNODC",
       provider: "UNODC / Global Study on Homicide",
-      type: "json",
+      type: "parquet",
       provenance: "real",
       freshness: "UNODC 2022-2023 consolidated",
       url: "https://dataunodc.un.org/data/crime/cts-intentional-homicide",
@@ -355,14 +335,14 @@
       fields: ["ISO3", "homicide rate per 100k", "ano de referência"],
       methodology: "Taxa de homicídios intencionais por 100 mil habitantes compilada do UNODC Global Study on Homicide.",
       limitations: ["Conjunto fallback com países selecionados.", "Algumas taxas refletem anos de referência diferentes (2021-2023).", "Países sem dados ficam sem valor no mapa."],
-      updatePolicy: "Baixar CSV oficial do UNODC Data Portal e regenerar data/security_global.json.",
+      updatePolicy: "Executar o ETL do UNODC e regenerar security_global.parquet.",
       note: "Dado real oficial do UNODC; fallback local usado para cobertura inicial."
     },
     securityGlobalGpi: {
       label: "Global Peace Index",
       shortLabel: "GPI",
       provider: "Vision of Humanity / IEP",
-      type: "json",
+      type: "parquet",
       provenance: "real",
       freshness: "GPI 2024",
       url: "https://visionofhumanity.org",
@@ -370,14 +350,14 @@
       fields: ["ISO3", "GPI Score", "GPI Rank"],
       methodology: "Global Peace Index (GPI) mede a paz relativa de nações usando indicadores de criminalidade, terrorismo, militarização e conflitos. Escala 1-5 (1 = mais pacífico, 5 = menos pacífico).",
       limitations: ["Conjunto fallback com países selecionados.", "GPI é composto por múltiplos indicadores, não apenas violência letal.", "Países sem dados ficam sem valor no mapa."],
-      updatePolicy: "Baixar planilha oficial do Vision of Humanity e regenerar data/security_global.json.",
+      updatePolicy: "Executar o ETL e regenerar security_global.parquet.",
       note: "Dado real do Institute for Economics & Peace."
     },
     securityBrazilFBSP: {
       label: "Segurança Pública Brasil",
       shortLabel: "FBSP/IPEA",
       provider: "FBSP Anuário Brasileiro / IPEA Atlas da Violência",
-      type: "json",
+      type: "parquet",
       provenance: "real",
       freshness: "FBSP Anuário 2024 (dados 2023)",
       url: "https://forumseguranca.org.br",
@@ -385,14 +365,14 @@
       fields: ["UF", "MVI por 100k", "Roubo Veículos por 100k", "Feminicídio por 100k", "Violência Doméstica por 100k", "ano-base"],
       methodology: "MVI = homicídio doloso + latrocínio + lesão corporal seguida de morte + mortes por intervenção policial. Roubo de veículos = roubo + furto. Feminicídio e violência doméstica baseados em registros policiais e consolidados oficiais.",
       limitations: ["Dados estaduais do Anuário FBSP 2024 (ano-base 2023).", "Violência doméstica pode ter subnotificação regional.", "Divergências esperadas entre FBSP (polícia) e Atlas da Violência (SUS/óbito)."],
-      updatePolicy: "Baixar nova planilha do Anuário FBSP e regenerar data/security_brazil.json.",
+      updatePolicy: "Executar o ETL do FBSP e regenerar security_brazil.parquet.",
       note: "Dado real oficial do FBSP e IPEA."
     },
     securityBrazilIPEACities: {
       label: "Homicídios municipais",
       shortLabel: "IPEA Atlas",
       provider: "IPEA Atlas da Violência 2024 / FBSP / SIM-MS / IBGE",
-      type: "json",
+      type: "parquet",
       provenance: "official_extracted_pdf",
       freshness: "Atlas da Violência 2024, ano-base 2022",
       url: "https://repositorio.ipea.gov.br/bitstream/11058/14031/5/AtlasViolencia2024_Retrato_dos_municipios_brasileros.pdf",
@@ -400,19 +380,19 @@
       fields: ["código IBGE", "homicídios estimados", "homicídios por 100k", "ano"],
       methodology: "Taxa de homicídios estimados por 100 mil habitantes. Soma homicídios registrados e homicídios ocultos estimados, conforme metodologia do Atlas.",
       limitations: ["Cobertura restrita aos 319 municípios com mais de 100 mil habitantes em 2022.", "Municípios sem dado usam proxy pela UF.", "Os demais indicadores municipais da aba continuam sendo proxy estadual."],
-      updatePolicy: "Atualizar data/security_brazil_cities_atlas2024.csv pela Tabela 2 do Atlas municipal mais recente e regenerar data/security_brazil_cities.json.",
-      note: "Dado oficial do IPEA/FBSP para 319 municípios; demais cidades usam proxy UF."
+      updatePolicy: "Atualizar a fonte municipal do IPEA e regenerar security_brazil_cities.parquet.",
+      note: "Dado oficial do IPEA/FBSP para 319 municípios; os demais usam proxy UF."
     },
     securityBrazilCityProxy: {
-      label: "Segurança de cidades (Proxy)",
+      label: "Segurança de municípios (Proxy)",
       shortLabel: "Proxy UF",
       provider: "Cálculo local a partir do estado",
       type: "computed",
       provenance: "estimado",
       freshness: "Proxy derivado da UF",
       quality: "Proxy transparente",
-      fields: ["indicador estadual ativo", "código da UF", "cidade selecionada"],
-      methodology: "Quando não há dado municipal real do IPEA, a cidade recebe o indicador da sua UF para permitir navegação visual.",
+      fields: ["indicador estadual ativo", "código da UF", "município selecionado"],
+      methodology: "Quando não há dado municipal real do IPEA, o município recebe o indicador da sua UF para permitir navegação visual.",
       limitations: ["Não é dado municipal real.", "Não deve ser usado para ranking municipal ou tomada de decisão local.", "Prioridade é dada ao dado IPEA quando disponível."],
       updatePolicy: "Substituir por base municipal auditável quando disponível.",
       note: "Fallback transparente quando IPEA não cobre o município."
@@ -421,7 +401,7 @@
       label: "Saude global",
       shortLabel: "WHO/GHO",
       provider: "WHO Global Health Observatory",
-      type: "json",
+      type: "parquet",
       provenance: "compilado",
       freshness: "Indicadores 2021-2023, conforme pais e variavel",
       url: "https://www.who.int/data/gho",
@@ -433,9 +413,9 @@
       ],
       quality: "Compilado para MVP",
       fields: ["ISO3", "expectativa de vida", "HALE", "UHC", "leitos/10k", "medicos/10k", "enfermagem/10k", "gasto em saude"],
-      methodology: "O arquivo data/health_global.json normaliza indicadores internacionais por ISO3 para o mapa global. A proxima etapa deve substituir a base inicial por extracao automatizada das APIs oficiais.",
+      methodology: "health_global.parquet normaliza indicadores internacionais por ISO3 para o mapa global.",
       limitations: ["Cobertura inicial de paises selecionados.", "Indicadores podem ter anos de referencia diferentes.", "Use como panorama comparativo inicial, nao como base epidemiologica final."],
-      updatePolicy: "Baixar os indicadores WHO/GHO e WDI por API, preservar ano por indicador e regenerar data/health_global.json.",
+      updatePolicy: "Executar o ETL WHO/GHO e WDI, preservar o ano e regenerar health_global.parquet.",
       note: "Base inicial para comparacao global de saude."
     },
     healthGlobalWorldBank: {
@@ -457,7 +437,7 @@
       label: "Saude Brasil",
       shortLabel: "DATASUS/CNES",
       provider: "DATASUS, CNES, SIM, SINASC, SIH/SUS e IBGE",
-      type: "json",
+      type: "parquet",
       provenance: "compilado",
       freshness: "Base inicial 2022-2024, conforme indicador",
       url: "https://datasus.saude.gov.br/informacoes-de-saude-tabnet/",
@@ -470,8 +450,8 @@
       ],
       quality: "Compilado para MVP",
       fields: ["leitos/1.000", "leitos SUS/1.000", "UTI/100k", "medicos/1.000", "enfermeiros/1.000", "mortalidade infantil", "mortalidade materna", "vacinacao", "saude suplementar"],
-      methodology: "O arquivo data/health_brazil.json traz indicadores estaduais normalizados por populacao. Municipios usam proxy pela UF ate a integracao completa por codigo IBGE.",
-      limitations: ["Primeira versao compilada e arredondada.", "Municipios ainda nao usam dado CNES/SIM/SINASC real proprio.", "Indicadores de capacidade e resultado nao devem ser somados em um unico ranking sem metodologia."],
+      methodology: "health_brazil.parquet traz indicadores estaduais normalizados por população e registra os proxies territoriais.",
+      limitations: ["Primeira versão compilada e arredondada.", "Municípios ainda não usam dado CNES/SIM/SINASC real próprio.", "Indicadores de capacidade e resultado não devem ser somados em um único ranking sem metodologia."],
       updatePolicy: "Criar extrator oficial para CNES, SIM, SINASC, SIH/SUS, ANS/SIOPS e IBGE, preservando competencia/ano.",
       note: "Base inicial para panorama brasileiro de saude."
     },
@@ -479,13 +459,13 @@
       label: "Saude municipal",
       shortLabel: "DATASUS municipal",
       provider: "CNES, SIM, SINASC, SI-PNI e IBGE",
-      type: "json",
+      type: "parquet",
       provenance: "compilado",
       freshness: "Base municipal inicial 2022-2024, conforme indicador",
-      url: "./data/health_brazil_cities.json",
+      url: "./data/parquet/site/atlas/health_brazil_cities.parquet",
       upstreamLabel: "CNES + SIM + SINASC + SI-PNI + IBGE por codigo municipal",
       upstreamSources: [
-        { label: "CNES/DATASUS", url: "https://cnes.datasus.gov.br/", fields: "leitos, UTI, estabelecimentos e profissionais por municipio", usage: "capacidade instalada municipal" },
+        { label: "CNES/DATASUS", url: "https://cnes.datasus.gov.br/", fields: "leitos, UTI, estabelecimentos e profissionais por município", usage: "capacidade instalada municipal" },
         { label: "SIM/DATASUS", url: "https://opendatasus.saude.gov.br/dataset/sim", fields: "obitos por municipio de residencia", usage: "mortalidade infantil e materna" },
         { label: "SINASC/DATASUS", url: "https://datasus.saude.gov.br/informacoes-de-saude-tabnet/", fields: "nascidos vivos por municipio de residencia", usage: "denominador de mortalidade" },
         { label: "SI-PNI/DATASUS", url: "https://opendatasus.saude.gov.br/", fields: "cobertura vacinal municipal", usage: "prevencao e imunizacao" },
@@ -493,21 +473,21 @@
       ],
       quality: "Cobertura municipal inicial",
       fields: ["codigo IBGE", "leitos/1.000", "leitos SUS/1.000", "UTI/100k", "medicos/1.000", "mortalidade infantil", "mortalidade materna", "vacinacao"],
-      methodology: "O app usa dados municipais quando o codigo IBGE aparece em data/health_brazil_cities.json. Cidades sem linha propria continuam com proxy da UF, explicitamente sinalizado no card.",
-      limitations: ["Cobertura inicial parcial.", "Cidades polo podem concentrar hospitais que atendem populacao regional.", "Mortalidade em municipios pequenos deve preferir media movel de 3 anos na proxima geracao automatizada."],
+      methodology: "O app usa dados municipais quando o código IBGE aparece no Parquet. Municípios sem linha própria continuam com proxy da UF, explicitamente sinalizado.",
+      limitations: ["Cobertura inicial parcial.", "Municípios polo podem concentrar hospitais que atendem população regional.", "Mortalidade em municípios pequenos deve preferir média móvel de 3 anos na próxima geração automatizada."],
       updatePolicy: "Gerar o JSON completo a partir de CNES/SIM/SINASC/SI-PNI/IBGE por codigo IBGE de 7 digitos.",
       note: "Dado municipal quando disponivel; fallback transparente pela UF."
     },
     healthBrazilCityProxy: {
-      label: "Saude de cidades",
+      label: "Saúde de municípios",
       shortLabel: "Proxy UF",
       provider: "Calculo local a partir dos indicadores estaduais",
       type: "computed",
       provenance: "estimado",
       freshness: "Proxy derivado da UF",
       quality: "Proxy transparente",
-      fields: ["indicador estadual ativo", "codigo da UF", "cidade selecionada"],
-      methodology: "Enquanto a extracao municipal do CNES/DATASUS nao esta integrada, a cidade recebe o indicador da sua UF para permitir navegacao visual.",
+      fields: ["indicador estadual ativo", "código da UF", "município selecionado"],
+      methodology: "Enquanto a extração municipal do CNES/DATASUS não está integrada, o município recebe o indicador da sua UF para permitir navegação visual.",
       limitations: ["Nao e dado municipal real.", "Nao deve ser usado para ranking municipal final.", "Polos regionais podem atender populacao de varios municipios, exigindo leitura por local de residencia e local de atendimento."],
       updatePolicy: "Substituir por base municipal auditavel do CNES, SIM, SINASC, SIH/SUS e IBGE por codigo IBGE de 7 digitos.",
       note: "Fallback transparente ate integrar dado municipal."
@@ -548,26 +528,26 @@
       provenance: "curado",
       freshness: "Atualizado por edição do catálogo",
       quality: "Curadoria manual",
-      fields: ["cidade", "URL do vídeo", "título", "canal"],
-      methodology: "Lista manual mantida em DOCUMENTED_CITIES, usada para destacar cidades com documentários.",
-      limitations: ["Cobertura depende de curadoria; ausência de vídeo não significa ausência de conteúdo público sobre a cidade."],
-      updatePolicy: "Adicionar novas cidades com URL, título, canal e checagem manual do link.",
-      note: "Lista manual de cidades com documentário e metadados de vídeo."
+      fields: ["município", "URL do vídeo", "título", "canal"],
+      methodology: "Lista manual mantida em DOCUMENTED_CITIES, usada para destacar municípios com documentários.",
+      limitations: ["Cobertura depende de curadoria; ausência de vídeo não significa ausência de conteúdo público sobre o município."],
+      updatePolicy: "Adicionar novos municípios com URL, título, canal e checagem manual do link.",
+      note: "Lista manual de municípios com documentário e metadados de vídeo."
     },
     storiesAi: {
-      label: "Histórias de cidades",
+      label: "Histórias de municípios",
       shortLabel: "IA + IBGE",
-      provider: "data/stories_brazil_cities.json",
-      type: "json",
+      provider: "data/parquet/site/atlas/stories_brazil_cities.parquet",
+      type: "parquet",
       provenance: "gerado por IA",
       freshness: "Piloto gerado em 2026-07-19",
-      url: "./data/stories_brazil_cities.json",
+      url: "./data/parquet/site/atlas/stories_brazil_cities.parquet",
       quality: "Texto de IA ancorado em dados oficiais",
       fields: ["arquétipo", "história (até 6 frases)", "sinais usados", "lacunas", "confiança", "hash do material-fonte"],
-      methodology: "scripts/generate_city_stories.py coleta população, PIB, composição do VAB e o histórico oficial do IBGE Cidades; o prompt-mestre (prompt-mestre-atlas-cidades.md) instrui o modelo a escrever no máximo 6 frases usando apenas esse material, com inferências sinalizadas e arquétipo da paleta.",
-      limitations: ["Texto gerado por IA: pode conter leituras imprecisas mesmo ancorado nos dados.", "VAB municipal disponível até 2021; PIB total até 2023.", "Piloto com 10 cidades; cobertura completa depende de validação da ideia."],
-      updatePolicy: "Regenerar com o script + prompt-mestre e revisar antes de publicar; guardar hash do material por cidade.",
-      note: "História socioeconômica curta por cidade, gerada por IA a partir de dados IBGE e auditada contra o material-fonte."
+      methodology: "scripts/generate_city_stories.py coleta população, PIB, composição do VAB e o histórico oficial do portal do IBGE; o prompt-mestre instrui o modelo a escrever no máximo 6 frases usando apenas esse material, com inferências sinalizadas e arquétipo da paleta.",
+      limitations: ["Texto gerado por IA: pode conter leituras imprecisas mesmo ancorado nos dados.", "VAB municipal disponível até 2021; PIB total até 2023.", "Piloto com 10 municípios; cobertura completa depende de validação da ideia."],
+      updatePolicy: "Regenerar com o script + prompt-mestre e revisar antes de publicar; guardar hash do material por município.",
+      note: "História socioeconômica curta por município, gerada por IA a partir de dados IBGE e auditada contra o material-fonte."
     }
   };
 
@@ -602,7 +582,7 @@
       caption: "IDH e IDHM",
       icon: "activity",
       group: "primary",
-      title: "Desenvolvimento humano no mundo, Brasil, estados e cidades",
+      title: "Desenvolvimento humano no mundo, Brasil, estados e municípios",
       defaultMetric: "hdi",
       sourceIds: ["hdiGlobalUndp", "idhmPnudBrazil", "idhmCityProxy"],
       sourceOptions: [
@@ -621,7 +601,7 @@
           difference: "Redistribuição do OWID com processamento menor e metadados editoriais; a fonte original citada continua sendo UNDP/HDR 2025."
         }
       ],
-      note: "No Globo, usa IDH global oficial do UNDP/HDR. No Brasil e UFs, usa IDHM anual do Painel IDHM/PNUD. Em cidades, a camada aparece como proxy pela UF até integrar uma base municipal auditável."
+      note: "No Globo, usa IDH global oficial do UNDP/HDR. No Brasil e UFs, usa IDHM anual do Painel IDHM/PNUD. Em municípios, a camada aparece como proxy pela UF até integrar uma base municipal auditável."
     },
     ips: {
       label: "IPS",
@@ -696,14 +676,14 @@
         femicideRate: { label: "Feminicídio", metric: "Feminicídio por 100k", sourceIds: ["securityBrazilFBSP"] },
         domesticViolenceRate: { label: "Violência Doméstica", metric: "Violência doméstica por 100k", sourceIds: ["securityBrazilFBSP"] }
       },
-      note: "No Globo, alterna entre homicídios (UNODC) e Global Peace Index. No Brasil e UFs, alterna entre MVI, roubos de veículos, feminicídio e violência doméstica (FBSP). Em cidades, MVI usa homicídios estimados do Atlas para 319 municípios com mais de 100 mil habitantes; quando ausente, usa proxy pela UF."
+      note: "No Globo, alterna entre homicídios (UNODC) e Global Peace Index. No Brasil e UFs, alterna entre MVI, roubos de veículos, feminicídio e violência doméstica (FBSP). Em municípios, MVI usa homicídios estimados do Atlas para 319 municípios com mais de 100 mil habitantes; quando ausente, usa proxy pela UF."
     },
     health: {
-      label: "Saude",
-      caption: "Saude e hospitais",
+      label: "Saúde",
+      caption: "Saúde e hospitais",
       icon: "heart-pulse",
       group: "primary",
-      title: "Saude, hospitais, leitos e acesso",
+      title: "Saúde, hospitais, leitos e acesso",
       defaultMetric: "bedsPer1000",
       metricStateKey: "healthSubMetric",
       sourceIds: ["healthGlobalWho", "healthBrazilDatasus", "healthBrazilCitiesDatasus", "healthBrazilCityProxy"],
@@ -717,14 +697,14 @@
         lifeExpectancy: { label: "Expect. vida", metric: "Expectativa de vida", sourceIds: ["healthGlobalWho", "healthGlobalWorldBank"] },
         hospitalBedsPer10000: { label: "Leitos globais", metric: "Leitos por 10.000 hab.", sourceIds: ["healthGlobalWho", "healthGlobalWorldBank"] }
       },
-      note: "No Globo, usa indicadores padronizados da OMS/Banco Mundial/IHME. No Brasil e UFs, usa base inicial DATASUS/CNES/SIM/SINASC/IBGE. Em cidades, usa dado municipal quando existir em health_brazil_cities.json; quando faltar, usa proxy pela UF."
+      note: "No Globo, usa indicadores padronizados da OMS/Banco Mundial/IHME. No Brasil e UFs, usa base inicial DATASUS/CNES/SIM/SINASC/IBGE. Em municípios, usa dado municipal quando existir em health_brazil_cities.parquet; quando faltar, usa proxy pela UF."
     },
     sse: {
       label: "SSE",
-      caption: "Saude, Seguranca, Educacao",
+      caption: "Saúde, Segurança, Educação",
       icon: "target",
       group: "primary",
-      title: "Indice composto SSE: Saude + Seguranca + Educacao",
+      title: "Índice composto SSE: Saúde + Segurança + Educação",
       defaultMetric: "sseTotal",
       sourceIds: ["healthBrazilDatasus", "securityBrazilFBSP", "enemLocal"],
       note: "V1 simplificada: cada dimensao normalizada para 0-100 e o SSE total e a media simples (1/3 cada). Saude = media de leitos, medicos, vacinacao e (inverso de) mortalidade infantil. Seguranca = inverso da taxa de homicidios (MVI). Educacao = nota ENEM normalizada entre 450 e 650."
@@ -734,20 +714,78 @@
       caption: "Viajando o Brasil",
       icon: "map-pin",
       group: "explore",
-      title: "Cidades e estados documentados em vídeo",
+      title: "Municípios e estados documentados em vídeo",
       defaultMetric: "documentedCities",
       sourceIds: ["travelCurated"],
-      note: "Camada curada manualmente para cidades e estados com documentários em vídeo."
+      note: "Camada curada manualmente para municípios e estados com documentários em vídeo."
     },
     stories: {
-      label: "Histórias das Cidades",
-      caption: "Histórias das Cidades",
+      label: "Histórias dos Municípios",
+      caption: "Histórias dos Municípios",
       icon: "book-open",
       group: "explore",
-      title: "A leitura do lugar: por que a cidade existe e do que ela vive",
+      title: "A leitura do lugar: por que o município existe e do que ele vive",
       defaultMetric: "storyScore",
       sourceIds: ["storiesAi"],
-      note: "Piloto com 10 cidades: história curta gerada por IA apenas com dados do IBGE (população, PIB, VAB e histórico oficial), com arquétipo e nível de confiança."
+      note: "Piloto com 10 municípios: história curta gerada por IA apenas com dados do IBGE (população, PIB, VAB e histórico oficial), com arquétipo e nível de confiança."
+    }
+  };
+
+  const ANALYSIS_EDITORIAL = {
+    general: {
+      kicker: "Atlas demográfico",
+      title: "População e território",
+      summary: "Compare população, área, densidade e posição relativa dos territórios."
+    },
+    gdp: {
+      kicker: "Economia territorial",
+      title: "PIB e riqueza",
+      summary: "Explore o PIB total e por habitante, distinguindo valores oficiais e projeções sinalizadas."
+    },
+    hdi: {
+      kicker: "Desenvolvimento humano",
+      title: "IDH e IDHM",
+      summary: "Compare desenvolvimento humano, série histórica e componentes disponíveis em cada escala."
+    },
+    ips: {
+      kicker: "Progresso social",
+      title: "Índice de Progresso Social",
+      summary: "Analise resultados sociais e ambientais do IPS em escala de zero a cem."
+    },
+    politics: {
+      kicker: "Representação pública",
+      title: "Política e representação",
+      summary: "Examine representação política, habitantes por representante e estimativas explicitamente identificadas."
+    },
+    education: {
+      kicker: "Educação",
+      title: "Formação e desempenho educacional",
+      summary: "Compare os indicadores educacionais disponíveis e seus níveis de cobertura territorial."
+    },
+    security: {
+      kicker: "Segurança pública",
+      title: "Violência e segurança",
+      summary: "Explore violência letal e outros indicadores de segurança, observando fonte, ano e cobertura."
+    },
+    health: {
+      kicker: "Saúde pública",
+      title: "Saúde, acesso e capacidade",
+      summary: "Compare acesso, leitos, profissionais, vacinação e resultados de saúde disponíveis."
+    },
+    sse: {
+      kicker: "Síntese territorial",
+      title: "Saúde, Segurança e Educação",
+      summary: "Leia conjuntamente as três dimensões do índice composto SSE e seus componentes."
+    },
+    travel: {
+      kicker: "Atlas imersivo",
+      title: "Viajando pelo Brasil",
+      summary: "Descubra territórios documentados em vídeo e abra suas leituras locais."
+    },
+    stories: {
+      kicker: "Histórias dos municípios",
+      title: "A leitura do lugar",
+      summary: "Entenda por que cada município existe e do que vive, com textos ancorados em dados oficiais."
     }
   };
 
@@ -759,8 +797,7 @@
     gdpPerCapita: { label: "PIB per capita", metric: "PIB per capita US$ (24)", sourceIds: ["localWorldJson"], labels: ["<2k", "5k", "15k", "35k", "60k+"] }
   };
 
-  const STORAGE_KEY = "atlas-brasil-preferences-v1";
-  const DATA_CACHE_NAME = "atlas-brasil-official-data-2023-v1";
+  const STORAGE_KEY = "atlas-brasil-preferences-v3";
   const savedPreferences = readStoredPreferences();
   const savedCamera = normalizeCamera(savedPreferences.camera);
 
@@ -862,11 +899,13 @@
   let fixedPopup = null;
   let brazilClickTimer = null;
   let stateClickTimer = null;
+  let countryClickTimer = null;
   let hoverPopup = null;
   let hoveredFeatureKey = null;
   let isStreetMode = false;
   let brazilMeshFeature = null;
   let hoverCardsEnabled = savedPreferences.hoverCards !== false;
+  let bubblesEnabled = savedPreferences.bubbles !== false;
   let totalPopulation = 0;
   let brazilGdp = 0;
   let brazilGdpYear = "";
@@ -891,6 +930,8 @@
   let activeHealthSubMetric = savedPreferences.healthSubMetric || "bedsPer1000";
   let ipsBrazilData = null;
   let ipsBrazilCitiesData = null;
+  let currentSectorData = null;
+  let activeSectorIndicator = savedPreferences.sectorIndicator || "bairro";
   const ipsCitiesByYear = new Map();
   const ipsDerivedBreaks = new Map();
   let availableIpsYears = [];
@@ -898,16 +939,14 @@
   let activeIpsYear = savedPreferences.ipsYear ? String(savedPreferences.ipsYear) : "2026";
   let activeIpsSubMetric = validAnalysisMetric("ips", savedPreferences.ipsSubMetric) ? savedPreferences.ipsSubMetric : "ipsGeral";
   let activeSourceSelections = { ...(savedPreferences.sourceSelections || {}) };
-  let fallbackStyleTried = false;
-  let activeBaseMode = validBaseMode(savedPreferences.base) ? savedPreferences.base : "hybrid";
+  let activeBaseMode = validBaseMode(savedPreferences.base) ? savedPreferences.base : "earth";
   let activeProjection = validProjection(savedPreferences.projection) ? savedPreferences.projection : "globe";
-  let activeView = validView(savedPreferences.view) ? savedPreferences.view : "brazil";
+  let activeView = validView(savedPreferences.view) ? savedPreferences.view : "world";
   let activeAnalysis = validAnalysis(savedPreferences.analysis) ? savedPreferences.analysis : "general";
   let activeGdpSubMetric = savedPreferences.gdpSubMetric || "perCapita";
   let activeWorldMetric = validWorldMetric(savedPreferences.worldMetric) ? savedPreferences.worldMetric : "pop";
   let activeCurrency = savedPreferences.currency === "USD" ? "USD" : "BRL";
   const USD_BRL_RATE = 5.0;
-  let dataCacheStats = createDataCacheStats();
   let basePaintByLayer = new Map();
   let worldFeatureCollection = null;
   let legendCollapsed = null;
@@ -916,10 +955,11 @@
   function init() {
     cacheElements();
     renderAnalysisControls();
+    updateEditorialHeader();
     if (window.lucide) window.lucide.createIcons();
 
     if (typeof maplibregl === "undefined") {
-      showStatus("MapLibre não carregou", "Verifique a conexão com cdn.jsdelivr.net para abrir o mapa.", true);
+      showStatus("MapLibre não carregou", "Verifique se os arquivos locais de vendor foram publicados.", true);
       return;
     }
 
@@ -927,7 +967,18 @@
     bindControls();
     bindPanelHandle();
     applyPreferenceControls();
-    loadAtlas();
+    loadAtlas().catch((error) => {
+      console.error("Falha ao carregar os Parquets locais", error);
+      if (window.location.protocol === "file:") {
+        showStatus(
+          "Abra o Atlas por HTTP",
+          "Os Parquets não podem ser lidos por file://. Inicie o servidor local e acesse http://127.0.0.1:8000/.",
+          true
+        );
+        return;
+      }
+      showStatus("Dados locais indisponíveis", "Confirme a publicação completa em data/parquet/site e recarregue o Atlas.", true);
+    });
   }
 
   function isMobileLayout() {
@@ -966,11 +1017,13 @@
     [
       "status", "status-spinner", "status-title", "status-text", "fixed-detail-card", "hud-layer", "hud-source", "hud-zoom", "hud-coords",
       "heat-legend",
+      "brand-kicker", "brand-title", "brand-subtitle",
       "metric-br-pop", "metric-city-count", "metric-state", "metric-state-pop", "metric-city", "metric-city-pop",
       "analysis-caption", "data-state-label", "search", "search-results", "selected-code", "selected-type", "selected-name",
-      "selected-pop", "selected-share", "selected-area", "selected-density", "selected-rank", "selected-context", "hover-cards-toggle", "population-chart", "chart-title",
+      "selected-pop", "selected-share", "selected-area", "selected-density", "selected-rank", "selected-context", "hover-cards-toggle", "bubbles-toggle", "population-chart", "chart-title",
       "chart-caption", "ranking", "ranking-title", "ranking-caption", "general-caption", "general-grid", "general-note",
-      "analysis-primary-nav", "analysis-explore-nav"
+      "analysis-primary-nav", "analysis-explore-nav", "sector-indicator-controls",
+      "sector-indicator-select", "sector-indicator-note"
     ].forEach((id) => {
       elements[id] = document.getElementById(id);
     });
@@ -992,8 +1045,8 @@
     map = new maplibregl.Map({
       container: "map",
       style: URLS.mapStyle,
-      center: savedCamera ? savedCamera.center : [-30, 0],
-      zoom: savedCamera ? savedCamera.zoom : 1.7,
+      center: savedCamera ? savedCamera.center : BR_CENTER,
+      zoom: savedCamera ? savedCamera.zoom : 1.5,
       pitch: savedCamera ? savedCamera.pitch : 0,
       bearing: savedCamera ? savedCamera.bearing : 0,
       attributionControl: { compact: true },
@@ -1002,14 +1055,6 @@
 
     map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
     if (map.doubleClickZoom) map.doubleClickZoom.disable();
-
-    map.on("error", (event) => {
-      const message = String(event.error && event.error.message ? event.error.message : "");
-      if (!fallbackStyleTried && /style|tile|network|fetch/i.test(message)) {
-        fallbackStyleTried = true;
-        map.setStyle(URLS.fallbackStyle);
-      }
-    });
 
     map.on("styleimagemissing", (event) => {
       if (!map.hasImage(event.id)) {
@@ -1032,101 +1077,34 @@
   }
 
   async function loadAtlas() {
-    dataCacheStats = createDataCacheStats();
-    showStatus("Carregando dados oficiais", "Buscando cache local e, se faltar, IBGE/SIDRA.");
+    showStatus("Carregando dados oficiais", "Lendo os Parquets locais do Atlas Brasil.");
     seedFallbackStates();
-
-    const requests = await Promise.allSettled([
-      fetchJson(URLS.statePopulation),
-      fetchJson(URLS.cityPopulation),
-      fetchJson(URLS.gdpBrazil),
-      fetchJson(URLS.gdpStates),
-      fetchJson(URLS.cityGdpYear("last/1")),
-      fetchJson(URLS.states),
-      fetchJson(URLS.cities),
-      fetchJson(URLS.hdiGlobal).catch((error) => {
-        console.warn("Falha ao carregar IDH global.", error);
-        return null;
-      }),
-      fetchJson(URLS.hdiOwid).catch((error) => {
-        console.warn("Falha ao carregar IDH OWID.", error);
-        return null;
-      }),
-      fetchJson(URLS.idhmBrazil).catch((error) => {
-        console.warn("Falha ao carregar IDHM Brasil.", error);
-        return null;
-      }),
-      fetchJson(URLS.securityGlobal).catch((error) => {
-        console.warn("Falha ao carregar dados globais de segurança.", error);
-        return null;
-      }),
-      fetchJson(URLS.securityBrazil).catch((error) => {
-        console.warn("Falha ao carregar dados de segurança do Brasil.", error);
-        return null;
-      }),
-      fetchJson(URLS.securityBrazilCities).catch((error) => {
-        console.warn("Falha ao carregar dados municipais de segurança.", error);
-        return null;
-      }),
-      fetchJson(URLS.healthGlobal).catch((error) => {
-        console.warn("Falha ao carregar dados globais de saude.", error);
-        return null;
-      }),
-      fetchJson(URLS.healthBrazil).catch((error) => {
-        console.warn("Falha ao carregar dados de saude do Brasil.", error);
-        return null;
-      }),
-      fetchJson(URLS.healthBrazilCities).catch((error) => {
-        console.warn("Falha ao carregar dados municipais de saude.", error);
-        return null;
-      }),
-      fetchJson(URLS.storiesBrazilCities).catch((error) => {
-        console.warn("Falha ao carregar histórias das cidades.", error);
-        return null;
-      }),
-      fetchJson(URLS.ipsBrazil).catch((error) => {
-        console.warn("Falha ao carregar IPS Brasil.", error);
-        return null;
-      }),
-      fetchJson(URLS.ipsBrazilCities(activeIpsYear)).catch((error) => {
-        console.warn("Falha ao carregar IPS municipal.", error);
-        return null;
-      }),
-      fetchJson(URLS.brazilMesh).catch((error) => {
-        console.warn("Falha ao carregar malha nacional do Brasil.", error);
-        return null;
-      }),
-      fetchJson(URLS.statesMesh)
-    ]);
-
-    const [stateRows, cityRows, gdpBrazilRows, gdpStateRows, gdpCityRows, states, cities, hdiGlobalRows, hdiOwidRows, idhmBrazilRows, securityGlobalRows, securityBrazilRows, securityBrazilCitiesRows, healthGlobalRows, healthBrazilRows, healthBrazilCitiesRows, storiesBrazilCitiesRows, ipsBrazilRows, ipsBrazilCitiesRows, brazilMesh, statesMesh] = requests.map((result) => (
-      result.status === "fulfilled" ? result.value : null
-    ));
-
-    mergeStates(states);
-    mergePopulation(stateRows, stateById);
+    const data = await globalThis.AtlasStaticData.loadInitial(STATE_FALLBACK, activeIpsYear);
+    mergeStates(data.states);
+    mergePopulation(data.statePopulation, stateById);
     totalPopulation = sumPopulation(Array.from(stateById.values()));
-    mergeCities(cities);
-    mergeCityPopulation(cityRows);
-    mergeBrazilGdp(gdpBrazilRows);
-    mergeGdp(gdpStateRows, stateById);
-    mergeGdp(gdpCityRows, cityById);
-    mergeGlobalHdi(hdiGlobalRows);
-    mergeOwidHdi(hdiOwidRows);
-    mergeBrazilHdi(idhmBrazilRows);
-    mergeSecurityGlobal(securityGlobalRows);
-    mergeSecurityBrazil(securityBrazilRows);
-    mergeSecurityBrazilCities(securityBrazilCitiesRows);
-    mergeHealthGlobal(healthGlobalRows);
-    mergeHealthBrazil(healthBrazilRows);
-    mergeHealthBrazilCities(healthBrazilCitiesRows);
-    if (storiesBrazilCitiesRows && storiesBrazilCitiesRows.cities) {
-      storiesBrazilCitiesData = storiesBrazilCitiesRows;
+    mergeCities(data.cities);
+    mergeCityPopulation(data.cityPopulation);
+    mergeBrazilGdp(data.gdpBrazil);
+    mergeGdp(data.gdpStates, stateById);
+    mergeGdp(data.gdpCities, cityById);
+    mergeGlobalHdi(data.hdiGlobal);
+    mergeOwidHdi(data.hdiOwid);
+    mergeBrazilHdi(data.idhmBrazil);
+    mergeSecurityGlobal(data.securityGlobal);
+    mergeSecurityBrazil(data.securityBrazil);
+    mergeSecurityBrazilCities(data.securityBrazilCities);
+    mergeHealthGlobal(data.healthGlobal);
+    mergeHealthBrazil(data.healthBrazil);
+    mergeHealthBrazilCities(data.healthBrazilCities);
+    if (data.storiesBrazilCities && data.storiesBrazilCities.cities) {
+      storiesBrazilCitiesData = data.storiesBrazilCities;
     }
-    mergeIpsBrazil(ipsBrazilRows);
-    mergeIpsBrazilCities(ipsBrazilCitiesRows);
-    hydrateBrazilMesh(brazilMesh);
-    hydrateStatesMesh(statesMesh);
+    mergeIpsBrazil(data.ipsBrazil);
+    mergeIpsBrazilCities(data.ipsBrazilCities);
+    hydrateBrazilMesh(data.brazilMesh);
+    hydrateStatesMesh(data.statesMesh);
+    worldFeatureCollection = data.world;
     syncHdiToActiveYear();
     syncSecurityData();
     syncHealthData();
@@ -1145,15 +1123,7 @@
     if (activeGdpYear === "last" && availableGdpYears.length) activeGdpYear = availableGdpYears[0];
     syncGdpToActiveYear();
 
-    const failedRequests = requests.filter((result) => result.status === "rejected");
-    if (failedRequests.length) {
-      console.warn("Algumas consultas falharam.", failedRequests.map((result) => result.reason));
-      elements["data-state-label"].textContent = "dados parciais";
-      showStatus("Dados parciais", "Não foi possível completar todas as consultas. A camada estadual de referência continua disponível.", true);
-      setTimeout(hideStatus, 4200);
-    } else {
-      elements["data-state-label"].textContent = dataCacheLabel();
-    }
+    elements["data-state-label"].textContent = "Parquet local";
 
     updateStateSources();
     renderBrazilMetrics();
@@ -1169,14 +1139,12 @@
     if (!state) return;
 
     selectStateUi(state);
-    showStatus(`Carregando ${state.sigla}`, "Montando malha de cidades e bolhas proporcionais de população.");
+    updateEditorialHeader();
+    showStatus(`Carregando ${state.sigla}`, "Montando malha de municípios e bolhas proporcionais de população.");
 
     try {
       if (!stateCitiesCache.has(selectedStateId)) {
-        const [mesh] = await Promise.all([
-          fetchJson(URLS.stateMesh(selectedStateId))
-        ]);
-        
+        const mesh = await globalThis.AtlasStaticData.loadMunicipalities(state.sigla);
         const collection = hydrateCityMesh(mesh, selectedStateId);
         stateCitiesCache.set(selectedStateId, collection);
         syncGdpToActiveYear();
@@ -1187,7 +1155,7 @@
       renderMunicipalityRanking(collection);
       renderMunicipalityChart(collection);
       setLayerVisibility("municipality", true);
-      elements["hud-layer"].textContent = "Cidades";
+      elements["hud-layer"].textContent = "Municípios";
 
       const selectedFeature = collection.features.find((feature) => feature.properties.id === String(requestedCityId));
       enterCityAnalysisMode();
@@ -1197,9 +1165,9 @@
         flyToState(state);
       }
     } catch (error) {
-      console.warn("Falha ao carregar cidades", error);
+      console.warn("Falha ao carregar municípios", error);
       updateMunicipalitySources(emptyFeatureCollection());
-      renderEmptyRanking("Não foi possível carregar a malha de cidades dessa UF agora.");
+      renderEmptyRanking("Não foi possível carregar a malha de municípios dessa UF agora.");
       if (!options.preserveCamera) flyToState(state);
     } finally {
       hideStatus();
@@ -1383,7 +1351,7 @@
     const key = String(year);
     if (ipsCitiesByYear.has(key)) return ipsCitiesByYear.get(key);
     try {
-      const data = await fetchJson(URLS.ipsBrazilCities(key));
+      const data = await globalThis.AtlasStaticData.loadIpsYear(key);
       if (data && data.cities) {
         ipsCitiesByYear.set(key, data);
         return data;
@@ -1931,7 +1899,7 @@
       feature.properties = {
         ...feature.properties,
         id,
-        name: city.nome || readGeoProperty(feature.properties, ["nomarea", "NM_MUN", "nome"]) || `Cidade ${id}`,
+        name: city.nome || readGeoProperty(feature.properties, ["nomarea", "NM_MUN", "nome"]) || `Município ${id}`,
         stateId: String(stateId),
         uf: state ? state.sigla : "",
         stateName: state ? state.nome : "",
@@ -2313,7 +2281,7 @@
       type: "circle",
       source: "states-points-source",
       paint: {
-        "circle-radius": ["interpolate", ["sqrt"], ["to-number", ["get", "pop"], 0], 600000, 5, 3000000, 9, 9000000, 15, 44000000, 28],
+        "circle-radius": ["interpolate", ["exponential", 0.5], ["to-number", ["get", "pop"], 0], 600000, 5, 3000000, 9, 9000000, 15, 44000000, 28],
         "circle-color": "#51d1c2",
         "circle-opacity": 0.74,
         "circle-stroke-color": "#edf3ee",
@@ -2377,7 +2345,7 @@
       source: "municipality-points-source",
       layout: { visibility: "none" },
       paint: {
-        "circle-radius": ["interpolate", ["sqrt"], ["to-number", ["get", "pop"], 0], 1000, 3, 10000, 5, 100000, 8, 500000, 13, 2000000, 22, 11000000, 36],
+        "circle-radius": ["interpolate", ["exponential", 0.5], ["to-number", ["get", "pop"], 0], 1000, 3, 10000, 5, 100000, 8, 500000, 13, 2000000, 22, 11000000, 36],
         "circle-color": "#f2c14e",
         "circle-opacity": 0.72,
         "circle-stroke-color": "#0b1014",
@@ -2470,6 +2438,7 @@
       "circle-stroke-width": (activeAnalysis === "travel" || activeAnalysis === "stories") ? 2.2 : 1.4,
       "circle-stroke-color": (activeAnalysis === "travel" || activeAnalysis === "stories") ? "#ffffff" : "#0b1014"
     });
+    applyBaseModeToAtlasLayers();
   }
 
   function setLayerPaint(layerId, paint) {
@@ -2646,7 +2615,7 @@
   function territoryBubbleRadiusExpression(scope) {
     const metric = analysisMetricExpression();
     if (activeAnalysis === "gdp") {
-      return ["interpolate", ["sqrt"], metric, 0, 3, 20000, 6, 50000, 11, 100000, 18, 180000, 28];
+      return ["interpolate", ["exponential", 0.5], metric, 0, 3, 20000, 6, 50000, 11, 100000, 18, 180000, 28];
     }
     if (activeAnalysis === "hdi") {
       return scope === "city"
@@ -2665,8 +2634,8 @@
     }
     if (activeAnalysis === "politics") {
       return scope === "city"
-        ? ["interpolate", ["sqrt"], metric, 100, 3, 2000, 7, 8000, 12, 30000, 20, 200000, 34]
-        : ["interpolate", ["sqrt"], metric, 1000, 5, 3000, 10, 5000, 15, 8000, 22, 12000, 30];
+        ? ["interpolate", ["exponential", 0.5], metric, 100, 3, 2000, 7, 8000, 12, 30000, 20, 200000, 34]
+        : ["interpolate", ["exponential", 0.5], metric, 1000, 5, 3000, 10, 5000, 15, 8000, 22, 12000, 30];
     }
     if (activeAnalysis === "education") {
       return scope === "city"
@@ -2690,7 +2659,7 @@
         if (sourceId === "gpi") {
           return ["interpolate", ["linear"], metric, 1.0, 3, 1.5, 6, 2.0, 10, 2.5, 14, 3.0, 20, 3.5, 28];
         }
-        return ["interpolate", ["sqrt"], metric, 0, 3, 5, 6, 15, 11, 30, 18, 50, 28];
+        return ["interpolate", ["exponential", 0.5], metric, 0, 3, 5, 6, 15, 11, 30, 18, 50, 28];
       }
       const secMetric = activeSecuritySubMetric || "mviRate";
       const cityStops = {
@@ -2708,10 +2677,10 @@
       const stops = scope === "city" ? cityStops[secMetric] : stateStops[secMetric];
       if (!stops) {
         return scope === "city"
-          ? ["interpolate", ["sqrt"], metric, 0, 3, 10, 6, 25, 11, 40, 18, 60, 28]
-          : ["interpolate", ["sqrt"], metric, 0, 5, 10, 10, 20, 16, 35, 24, 55, 34];
+          ? ["interpolate", ["exponential", 0.5], metric, 0, 3, 10, 6, 25, 11, 40, 18, 60, 28]
+          : ["interpolate", ["exponential", 0.5], metric, 0, 5, 10, 10, 20, 16, 35, 24, 55, 34];
       }
-      const expr = ["interpolate", ["sqrt"], metric];
+      const expr = ["interpolate", ["exponential", 0.5], metric];
       for (let i = 0; i < stops.length; i += 2) {
         expr.push(stops[i], stops[i + 1]);
       }
@@ -2721,7 +2690,7 @@
       if (activeView === "world") {
         const healthMetric = activeHealthSubMetric || "uhcIndex";
         if (healthMetric === "lifeExpectancy") return ["interpolate", ["linear"], metric, 55, 3, 65, 7, 72, 12, 78, 20, 84, 30];
-        if (healthMetric === "hospitalBedsPer10000") return ["interpolate", ["sqrt"], metric, 0, 3, 15, 7, 30, 12, 60, 20, 100, 30];
+        if (healthMetric === "hospitalBedsPer10000") return ["interpolate", ["exponential", 0.5], metric, 0, 3, 15, 7, 30, 12, 60, 20, 100, 30];
         if (healthMetric === "doctorsPer1000") return ["interpolate", ["linear"], metric, 5, 3, 15, 7, 25, 12, 40, 20, 55, 30];
         return ["interpolate", ["linear"], metric, 40, 3, 60, 7, 75, 12, 85, 20, 92, 30];
       }
@@ -2733,13 +2702,13 @@
         infantMortality: [8, 5, 10, 10, 12, 16, 15, 24, 18, 34],
         vaccinationCoverage: [70, 5, 78, 10, 84, 16, 88, 24, 92, 34]
       }[healthMetric] || [0.8, 5, 1.4, 10, 2.0, 16, 2.6, 24, 3.2, 34];
-      const expr = ["interpolate", ["sqrt"], metric];
+      const expr = ["interpolate", ["exponential", 0.5], metric];
       for (let i = 0; i < stops.length; i += 2) expr.push(stops[i], stops[i + 1]);
       return expr;
     }
     return scope === "city"
-      ? ["interpolate", ["sqrt"], metric, 1000, 3, 10000, 5, 100000, 8, 500000, 13, 2000000, 22, 11000000, 36]
-      : ["interpolate", ["sqrt"], metric, 600000, 5, 3000000, 9, 9000000, 15, 44000000, 28];
+      ? ["interpolate", ["exponential", 0.5], metric, 1000, 3, 10000, 5, 100000, 8, 500000, 13, 2000000, 22, 11000000, 36]
+      : ["interpolate", ["exponential", 0.5], metric, 600000, 5, 3000000, 9, 9000000, 15, 44000000, 28];
   }
 
   function analysisMetricExpression() {
@@ -3072,7 +3041,7 @@
     legend.innerHTML = `
       <div class="legend-head">
         <span>Mapa de calor | ${escapeHtml(config.scope)}</span>
-        ${activeAnalysis === "hdi" ? `
+        ${activeView === "census_tract" ? `<strong>${escapeHtml(config.metric)}</strong>` : (activeAnalysis === "hdi" ? `
           <div class="flex-gap-4">
             ${renderSourceOptionSelector()}
             <div class="year-stepper">
@@ -3140,12 +3109,24 @@
               ${renderMetricOptions(WORLD_METRIC_CATALOG, activeWorldMetric)}
             </select>
           </div>
-        ` : `<strong>${escapeHtml(config.metric)}</strong>`))))))}
+        ` : `<strong>${escapeHtml(config.metric)}</strong>`)))))))}
       </div>
-      <div class="legend-scale" id="legend-gradient-scale"></div>
-      <div class="legend-labels">
-        ${config.labels.map((label) => `<span>${escapeHtml(label)}</span>`).join("")}
-      </div>
+      ${config.categories ? `
+        <div class="categorical-legend" role="list" aria-label="Cores por ${escapeHtml(config.metric.toLowerCase())}">
+          <div class="categorical-legend-count">${formatNumber(config.categories.length)} categorias</div>
+          ${config.categories.map((category, index) => `
+            <div class="categorical-legend-item" role="listitem">
+              <span class="categorical-legend-swatch" data-category-color-index="${index}" aria-hidden="true"></span>
+              <span title="${escapeHtml(category.label)}">${escapeHtml(category.label)}</span>
+            </div>
+          `).join("")}
+        </div>
+      ` : `
+        <div class="legend-scale" id="legend-gradient-scale"></div>
+        <div class="legend-labels">
+          ${config.labels.map((label) => `<span>${escapeHtml(label)}</span>`).join("")}
+        </div>
+      `}
       ${sourceHtml ? `
         <button type="button" class="legend-toggle" id="legend-toggle" aria-expanded="${legendCollapsed ? "false" : "true"}" aria-controls="legend-source-block">
           <span class="legend-toggle-label">${legendCollapsed ? "Fonte e detalhes" : "Ocultar detalhes"}</span>
@@ -3168,6 +3149,10 @@
         gradScale.style.background = `linear-gradient(90deg, ${config.colors.join(", ")})`;
       }
     }
+    legend.querySelectorAll("[data-category-color-index]").forEach((swatch) => {
+      const category = config.categories?.[Number(swatch.dataset.categoryColorIndex)];
+      if (category) swatch.style.backgroundColor = category.color;
+    });
 
     const legendToggle = legend.querySelector("#legend-toggle");
     if (legendToggle) {
@@ -3358,39 +3343,8 @@
         activeGdpYear = newYear;
         syncGdpToActiveYear();
         
-        // On-demand fetch for specific year if in cities view
-        if (activeView === "cities") {
-           const yearInt = parseInt(activeGdpYear, 10);
-           const latestOfficialYear = parseInt(LATEST_OFFICIAL_GDP_YEAR, 10);
-           const shouldFetchOfficialYear = activeGdpYear === "last" || (!isNaN(yearInt) && yearInt <= latestOfficialYear);
-           const resolvedYear = activeGdpYear === "last" || isNaN(yearInt) ? LATEST_OFFICIAL_GDP_YEAR : activeGdpYear;
-           // If we don't have this year in history for most cities, fetch it
-           if (shouldFetchOfficialYear) {
-           try {
-             showStatus("Atualizando dados", `Buscando PIB oficial para basear ${resolvedYear}...`);
-             const gdpRows = await fetchJson(URLS.cityGdpYear(resolvedYear));
-             mergeGdp(gdpRows, cityById);
-             
-             // Update all state caches if they exist
-             stateCitiesCache.forEach(collection => {
-                collection.features.forEach(f => {
-                   f.properties = { ...f.properties, ...cityMapProperties(f.properties) };
-                });
-             });
-             
-             // Re-sync after merge to move data from history to active properties
-             syncGdpToActiveYear();
-             
-             const collection = selectedStateId ? stateCitiesCache.get(selectedStateId) : null;
-             if (collection) updateMunicipalitySources(collection);
-             
-             hideStatus();
-           } catch (err) {
-             console.warn("Falha ao buscar ano específico", err);
-             hideStatus();
-           }
-           }
-        }
+        const collection = selectedStateId ? stateCitiesCache.get(selectedStateId) : null;
+        if (collection) updateMunicipalitySources(collection);
 
         updateStateSources();
         updateAnalysisPaint();
@@ -3466,6 +3420,33 @@
   }
 
   function heatLegendConfig() {
+    if (activeView === "census_tract" && currentSectorData) {
+      const indicator = sectorIndicatorMeta(activeSectorIndicator);
+      if (!indicator) return null;
+      if (indicator.kind === "categorical") {
+        return {
+          metric: indicator.label,
+          scope: "setores censitários",
+          categories: sectorCategoricalEntries(currentSectorData),
+          sourceIds: ["populationIbge"]
+        };
+      }
+      const values = currentSectorData.features
+        .map((feature) => Number(feature.properties?.[indicator.property]))
+        .filter(Number.isFinite)
+        .sort((a, b) => a - b);
+      return {
+        metric: indicator.label,
+        scope: "setores censitários",
+        colors: ["#17212b", "#1a5f8a", "#51d1c2", "#f2c14e", "#ff6b73"],
+        labels: values.length ? [
+          formatSectorIndicatorValue(values[0], indicator),
+          formatSectorIndicatorValue(sectorQuantile(values, 0.5), indicator),
+          formatSectorIndicatorValue(values.at(-1), indicator)
+        ] : ["sem dado"],
+        sourceIds: ["populationIbge"]
+      };
+    }
     if (!["states", "cities", "world"].includes(activeView)) return null;
 
     if (activeAnalysis === "hdi") {
@@ -3474,7 +3455,7 @@
       const isCity = activeView === "cities" && selectedStateId;
       return {
         metric: `${isWorld ? "IDH" : "IDHM"} ${year || ""}`,
-        scope: isWorld ? "Global" : (isCity ? "cidades da UF (proxy)" : "estados"),
+        scope: isWorld ? "Global" : (isCity ? "municípios da UF (proxy)" : "estados"),
         colors: ["#ff3b3b", "#ef7d60", "#f2c14e", "#a9d65c", "#17212b"],
         labels: ["baixo", "médio", "alto", "muito alto", "topo"],
         sourceIds: isWorld ? (activeSourceOption("hdi", "world")?.sourceIds || ["hdiGlobalUndp"]) : (isCity ? ["idhmPnudBrazil", "idhmCityProxy"] : ["idhmPnudBrazil"]),
@@ -3491,7 +3472,7 @@
       const formatBreak = (value) => value.toFixed(1).replace(".", ",");
       return {
         metric: `${metricConfig.metric}${edition ? ` ${edition}` : ""}`,
-        scope: `${isCityScope ? (hasCityData ? "cidades (municipal)" : "cidades da UF (proxy)") : "estados"}${edition ? ` ${edition}` : ""}`,
+        scope: `${isCityScope ? (hasCityData ? "municípios" : "municípios da UF (proxy)") : "estados"}${edition ? ` ${edition}` : ""}`,
         colors: IPS_CLASS_COLORS,
         // Rótulos nos cortes que importam: piso, meio e teto das classes.
         labels: [
@@ -3523,7 +3504,7 @@
     if (activeAnalysis === "education") {
       return {
         metric: `Nota média ENEM ${activeEnemYear}`,
-        scope: isCity ? "cidades da UF (relativo)" : "estados",
+        scope: isCity ? "municípios da UF (relativo)" : "estados",
         colors: ["#5c1514", "#ef7d60", "#f2c14e", "#a9d65c", "#51d1c2", "#3a8fc7"],
         labels: (scale && scale.max > scale.min) 
           ? [formatLabel(scale.min, "edu"), "...", formatLabel(scale.max, "edu")]
@@ -3535,7 +3516,7 @@
       const yearText = gdpYearNumber > parseInt(LATEST_OFFICIAL_GDP_YEAR, 10) ? `${activeGdpYear} (proj.)` : activeGdpYear;
       return {
         metric: activeGdpSubMetric === "total" ? `PIB Total ${yearText}` : `PIB por habitante ${yearText}`,
-        scope: isCity ? "cidades da UF (relativo)" : "estados",
+        scope: isCity ? "municípios da UF (relativo)" : "estados",
         colors: ["#ff3b3b", "#ef7d60", "#f2c14e", "#79a95d", "#17212b"],
         labels: (scale && scale.max > scale.min)
           ? [formatLabel(scale.min, "gdp"), "...", formatLabel(scale.max, "gdp")]
@@ -3548,7 +3529,7 @@
     if (activeAnalysis === "politics") {
       return {
         metric: "Habitantes por político",
-        scope: isCity ? "cidades da UF (relativo)" : "estados",
+        scope: isCity ? "municípios da UF (relativo)" : "estados",
         colors: ["#ff3b3b", "#ef7d60", "#f2c14e", "#51d1c2", "#16212b"],
         labels: (scale && scale.max > scale.min)
           ? [formatLabel(scale.min, "pol"), "...", formatLabel(scale.max, "pol")]
@@ -3558,7 +3539,7 @@
 
     if (activeAnalysis === "travel") {
       return {
-        metric: "Cidades documentadas",
+        metric: "Municípios documentados",
         scope: isCity ? "locais com vídeo" : "estados visitados",
         colors: ["#17212b", "#f2c14e"],
         labels: ["Sem vídeos", "Com documentários"]
@@ -3566,8 +3547,8 @@
     }
     if (activeAnalysis === "stories") {
       return {
-        metric: "Histórias das cidades",
-        scope: isCity ? "cidades com história" : "estados com histórias",
+        metric: "Histórias dos municípios",
+        scope: isCity ? "municípios com história" : "estados com histórias",
         colors: ["#17212b", "#b78ae8"],
         labels: ["Sem história", "Com história"]
       };
@@ -3576,7 +3557,7 @@
       const isCity = activeView === "cities" && selectedStateId;
       return {
         metric: "SSE total (0-100)",
-        scope: isCity ? "cidades da UF" : "estados",
+        scope: isCity ? "municípios da UF" : "estados",
         colors: ["#ef7d60", "#f2c14e", "#a9d65c", "#4f8f70", "#1a5f8a"],
         labels: ["20", "40", "60", "80", "95"],
         sourceIds: ["healthBrazilDatasus", "securityBrazilFBSP", "enemLocal"]
@@ -3624,7 +3605,7 @@
       const negative = metric === "infantMortality";
       return {
         metric: metricLabels[metric] || metricLabels.bedsPer1000,
-        scope: isCity ? "cidades da UF (municipal + proxy)" : "estados",
+        scope: isCity ? "municípios da UF (municipal + proxy)" : "estados",
         colors: negative
           ? ["#1a5f8a", "#4f8f70", "#a9d65c", "#f2c14e", "#ff3b3b"]
           : ["#ff3b3b", "#ef7d60", "#f2c14e", "#a9d65c", "#17212b"],
@@ -3670,7 +3651,7 @@
         femicideRate: isCity ? ["0", "1", "2", "3", "5+"] : ["0", "1", "1.5", "2.5", "4+"],
         domesticViolenceRate: isCity ? ["0", "25", "45", "60", "75+"] : ["0", "20", "35", "50", "65+"]
       };
-      const scopeLabel = isCity ? "cidades da UF (IPEA + proxy)" : "estados";
+      const scopeLabel = isCity ? "municípios da UF (IPEA + proxy)" : "estados";
       return {
         metric: metricLabels[metric] || "MVI por 100k",
         scope: scopeLabel,
@@ -3702,7 +3683,7 @@
 
     return {
       metric: "População",
-      scope: isCity ? "cidades da UF (relativo)" : "estados",
+      scope: isCity ? "municípios da UF (relativo)" : "estados",
       colors: isCity
         ? ["#ff3b3b", "#ef7d60", "#f2c14e", "#5b8e54", "#25534e", "#17212b"]
         : ["#ff3b3b", "#ef7d60", "#f2c14e", "#5b8e54", "#17212b"],
@@ -3803,7 +3784,7 @@
         }
         selectCity(props.id, fullFeature, { fly: false });
         showMunicipalityPopup(event.lngLat, props);
-        setActiveView("street");
+        setActiveView("census_tract");
         flyToStreet();
       });
       map.on("mousemove", layerId, (event) => {
@@ -3865,54 +3846,155 @@
     stateClickTimer = null;
   }
 
+  function scheduleCountryClick(lngLat, props, feature) {
+    clearPendingCountryClick();
+    countryClickTimer = window.setTimeout(() => {
+      countryClickTimer = null;
+      clearHoverPopup();
+      selectCountry(props, feature);
+      showCountryPopup(lngLat, feature.properties || props);
+    }, 240);
+  }
+
+  function clearPendingCountryClick() {
+    if (countryClickTimer) window.clearTimeout(countryClickTimer);
+    countryClickTimer = null;
+  }
+
   function addBaseLayers() {
-    if (!map.getSource("satellite-source")) {
-      map.addSource("satellite-source", {
-        type: "raster",
+    const bases = [
+      {
+        id: "earth",
         tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],
-        tileSize: 256,
         maxzoom: 19,
-        attribution: "Tiles © Esri"
+        attribution: "Tiles © Esri — Esri, Maxar, Earthstar Geographics e comunidade GIS"
+      },
+      {
+        id: "map",
+        tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+        maxzoom: 19,
+        attribution: "© OpenStreetMap contributors"
+      },
+      {
+        id: "hybrid",
+        tiles: ["https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png"],
+        maxzoom: 20,
+        attribution: "© OpenStreetMap contributors © CARTO"
+      }
+    ];
+    bases.forEach((base) => {
+      const sourceId = `base-${base.id}-source`;
+      const layerId = `base-${base.id}-layer`;
+      if (!map.getSource(sourceId)) {
+        map.addSource(sourceId, {
+          type: "raster",
+          tiles: base.tiles,
+          tileSize: 256,
+          maxzoom: base.maxzoom,
+          attribution: base.attribution
+        });
+      }
+      addLayerOnce({
+        id: layerId,
+        type: "raster",
+        source: sourceId,
+        layout: { visibility: base.id === activeBaseMode ? "visible" : "none" },
+        paint: { "raster-opacity": 1, "raster-fade-duration": 180 }
       });
-    }
-    addLayerOnce({
-      id: "satellite-layer",
-      type: "raster",
-      source: "satellite-source",
-      layout: { visibility: "none" },
-      paint: { "raster-opacity": 1 }
-    }, firstLineOrSymbolLayerId());
+    });
+  }
+
+  function updateEditorialHeader() {
+    const editorial = ANALYSIS_EDITORIAL[activeAnalysis] || ANALYSIS_EDITORIAL.general;
+    const state = selectedStateId ? stateById.get(String(selectedStateId)) : null;
+    const municipalityName = selectedCityFeature && selectedCityFeature.properties
+      ? selectedCityFeature.properties.name
+      : "";
+    const scopes = {
+      world: {
+        kicker: "Mundo",
+        suffix: "no mundo",
+        summary: "Passe o mouse ou clique em um país; dê duplo clique no Brasil para abrir os estados."
+      },
+      states: {
+        kicker: "Brasil | Estados",
+        suffix: "nos estados brasileiros",
+        summary: "Compare as UFs e dê duplo clique em um estado para abrir seus municípios."
+      },
+      cities: {
+        kicker: state ? `Brasil | ${state.sigla} | Municípios` : "Brasil | Municípios",
+        suffix: state ? `nos municípios de ${state.sigla}` : "nos municípios brasileiros",
+        summary: state
+          ? `Compare os municípios de ${state.nome} e dê duplo clique em um deles para abrir seus setores censitários.`
+          : "Escolha ou dê duplo clique em um estado para carregar seus municípios."
+      },
+      census_tract: {
+        kicker: municipalityName ? `Brasil | Setores | ${municipalityName}` : "Brasil | Setores censitários",
+        suffix: municipalityName ? `nos setores censitários de ${municipalityName}` : "nos setores censitários",
+        summary: "Explore os indicadores do Censo 2022 por setor censitário, com observações, estimativas e proxies identificados."
+      }
+    };
+    const scope = scopes[activeView] || scopes.world;
+    if (elements["brand-kicker"]) elements["brand-kicker"].textContent = `${editorial.kicker} | ${scope.kicker}`;
+    if (elements["brand-title"]) elements["brand-title"].textContent = `${editorial.title} ${scope.suffix}`;
+    if (elements["brand-subtitle"]) elements["brand-subtitle"].textContent = `${editorial.summary} ${scope.summary}`;
+    document.title = `Atlas Brasil | ${editorial.title} ${scope.suffix}`;
   }
 
   function setBaseMode(mode) {
-    activeBaseMode = mode;
-    const showSatellite = mode === "earth" || mode === "hybrid";
-    if (map.getLayer("satellite-layer")) {
-      map.setLayoutProperty("satellite-layer", "visibility", showSatellite ? "visible" : "none");
+    activeBaseMode = validBaseMode(mode) ? mode : "earth";
+    const offlineBackgrounds = { map: "#dce8ec", earth: "#10251f", hybrid: "#06131c" };
+    if (map.getLayer("offline-background")) {
+      map.setPaintProperty("offline-background", "background-color", offlineBackgrounds[activeBaseMode]);
     }
-
-    const style = map.getStyle();
-    const layers = style ? style.layers || [] : [];
-    layers.forEach((layer) => {
-      if (layer.id === "satellite-layer" || isAtlasLayer(layer.id)) return;
-      let visible = true;
-      if (mode === "earth") {
-        visible = false;
-      } else if (mode === "hybrid") {
-        visible = !["background", "fill", "fill-extrusion", "hillshade", "raster"].includes(layer.type);
+    ["earth", "map", "hybrid"].forEach((baseId) => {
+      const layerId = `base-${baseId}-layer`;
+      if (map.getLayer(layerId)) {
+        map.setLayoutProperty(layerId, "visibility", baseId === activeBaseMode ? "visible" : "none");
       }
-      try { map.setLayoutProperty(layer.id, "visibility", visible ? "visible" : "none"); } catch (error) {}
     });
-    tuneBaseMapPaint(mode);
+    applyBaseModeToAtlasLayers();
     setBaseAdministrativeBoundariesVisible(activeView !== "brazil");
+    const activeButton = document.querySelector(`[data-base="${activeBaseMode}"]`);
+    if (activeButton) setActiveButton("[data-base]", activeButton);
     savePreferences();
+  }
+
+  function applyBaseModeToAtlasLayers() {
+    if (!map) return;
+    const modes = {
+      map: {
+        fill: { brazil: 0.54, states: 0.5, municipalities: 0.48, sectors: 0.66 },
+        outline: "rgba(24, 54, 68, 0.72)", label: "#183644", halo: "#f7fbfc"
+      },
+      earth: {
+        fill: { brazil: 0.72, states: 0.68, municipalities: 0.64, sectors: 0.76 },
+        outline: "rgba(244, 249, 241, 0.78)", label: "#ffffff", halo: "#102a24"
+      },
+      hybrid: {
+        fill: { brazil: 0.86, states: 0.8, municipalities: 0.76, sectors: 0.88 },
+        outline: "rgba(237, 243, 238, 0.64)", label: "#edf3ee", halo: "#07121b"
+      }
+    };
+    const visual = modes[activeBaseMode] || modes.hybrid;
+    setLayerPaint("brazil-fill", { "fill-opacity": visual.fill.brazil });
+    setLayerPaint("states-fill", { "fill-opacity": activeAnalysis === "ips" ? Math.max(visual.fill.states, 0.82) : visual.fill.states });
+    setLayerPaint("municipality-fill", { "fill-opacity": activeAnalysis === "ips" ? Math.max(visual.fill.municipalities, 0.78) : visual.fill.municipalities });
+    setLayerPaint("world-fill", { "fill-opacity": visual.fill.states });
+    setLayerPaint("setores-fill", { "fill-opacity": visual.fill.sectors });
+    ["world-outline", "states-outline", "municipality-outline", "setores-outline"].forEach((id) => {
+      setLayerPaint(id, { "line-color": visual.outline });
+    });
+    ["states-labels", "municipality-labels"].forEach((id) => {
+      setLayerPaint(id, { "text-color": visual.label, "text-halo-color": visual.halo });
+    });
   }
 
   function tuneBaseMapPaint(mode) {
     const style = map.getStyle();
     if (!style || !style.layers) return;
     style.layers.forEach((layer) => {
-      if (layer.id === "satellite-layer" || isAtlasLayer(layer.id)) return;
+      if (layer.id === "offline-background" || layer.id === "satellite-layer" || isAtlasLayer(layer.id)) return;
       rememberBaseLayerPaint(layer);
 
       if (mode === "map") {
@@ -4014,7 +4096,7 @@
   }
 
   function isAtlasLayer(id) {
-    return id.startsWith("brazil-") || id.startsWith("states-") || id.startsWith("selected-state") || id.startsWith("municipality-") || id.startsWith("world-") || id.startsWith("selected-country");
+    return id.startsWith("brazil-") || id.startsWith("states-") || id.startsWith("selected-state") || id.startsWith("municipality-") || id.startsWith("setores-") || id.startsWith("world-") || id.startsWith("selected-country");
   }
 
   function setLayerVisibility(group, visible) {
@@ -4023,7 +4105,8 @@
     if (!style || !style.layers) return;
     style.layers.forEach((layer) => {
       if (layer.id.startsWith(prefix)) {
-        map.setLayoutProperty(layer.id, "visibility", visible ? "visible" : "none");
+        const layerVisible = visible && (!layer.id.endsWith("-bubbles") || bubblesEnabled);
+        map.setLayoutProperty(layer.id, "visibility", layerVisible ? "visible" : "none");
       }
     });
   }
@@ -4031,7 +4114,8 @@
   function setLayersVisibility(layerIds, visible) {
     layerIds.forEach((layerId) => {
       if (map.getLayer(layerId)) {
-        map.setLayoutProperty(layerId, "visibility", visible ? "visible" : "none");
+        const layerVisible = visible && (!layerId.endsWith("-bubbles") || bubblesEnabled);
+        map.setLayoutProperty(layerId, "visibility", layerVisible ? "visible" : "none");
       }
     });
   }
@@ -4070,6 +4154,11 @@
 
   function syncAtlasLayersForActiveView() {
     const hasWorld = Boolean(map.getLayer("world-fill"));
+    const sectorsVisible = activeView === "census_tract";
+    setLayersVisibility(["setores-fill", "setores-outline"], sectorsVisible);
+    if (elements["sector-indicator-controls"]) {
+      elements["sector-indicator-controls"].hidden = !sectorsVisible;
+    }
     if (activeView === "world") {
       setBrazilLayerVisibility(false);
       hideAtlasAnalysisLayers();
@@ -4105,7 +4194,7 @@
       return;
     }
 
-    if (activeView === "street") {
+    if (activeView === "census_tract") {
       hideAtlasLayersForStreet();
       return;
     }
@@ -4144,7 +4233,7 @@
           } else {
             enterCitiesChooserMode();
           }
-        } else if (view === "street") {
+        } else if (view === "census_tract") {
           flyToStreet();
         }
       });
@@ -4187,6 +4276,19 @@
       });
     }
 
+    if (elements["bubbles-toggle"]) {
+      elements["bubbles-toggle"].addEventListener("click", () => {
+        setBubblesEnabled(!bubblesEnabled);
+        savePreferences();
+      });
+    }
+
+    if (elements["sector-indicator-select"]) {
+      elements["sector-indicator-select"].addEventListener("change", (event) => {
+        applySectorIndicator(event.target.value);
+      });
+    }
+
     elements.search.addEventListener("input", renderSearch);
     elements.search.addEventListener("keydown", (event) => {
       if (event.key === "Escape") {
@@ -4203,6 +4305,7 @@
     if (button) setActiveButton("[data-view]", button);
     if (window.updateWorldLayerColor) window.updateWorldLayerColor();
     updateHeatLegend();
+    updateEditorialHeader();
     savePreferences();
   }
 
@@ -4216,6 +4319,7 @@
     const button = document.querySelector(`[data-analysis="${activeAnalysis}"]`);
     if (button) setActiveButton("[data-analysis]", button);
     if (elements["analysis-caption"]) elements["analysis-caption"].textContent = analysisLabel(activeAnalysis);
+    updateEditorialHeader();
     updateSourceDisplays();
     updateAnalysisPaint();
     if (window.updateWorldLayerColor) window.updateWorldLayerColor();
@@ -4278,15 +4382,15 @@
       } else {
         enterCitiesChooserMode({ preserveCamera });
       }
-    } else if (activeView === "street") {
-      setActiveView("street");
+    } else if (activeView === "census_tract") {
+      setActiveView("census_tract");
       if (savedPreferences.selectedStateId && stateById.has(String(savedPreferences.selectedStateId))) {
         await loadStateCities(savedPreferences.selectedStateId, savedPreferences.selectedCityId, { preserveCamera: true });
       }
-      flyToStreet({ preserveCamera });
+      await flyToStreet({ preserveCamera });
     } else {
-      setActiveView("brazil");
-      enterBrazilOverviewMode({ preserveCamera });
+      setActiveView("world");
+      await enterWorldMode({ preserveCamera });
     }
 
     if (savedCamera) restoreMapCamera(savedCamera);
@@ -4312,7 +4416,7 @@
     elements["metric-city-pop"].textContent = "dados gerais do país";
     renderSelectedBrazil();
     renderStateChart();
-    renderEmptyRanking("A visão Brasil mostra o país como um território único. Use Estados para comparar UFs ou Cidades para detalhar cidades.");
+    renderEmptyRanking("Clique no Brasil no globo para ler os totais ou use Estados para comparar as UFs.");
     if (!options.preserveCamera) fitBrazil();
     if (window.updateWorldLayerColor) window.updateWorldLayerColor();
     updateHeatLegend();
@@ -4340,7 +4444,7 @@
     elements["metric-city-pop"].textContent = "duplo clique em uma UF";
     if (options.selectBrazil) renderSelectedBrazil();
     renderStateChart();
-    renderEmptyRanking("Passe o mouse sobre um estado para ler os dados. Dê duplo clique em uma UF para explorar suas cidades.");
+    renderEmptyRanking("Passe o mouse sobre um estado para ler os dados. Dê duplo clique em uma UF para explorar seus municípios.");
     if (!options.preserveCamera) fitBrazil();
     if (window.updateWorldLayerColor) window.updateWorldLayerColor();
     updateHeatLegend();
@@ -4360,14 +4464,14 @@
     setLayerVisibility("states", true);
     setLayersVisibility(["selected-state-fill", "selected-state-glow-outer", "selected-state-outline"], true);
     setLayerVisibility("municipality", false);
-    elements["hud-layer"].textContent = "Cidades";
+    elements["hud-layer"].textContent = "Municípios";
     elements["metric-state"].textContent = "Brasil";
     elements["metric-state-pop"].textContent = "duplo clique em uma UF";
     elements["metric-city"].textContent = "nenhum";
     elements["metric-city-pop"].textContent = "escolha um estado";
     renderSelectedBrazil();
     renderStateChart();
-    renderEmptyRanking("Dê duplo clique em uma UF para carregar as cidades antes de entrar no detalhe.");
+    renderEmptyRanking("Dê duplo clique em uma UF para carregar os municípios antes de entrar no detalhe.");
     if (!options.preserveCamera) fitBrazil();
     if (window.updateWorldLayerColor) window.updateWorldLayerColor();
     updateHeatLegend();
@@ -4382,7 +4486,7 @@
     setLayersVisibility(["selected-state-fill", "selected-state-glow-outer", "selected-state-outline"], true);
     setLayerVisibility("municipality", true);
     updateSelectedStateSource();
-    elements["hud-layer"].textContent = "Cidades";
+    elements["hud-layer"].textContent = "Municípios";
     updateAnalysisPaint();
     if (window.updateWorldLayerColor) window.updateWorldLayerColor();
     updateHeatLegend();
@@ -4434,7 +4538,7 @@
       <button type="button" class="result-btn" data-type="${item.type}" data-id="${item.id}" data-state-id="${item.stateId || item.id}">
         <span>
           <span class="result-name">${escapeHtml(item.title)}</span>
-          <span class="result-meta">${escapeHtml(item.type === "state" ? "Unidade da Federação" : item.meta || "Cidade")}</span>
+          <span class="result-meta">${escapeHtml(item.type === "state" ? "Unidade da Federação" : item.meta || "Município")}</span>
         </span>
         <span class="result-pop">${formatShort(item.pop || 0)}</span>
       </button>
@@ -4455,7 +4559,7 @@
 
   function renderBrazilMetrics() {
     elements["metric-br-pop"].textContent = formatNumber(totalPopulation);
-    elements["metric-city-count"].textContent = cityById.size ? `${formatNumber(cityById.size)} cidades` : "cidades ao carregar";
+    elements["metric-city-count"].textContent = cityById.size ? `${formatNumber(cityById.size)} municípios` : "municípios ao carregar";
   }
 
   function renderSelectedBrazil() {
@@ -4474,6 +4578,7 @@
 
   function selectStateUi(state) {
     selectedStateId = String(state.id);
+    updateEditorialHeader();
     elements["metric-state"].textContent = state.sigla;
     elements["metric-state-pop"].textContent = formatNumber(state.pop || 0);
     elements["metric-city"].textContent = "nenhum";
@@ -4508,27 +4613,13 @@
     const props = feature.properties;
     selectedCityId = String(cityId);
     selectedCityFeature = feature;
+    updateEditorialHeader();
     updateSelectedCitySource(feature);
-
-    // Fetch history asynchronously if not present
-    if (city && (!city.gdpHistory || Object.keys(city.gdpHistory).length < 5)) {
-      fetchJson(URLS.municipalityGdpHistory(selectedCityId)).then(gdpRows => {
-        mergeGdp(gdpRows, cityById);
-        const cityObj = cityById.get(selectedCityId);
-        if (cityObj && cityObj.gdpHistory) mockGdpProjections(cityObj.gdpHistory);
-        // Update feature properties with new history
-        feature.properties = { ...feature.properties, ...cityMapProperties(feature.properties) };
-        // Only refresh if still selected
-        if (selectedCityId === cityId) {
-          renderGeneralPanel("city", feature.properties);
-        }
-      }).catch(err => console.warn("Erro ao carregar histórico da cidade", err));
-    }
 
     elements["metric-city"].textContent = props.name;
     elements["metric-city-pop"].textContent = formatNumber(props.pop || 0);
     elements["selected-code"].textContent = props.id;
-    elements["selected-type"].textContent = "Cidade";
+    elements["selected-type"].textContent = "Município";
     elements["selected-name"].textContent = `${props.name} (${props.uf})`;
     elements["selected-pop"].textContent = formatNumber(props.pop || 0);
     const stateId = props.stateId || (props.id && String(props.id).length >= 2 ? String(props.id).substring(0, 2) : "");
@@ -4833,7 +4924,7 @@
         value: formatHealthValue(metric, valueForMetric(data))
       });
 
-      let levelValue = "Proxy pela UF, não cidade";
+      let levelValue = "Proxy pela UF, não município";
       let isHtmlVal = false;
       if (data.healthCoverage === "real") {
         levelValue = "Dado municipal";
@@ -5050,7 +5141,7 @@
       const entry = data.hdiComponents || hdiEntryForYear(data.hdiHistory, year);
       return [
         { label: `IDHM ${data.hdiYear || year}`, value: `${formatHdi(data.hdi)} (proxy UF)` },
-        { label: "Nível do dado", value: "UF, não cidade" },
+        { label: "Nível do dado", value: "UF, não município" },
         { label: "UF usada", value: `${data.stateName || ""} (${data.uf || ""})` },
         { label: "Longevidade UF", value: formatHdiComponent(entry, "longevity") },
         { label: "Educação UF", value: formatHdiComponent(entry, "education") },
@@ -5107,7 +5198,7 @@
       if (!data.ipsReal) {
         return [
           { label: `IPS ${edition}`, value: `${formatIps(value)} (proxy UF)` },
-          { label: "Nível do dado", value: "UF, não cidade" },
+          { label: "Nível do dado", value: "UF, não município" },
           { label: "UF usada", value: `${data.stateName || ""} (${data.uf || ""})` },
           { label: "Brasil", value: brazil ? formatIps(brazil.ips) : "-" },
           { label: "Fonte", value: compactSourceLine(["ipsBrasilImazon", "ipsCityProxy"]) }
@@ -5227,7 +5318,7 @@
       { label: "População", value: formatNumber(totalPopulation) },
       { label: "Mapa de calor", value: "PIB por habitante" },
       { label: "Histórico BR", value: renderGdpHistoryChart(brazilGdpHistory), isHtml: true },
-      { label: "Comparação", value: "Estados e cidades" },
+      { label: "Comparação", value: "Estados e municípios" },
       { label: "Fonte", value: "SIDRA/IBGE 5938" }
     ];
   }
@@ -5298,7 +5389,7 @@
         { label: `Nota ENEM ${activeEnemYear} (Proj.)`, value: cityScore ? `${cityScore.toFixed(1)} pts` : "-" },
         { label: `Média UF (${sigla})`, value: stateScore ? `${stateScore.toFixed(1)} pts` : "-" },
         { label: `Média Brasil ${activeEnemYear}`, value: `${BRAZIL_ENEM_SCORE} pts` },
-        { label: "Dados por cidade", value: "estimativa projetada" },
+        { label: "Dados por município", value: "estimativa projetada" },
         { label: "Linguagens (BR)", value: `${BRAZIL_ENEM_AREAS.linguagens} pts` },
         { label: "Matemática (BR)", value: `${BRAZIL_ENEM_AREAS.matematica} pts` }
       ];
@@ -5318,7 +5409,7 @@
       const citiesInState = citiesForState(data.id);
       const docCount = citiesInState.filter(c => DOCUMENTED_CITIES[c.id]).length;
       return [
-        { label: "Cidades documentadas", value: docCount > 0 ? formatNumber(docCount) : "Ainda não" },
+        { label: "Municípios documentados", value: docCount > 0 ? formatNumber(docCount) : "Ainda não" },
         { label: "População", value: formatNumber(data.pop || 0) },
         { label: "Mapa de calor", value: "Estados com documentários" }
       ];
@@ -5327,18 +5418,15 @@
       const doc = DOCUMENTED_CITIES[data.id];
       const cards = [
         { label: "Documentário", value: doc ? "Disponível" : "Ainda não" },
-        { label: "Cidade", value: data.name },
+        { label: "Município", value: data.name },
         { label: "Estado", value: data.uf }
       ];
       if (doc && doc.v) {
-        const videoId = getYouTubeId(doc.v);
-        const thumbUrl = videoId ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg` : null;
         const safeHref = escapeHtml(doc.v);
         cards.push({
           label: "Vídeo",
           value: `
             <div class="mt-6 w-full">
-              ${thumbUrl ? `<img src="${thumbUrl}" class="video-thumb">` : ""}
               <div class="video-title">${escapeHtml(doc.t || "Documentário Especial")}</div>
               <a href="${safeHref}" target="_blank" rel="noopener noreferrer" class="video-link">Assistir vídeo <i aria-hidden="true" data-lucide="external-link" class="icon-small"></i></a>
             </div>
@@ -5351,7 +5439,7 @@
     }
     return [
       { label: "Temática", value: "História e cultura local" },
-      { label: "Total de cidades mapeadas", value: Object.keys(DOCUMENTED_CITIES).length.toString() }
+      { label: "Total de municípios mapeados", value: Object.keys(DOCUMENTED_CITIES).length.toString() }
     ];
   }
 
@@ -5412,9 +5500,9 @@
       const items = storyCityList(String(data.id || ""));
       const cards = [
         { label: "Histórias na UF", value: items.length ? formatNumber(items.length) : "Ainda não" },
-        { label: "Piloto nacional", value: `${formatNumber(total)} cidades` }
+        { label: "Piloto nacional", value: `${formatNumber(total)} municípios` }
       ];
-      if (items.length) cards.push({ label: "Cidades", value: storyListHtml(items), isHtml: true });
+      if (items.length) cards.push({ label: "Municípios", value: storyListHtml(items), isHtml: true });
       return cards;
     }
     if (scope === "city") {
@@ -5422,8 +5510,8 @@
       if (!story) {
         return [
           { label: "História", value: "Ainda não escrita" },
-          { label: "Piloto", value: `${formatNumber(total)} cidades com história` },
-          { label: "Cidade", value: `${data.name || ""} (${data.uf || ""})` }
+          { label: "Piloto", value: `${formatNumber(total)} municípios com história` },
+          { label: "Município", value: `${data.name || ""} (${data.uf || ""})` }
         ];
       }
       return [
@@ -5433,9 +5521,9 @@
     }
     const items = storyCityList(null);
     return [
-      { label: "Piloto", value: `${formatNumber(total)} cidades com história` },
+      { label: "Piloto", value: `${formatNumber(total)} municípios com história` },
       { label: "Como é feito", value: "IA + dados IBGE" },
-      { label: "Cidades do piloto", value: storyListHtml(items), isHtml: true }
+      { label: "Municípios do piloto", value: storyListHtml(items), isHtml: true }
     ];
   }
 
@@ -5445,19 +5533,19 @@
       ? ` Ano ${activeGdpYear} marcado como projeção local.`
       : "";
     const hdiWarning = activeAnalysis === "hdi"
-      ? ` Ano ativo: ${resolveHdiYear() || "N/D"}.${activeView === "cities" ? " Em cidades, o valor é proxy por UF, não IDHM municipal real." : ""}`
+      ? ` Ano ativo: ${resolveHdiYear() || "N/D"}.${activeView === "cities" ? " Em municípios, o valor é proxy por UF, não IDHM municipal real." : ""}`
       : "";
     const securityWarning = activeAnalysis === "security"
-      ? ` Indicador ativo: ${activeSecuritySubMetric || "mviRate"}.${activeView === "cities" ? " Em cidades, prioriza dado IPEA Atlas; quando ausente, usa proxy UF." : ""}`
+      ? ` Indicador ativo: ${activeSecuritySubMetric || "mviRate"}.${activeView === "cities" ? " Em municípios, prioriza dado IPEA Atlas; quando ausente, usa proxy UF." : ""}`
       : "";
     const healthWarning = activeAnalysis === "health"
-      ? ` Indicador ativo: ${activeHealthSubMetric || "bedsPer1000"}.${activeView === "cities" ? " Em cidades, usa dado municipal quando disponivel; quando ausente, usa proxy UF." : ""}`
+      ? ` Indicador ativo: ${activeHealthSubMetric || "bedsPer1000"}.${activeView === "cities" ? " Em municípios, usa dado municipal quando disponível; quando ausente, usa proxy UF." : ""}`
       : "";
     const ipsComparability = activeAnalysis === "ips" && ipsBrazilData && availableIpsYears.length > 1
       ? ` As edições ${availableIpsYears.slice().reverse().join(", ")} não são estritamente comparáveis entre si (mudaram indicadores e tratamentos estatísticos); para tendência, use a série recalculada do Brasil no card de histórico.${isLatestIpsYear() ? "" : ` A edição ${ipsEdition()} não é a vigente: nela as UFs vêm da agregação municipal ponderada, já que só o relatório da edição vigente está integrado.`}`
       : "";
     const ipsWarning = activeAnalysis === "ips"
-      ? ` Edição ${ipsEdition() || "N/D"}.${activeView === "cities" ? (ipsCityCount() ? ` Em cidades, IPS municipal oficial dos ${formatNumber(ipsCityCount())} municípios.` : " Em cidades, o valor é proxy pela UF.") : ""}${activeView === "world" ? " No Globo não há camada de IPS: o IPS Brasil é índice nacional/municipal e não é comparável ao IPS Global (Brasil marca 72,74 no Global 2026 e 63,40 no IPS Brasil 2026)." : ""}${ipsComparability}`
+      ? ` Edição ${ipsEdition() || "N/D"}.${activeView === "cities" ? (ipsCityCount() ? ` IPS municipal oficial dos ${formatNumber(ipsCityCount())} municípios.` : " Em municípios, o valor é proxy pela UF.") : ""}${activeView === "world" ? " No Globo não há camada de IPS: o IPS Brasil é índice nacional/municipal e não é comparável ao IPS Global (Brasil marca 72,74 no Global 2026 e 63,40 no IPS Brasil 2026)." : ""}${ipsComparability}`
       : "";
     return `${config.note}${projectionWarning}${hdiWarning}${securityWarning}${healthWarning}${ipsWarning} Fonte/procedência: ${sourceDetailsLine()}.`;
   }
@@ -5579,7 +5667,7 @@
     if (activeAnalysis === "stories") {
       return {
         title: "Estados com histórias escritas",
-        caption: "piloto | 10 cidades",
+        caption: "piloto | 10 municípios",
         value: (row) => storyCityIds().filter((id) => id.startsWith(row.id)).length,
         format: (v) => v === 1 ? "1 história" : `${v} histórias`
       };
@@ -5635,7 +5723,7 @@
     const uf = state ? state.sigla : "UF";
     if (activeAnalysis === "gdp") {
       return {
-        title: `Cidades por PIB por habitante de ${uf}`,
+        title: `Municípios por PIB por habitante de ${uf}`,
         caption: "mais ricas | top 10",
         value: (row) => perCapita(row.gdp, row.pop),
         format: formatCurrencyShort
@@ -5643,7 +5731,7 @@
     }
     if (activeAnalysis === "hdi") {
       return {
-        title: `Cidades por IDHM de ${uf}`,
+        title: `Municípios por IDHM de ${uf}`,
         caption: "proxy pela UF; não é ranking municipal real",
         value: (row) => row.hdi || 0,
         format: (v) => `${formatHdi(v)} proxy`
@@ -5654,7 +5742,7 @@
       const metricConfig = ANALYSIS_CATALOG.ips.metrics[activeIpsSubMetric] || ANALYSIS_CATALOG.ips.metrics.ipsGeral;
       const field = ipsMetricField();
       return {
-        title: `Cidades de ${uf} por ${metricConfig.metric}`,
+        title: `Municípios de ${uf} por ${metricConfig.metric}`,
         caption: hasCityData ? `municipal ${ipsEdition()} | top 10` : "proxy pela UF; não é ranking municipal real",
         value: (row) => row[field] || 0,
         format: (value) => (hasCityData ? formatIps(value) : `${formatIps(value)} proxy`)
@@ -5662,7 +5750,7 @@
     }
     if (activeAnalysis === "politics") {
       return {
-        title: `Cidades por habitantes por político de ${uf}`,
+        title: `Municípios por habitantes por político de ${uf}`,
         caption: "maior carga por político | top 10",
         value: (row) => inhabitantsPerPolitician(row.pop, cityPoliticalSummary(row).total),
         format: formatPeoplePerPoliticianShort
@@ -5678,7 +5766,7 @@
       };
       const title = metricTitles[metric] || "MVI";
       return {
-        title: `${title} — cidades de ${uf}`,
+        title: `${title} — municípios de ${uf}`,
         caption: metric === "mviRate" ? "IPEA + proxy UF quando ausente" : "proxy pela UF",
         value: (row) => row[metric] || 0,
         format: (v) => `${v.toFixed(1)} por 100k`
@@ -5694,7 +5782,7 @@
         vaccinationCoverage: "vacinacao"
       };
       return {
-        title: `Saude - cidades de ${uf}`,
+        title: `Saúde — municípios de ${uf}`,
         caption: `${metricTitles[metric] || "indicador"} municipal quando disponivel; fallback UF`,
         value: (row) => row[healthMetricField()] || 0,
         format: (v) => metric === "vaccinationCoverage" ? `${v.toFixed(1)}%` : `${v.toFixed(1)}`
@@ -5702,7 +5790,7 @@
     }
     if (activeAnalysis === "education") {
       return {
-        title: `ENEM ${ENEM_STATES_YEAR} — cidades de ${uf}`,
+        title: `ENEM ${ENEM_STATES_YEAR} — municípios de ${uf}`,
         caption: `maiores médias (estimativas projetadas) | top 10`,
         value: (row) => row.enemScore || 0,
         format: (v) => v ? `${v.toFixed(1)} pts` : "-"
@@ -5710,7 +5798,7 @@
     }
     if (activeAnalysis === "travel") {
       return {
-        title: `Cidades documentadas em ${uf}`,
+        title: `Municípios documentados em ${uf}`,
         caption: "por população",
         value: (row) => DOCUMENTED_CITIES[row.id] ? row.pop : 0,
         format: formatShort
@@ -5718,14 +5806,14 @@
     }
     if (activeAnalysis === "stories") {
       return {
-        title: `Cidades com história em ${uf}`,
+        title: `Municípios com história em ${uf}`,
         caption: "piloto | clique para ler",
         value: (row) => storyForCity(row.id) ? row.pop : 0,
         format: formatShort
       };
     }
     return {
-      title: `Maiores cidades de ${uf}`,
+      title: `Maiores municípios de ${uf}`,
       caption: "top 10",
       value: (row) => row.pop || 0,
       format: formatShort
@@ -5746,8 +5834,8 @@
       .map((feature) => feature.properties)
       .sort((a, b) => config.value(b) - config.value(a))
       .slice(0, 14);
-    elements["ranking-title"].textContent = activeAnalysis === "general" ? `Cidades de ${uf}` : config.title;
-    elements["ranking-caption"].textContent = `${collection.features.length} cidades`;
+    elements["ranking-title"].textContent = activeAnalysis === "general" ? `Municípios de ${uf}` : config.title;
+    elements["ranking-caption"].textContent = `${collection.features.length} municípios`;
     elements.ranking.innerHTML = rows.map((row, index) => `
       <button type="button" class="rank-btn" data-city-id="${row.id}">
         <span class="rank-no">${String(index + 1).padStart(2, "0")}</span>
@@ -5772,9 +5860,9 @@
   }
 
   function renderEmptyRanking(message) {
-    elements["ranking-title"].textContent = "Cidades em foco";
+    elements["ranking-title"].textContent = "Municípios em foco";
     elements["ranking-caption"].textContent = "selecione uma UF";
-    const text = message || "Clique em um estado no mapa ou use a busca para carregar as cidades da UF.";
+    const text = message || "Clique em um estado no mapa ou use a busca para carregar os municípios da UF.";
     elements.ranking.innerHTML = `<div class="empty">${escapeHtml(text)}</div>`;
   }
 
@@ -5851,14 +5939,14 @@
 
   function showMunicipalityPopup(lngLat, props) {
     const rows = municipalityPopupRows(props);
-    showFixedDetailCard("Cidade", props.name, rows, props);
+    showFixedDetailCard("Município", props.name, rows, props);
     if (window.lucide) window.lucide.createIcons();
   }
 
   function showMunicipalityHover(lngLat, props) {
     if (isStreetMode || !hoverCardsEnabled) return;
     const key = `${props.stateId || ""}:${props.id || ""}`;
-    const html = popupHtml("Cidade", props.name, municipalityPopupRows(props));
+    const html = popupHtml("Município", props.name, municipalityPopupRows(props));
 
     if (!hoverPopup) {
       hoverPopup = new maplibregl.Popup({
@@ -6004,7 +6092,7 @@
     const { kind, context } = currentFixedCard;
     if (kind === "Unidade da Federação" && context) {
       showStatePopup(null, stateMapProperties(context));
-    } else if (kind === "Cidade" && context) {
+    } else if (kind === "Município" && context) {
       // Re-hydrate city props for current year before refreshing popup
       const city = cityById.get(String(context.id));
       if (city) {
@@ -6149,47 +6237,253 @@
     map.flyTo({ center: [state.lng, state.lat], zoom: zoom || 5.2, pitch: 0, speed: 0.8, curve: 1.3, essential: true });
   }
 
-  function flyToStreet(options = {}) {
+  function normalizeSectorFeatureProperties(feature) {
+    const props = feature.properties || {};
+    const sectorId = props.sector_id || props.CD_SETOR || props.id || feature.id;
+    const bairro = props.bairro || props.bairroNome || props.NM_BAIRRO || null;
+    const distrito = props.distrito || props.NM_DISTRI || null;
+    feature.id = feature.id || sectorId;
+    feature.properties = {
+      ...props,
+      sector_id: String(sectorId || ""),
+      id: String(sectorId || ""),
+      CD_SETOR: String(sectorId || ""),
+      bairro,
+      bairroNome: bairro,
+      NM_BAIRRO: bairro,
+      distrito,
+      NM_DISTRI: distrito,
+      bairroGrupo: bairro || (distrito ? `Distrito: ${distrito}` : "Sem bairro oficial"),
+      pop: props.pop ?? props.populacao ?? null,
+      domicilios: props.domicilios ?? props.dom ?? null
+    };
+    return feature;
+  }
+
+  function sectorIndicatorFallbackCatalog() {
+    return [
+      { id: "bairro", property: "bairroGrupo", label: "Bairro", unit: "categoria", kind: "categorical", provenance: "official_observed", map: true },
+      { id: "populacao", property: "pop", label: "População residente", unit: "habitantes", kind: "count", provenance: "official_observed", map: true },
+      { id: "domicilios", property: "domicilios", label: "Total de domicílios", unit: "domicílios", kind: "count", provenance: "official_observed", map: true }
+    ];
+  }
+
+  function sectorIndicatorsForData(data) {
+    if (!data || !Array.isArray(data.features)) return [];
+    const catalog = Array.isArray(data.indicators) && data.indicators.length
+      ? data.indicators
+      : sectorIndicatorFallbackCatalog();
+    return catalog.filter((indicator) => {
+      if (indicator.map === false) return false;
+      if (indicator.kind === "categorical") return true;
+      return data.features.some((feature) => Number.isFinite(Number(feature.properties?.[indicator.property])));
+    });
+  }
+
+  function sectorIndicatorMeta(indicatorId, data = currentSectorData) {
+    const indicators = sectorIndicatorsForData(data);
+    return indicators.find((indicator) => indicator.id === indicatorId)
+      || indicators.find((indicator) => indicator.id === "bairro")
+      || indicators[0]
+      || null;
+  }
+
+  function sectorIndicatorProvenanceNote(indicator) {
+    const provenance = String(indicator?.provenance || "");
+    if (provenance === "estimated_parent_proxy") return "Proxy municipal ou estadual aplicado ao setor; taxas e índices não foram divididos.";
+    if (provenance === "estimated_proportional") return "Estimativa proporcional; o total do território de origem é preservado.";
+    if (provenance === "estimated_model") return "Estimativa modelada; o total municipal é preservado.";
+    return "Observado ou derivado dos agregados oficiais do Censo 2022.";
+  }
+
+  function sectorQuantile(values, probability) {
+    if (!values.length) return null;
+    const position = (values.length - 1) * probability;
+    const lower = Math.floor(position);
+    const upper = Math.ceil(position);
+    if (lower === upper) return values[lower];
+    return values[lower] + ((values[upper] - values[lower]) * (position - lower));
+  }
+
+  function sectorCategoricalEntries(data) {
+    const groups = [...new Set((data?.features || []).map((feature) => {
+      const props = feature.properties ||= {};
+      props.bairroGrupo = props.bairro || props.bairroNome || props.NM_BAIRRO
+        || (props.distrito || props.NM_DISTRI ? `Distrito: ${props.distrito || props.NM_DISTRI}` : "Sem bairro oficial");
+      return props.bairroGrupo;
+    }))].sort((a, b) => String(a).localeCompare(String(b), "pt-BR"));
+    return groups.map((group, index) => {
+      const hue = Math.round((203 + (index * 137.507764)) % 360);
+      return {
+        label: String(group),
+        color: group === "Sem bairro oficial" ? "#64748b" : `hsl(${hue}, 72%, 52%)`
+      };
+    });
+  }
+
+  function sectorCategoricalColorExpression(data) {
+    const categories = sectorCategoricalEntries(data);
+    const expression = ["match", ["coalesce", ["get", "bairroGrupo"], "Sem bairro oficial"]];
+    categories.forEach((category) => {
+      expression.push(category.label, category.color);
+    });
+    expression.push("#64748b");
+    return expression;
+  }
+
+  function sectorNumericColorExpression(data, indicator) {
+    const values = (data?.features || [])
+      .map((feature) => Number(feature.properties?.[indicator.property]))
+      .filter(Number.isFinite)
+      .sort((a, b) => a - b);
+    if (!values.length) return "rgba(100, 116, 139, 0.45)";
+    const probabilities = [0, 0.25, 0.5, 0.75, 1];
+    const palette = ["#17212b", "#1a5f8a", "#51d1c2", "#f2c14e", "#ff6b73"];
+    const stops = [];
+    probabilities.forEach((probability, index) => {
+      const value = sectorQuantile(values, probability);
+      if (!stops.length || value > stops.at(-1).value) stops.push({ value, color: palette[index] });
+      else stops.at(-1).color = palette[index];
+    });
+    if (stops.length === 1) return stops[0].color;
+    const interpolation = ["interpolate", ["linear"], ["to-number", ["get", indicator.property]]];
+    stops.forEach((stop) => interpolation.push(stop.value, stop.color));
+    return ["case", ["all", ["has", indicator.property], ["!=", ["get", indicator.property], null]], interpolation, "rgba(100, 116, 139, 0.35)"];
+  }
+
+  function sectorColorExpression(data, indicatorId) {
+    const indicator = sectorIndicatorMeta(indicatorId, data);
+    return !indicator || indicator.kind === "categorical"
+      ? sectorCategoricalColorExpression(data)
+      : sectorNumericColorExpression(data, indicator);
+  }
+
+  function formatSectorIndicatorValue(value, indicator) {
+    const number = Number(value);
+    if (value === null || value === undefined || !Number.isFinite(number)) return "Não disponível";
+    if (indicator?.kind === "currency") return formatCurrencyShort(number, "BRL");
+    if (indicator?.unit === "%") return `${number.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`;
+    if (indicator?.unit === "por mil hab.") return `${number.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}‰`;
+    if (indicator?.kind === "average" || indicator?.kind === "rate") {
+      return `${number.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} ${indicator.unit || ""}`.trim();
+    }
+    return `${formatNumber(number)}${indicator?.unit ? ` ${indicator.unit}` : ""}`;
+  }
+
+  function renderSectorIndicatorControl() {
+    const container = elements["sector-indicator-controls"];
+    const select = elements["sector-indicator-select"];
+    if (!container || !select) return;
+    const indicators = sectorIndicatorsForData(currentSectorData);
+    container.hidden = !isStreetMode;
+    select.innerHTML = indicators.map((indicator) => (
+      `<option value="${escapeHtml(indicator.id)}" ${indicator.id === activeSectorIndicator ? "selected" : ""}>${escapeHtml(indicator.label)}</option>`
+    )).join("");
+    const meta = sectorIndicatorMeta(activeSectorIndicator);
+    if (elements["sector-indicator-note"] && meta) {
+      elements["sector-indicator-note"].textContent = `${sectorIndicatorProvenanceNote(meta)} Unidade: ${meta.unit || "não se aplica"}.`;
+    }
+  }
+
+  function applySectorIndicator(indicatorId) {
+    if (!currentSectorData) return;
+    const selected = sectorIndicatorMeta(indicatorId);
+    if (!selected) return;
+    activeSectorIndicator = selected.id;
+    if (map.getLayer("setores-fill")) {
+      map.setPaintProperty("setores-fill", "fill-color", sectorColorExpression(currentSectorData, activeSectorIndicator));
+    }
+    renderSectorIndicatorControl();
+    updateHeatLegend();
+    savePreferences();
+  }
+
+  async function flyToStreet(options = {}) {
     isStreetMode = true;
-    setHybridBaseActive();
+    if (activeView !== "census_tract") setActiveView("census_tract");
     clearHoverPopup();
     if (fixedPopup) fixedPopup.remove();
     fixedPopup = null;
     hideAtlasLayersForStreet();
     restoreBaseLabels();
-    elements["hud-layer"].textContent = "Rua";
-    updateHeatLegend();
+    elements["hud-layer"].textContent = "Setores";
+    currentSectorData = null;
+    if (elements["sector-indicator-controls"]) elements["sector-indicator-controls"].hidden = false;
 
-    let target = selectedCityFeature && selectedCityFeature.properties;
-    if (!target && selectedStateId && stateCitiesCache.has(selectedStateId)) {
+    if (!selectedCityId && selectedStateId && stateCitiesCache.has(selectedStateId)) {
       const largestCity = stateCitiesCache.get(selectedStateId).features[0];
       if (largestCity) {
         selectCity(largestCity.properties.id, largestCity, { fly: false });
-        target = largestCity.properties;
       }
+    }
+
+    if (!selectedCityId) {
+      await loadStateCities("41", "4106902", { preserveCamera: true });
+    }
+
+    const state = selectedStateId ? stateById.get(String(selectedStateId)) : null;
+    if (!state || !selectedCityId) throw new Error("Selecione um município para visualizar os setores.");
+    showStatus("Carregando setores censitários", `Lendo a partição local de ${selectedCityFeature?.properties?.name || selectedCityId}.`);
+    try {
+      const sectors = await globalThis.AtlasStaticData.loadSectors(state.sigla, selectedCityId);
+      sectors.features = sectors.features.map(normalizeSectorFeatureProperties);
+      currentSectorData = sectors;
+      const indicators = sectorIndicatorsForData(sectors);
+      if (!indicators.some((indicator) => indicator.id === activeSectorIndicator)) {
+        activeSectorIndicator = indicators.find((indicator) => indicator.id === "bairro")?.id || indicators[0]?.id;
+      }
+
+      setLayersVisibility(["setores-fill", "setores-outline"], false);
+      if (map.getLayer("setores-fill")) map.removeLayer("setores-fill");
+      if (map.getLayer("setores-outline")) map.removeLayer("setores-outline");
+      if (map.getSource("setores-source")) map.removeSource("setores-source");
+      map.addSource("setores-source", { type: "geojson", data: sectors });
+      addLayerOnce({
+        id: "setores-fill",
+        type: "fill",
+        source: "setores-source",
+        paint: { "fill-color": sectorColorExpression(sectors, activeSectorIndicator), "fill-opacity": 0.68 }
+      }, firstBaseSymbolLayerId());
+      addLayerOnce({
+        id: "setores-outline",
+        type: "line",
+        source: "setores-source",
+        paint: { "line-color": "rgba(255,255,255,0.45)", "line-width": 0.8 }
+      }, firstBaseSymbolLayerId());
+
+      map.off("click", "setores-fill");
+      map.on("click", "setores-fill", (event) => {
+        const props = event.features[0].properties || {};
+        const indicator = sectorIndicatorMeta(activeSectorIndicator);
+        const indicatorValue = indicator ? formatSectorIndicatorValue(props[indicator.property], indicator) : "Não disponível";
+        const sectorCode = String(props.sector_id || props.id || "Não disponível");
+        const rows = [
+          { label: "Código", value: sectorCode },
+          { label: "Bairro", value: props.bairroGrupo || "Não disponível" },
+          { label: "População", value: formatSectorIndicatorValue(props.pop, { unit: "habitantes" }) },
+          { label: "Domicílios", value: formatSectorIndicatorValue(props.domicilios, { unit: "domicílios" }) }
+        ];
+        if (indicator && indicator.id !== "bairro") {
+          rows.push({ label: indicator.label, value: indicatorValue });
+        }
+        rows.push({ label: "Proveniência", value: sectorIndicatorProvenanceNote(indicator) });
+        showFixedDetailCard("Setor censitário", sectorCode, rows, props);
+      });
+
+      renderSectorIndicatorControl();
+      updateHeatLegend();
+      if (!options.preserveCamera && sectors.bbox) {
+        map.fitBounds([[sectors.bbox[0], sectors.bbox[1]], [sectors.bbox[2], sectors.bbox[3]]], { padding: 50, duration: 900, essential: true });
+      }
+    } finally {
+      hideStatus();
     }
 
     if (options.preserveCamera) {
       savePreferences();
       return;
     }
-
-    const center = target ? [target.lng, target.lat] : BRASILIA_STREET_CENTER;
-    map.flyTo({
-      center,
-      zoom: 16.1,
-      pitch: 28,
-      bearing: 0,
-      speed: 0.65,
-      curve: 1.15,
-      essential: true
-    });
-  }
-
-  function setHybridBaseActive() {
-    const hybridButton = document.querySelector('[data-base="hybrid"]');
-    if (hybridButton) setActiveButton("[data-base]", hybridButton);
-    setBaseMode("hybrid");
+    savePreferences();
   }
 
   function updateHud() {
@@ -6225,6 +6519,7 @@
     if (currencyButton) setActiveButton("[data-currency]", currencyButton);
 
     setHoverCardsEnabled(hoverCardsEnabled);
+    setBubblesEnabled(bubblesEnabled);
     updateHeatLegend();
   }
 
@@ -6241,10 +6536,24 @@
       : "Ligar cards ao passar o mouse";
   }
 
+  function setBubblesEnabled(enabled) {
+    bubblesEnabled = Boolean(enabled);
+    const button = elements["bubbles-toggle"];
+    if (button) {
+      button.classList.toggle("active", bubblesEnabled);
+      button.setAttribute("aria-pressed", String(bubblesEnabled));
+      button.title = bubblesEnabled
+        ? "Ocultar bolhas proporcionais"
+        : "Exibir bolhas proporcionais";
+    }
+    if (map && map.getStyle()) syncAtlasLayersForActiveView();
+  }
+
   function savePreferences() {
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify({
         hoverCards: hoverCardsEnabled,
+        bubbles: bubblesEnabled,
         base: activeBaseMode,
         projection: activeProjection,
         analysis: activeAnalysis,
@@ -6254,6 +6563,7 @@
         healthSubMetric: activeHealthSubMetric,
         ipsSubMetric: activeIpsSubMetric,
         ipsYear: activeIpsYear,
+        sectorIndicator: activeSectorIndicator,
         sourceSelections: activeSourceSelections,
         worldMetric: activeWorldMetric,
         view: activeView,
@@ -6296,12 +6606,14 @@
 
       const safe = {};
       if (typeof parsed.hoverCards === "boolean") safe.hoverCards = parsed.hoverCards;
+      if (typeof parsed.bubbles === "boolean") safe.bubbles = parsed.bubbles;
       if (validBaseMode(parsed.base)) safe.base = parsed.base;
       if (validProjection(parsed.projection)) safe.projection = parsed.projection;
       if (validAnalysis(parsed.analysis)) safe.analysis = parsed.analysis;
       if (validView(parsed.view)) safe.view = parsed.view;
       if (validWorldMetric(parsed.worldMetric)) safe.worldMetric = parsed.worldMetric;
       if (parsed.currency === "BRL" || parsed.currency === "USD") safe.currency = parsed.currency;
+      if (typeof parsed.sectorIndicator === "string" && parsed.sectorIndicator) safe.sectorIndicator = parsed.sectorIndicator;
 
       if (parsed.selectedStateId) safe.selectedStateId = normalizeCode(parsed.selectedStateId);
       if (parsed.selectedCityId) safe.selectedCityId = normalizeCode(parsed.selectedCityId);
@@ -6346,7 +6658,7 @@
   }
 
   function validView(view) {
-    return ["world", "brazil", "states", "cities", "street"].includes(view);
+    return ["world", "states", "cities", "census_tract"].includes(view);
   }
 
   function validAnalysis(analysis) {
@@ -6440,94 +6752,6 @@
     return layer ? layer.id : undefined;
   }
 
-  async function fetchJson(url) {
-    const cached = await readCachedJson(url);
-    if (cached) return cached;
-
-    const response = await fetch(url, { headers: { Accept: "application/json, application/vnd.geo+json" } });
-    if (!response.ok) throw new Error(`${response.status} ${response.statusText}: ${url}`);
-    dataCacheStats.network += 1;
-    const data = await response.clone().json();
-    await writeCachedResponse(url, response);
-    return data;
-  }
-
-  async function readCachedJson(url) {
-    if (!window.caches) {
-      dataCacheStats.disabled = true;
-      return null;
-    }
-
-    try {
-      const cache = await window.caches.open(DATA_CACHE_NAME);
-      const response = await cache.match(url);
-      if (!response) return null;
-
-      // TTL de 7 dias = 7 * 24 * 60 * 60 * 1000 = 604800000 ms
-      const cacheTimeStr = response.headers.get("X-Cache-Time");
-      if (cacheTimeStr) {
-        const cacheTime = parseInt(cacheTimeStr, 10);
-        if (!isNaN(cacheTime)) {
-          const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
-          if (Date.now() - cacheTime > sevenDaysMs) {
-            await cache.delete(url);
-            return null;
-          }
-        }
-      } else {
-        // Fallback usando o header HTTP "Date" se disponível
-        const dateHeader = response.headers.get("date");
-        if (dateHeader) {
-          const cacheDate = new Date(dateHeader).getTime();
-          const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
-          if (!isNaN(cacheDate) && (Date.now() - cacheDate > sevenDaysMs)) {
-            await cache.delete(url);
-            return null;
-          }
-        }
-      }
-
-      dataCacheStats.hits += 1;
-      return await response.json();
-    } catch (error) {
-      dataCacheStats.failures += 1;
-      return null;
-    }
-  }
-
-  async function writeCachedResponse(url, response) {
-    if (!window.caches) return;
-
-    try {
-      const cache = await window.caches.open(DATA_CACHE_NAME);
-      const newHeaders = new Headers(response.headers);
-      newHeaders.set("X-Cache-Time", Date.now().toString());
-
-      const blob = await response.clone().blob();
-      const customResponse = new Response(blob, {
-        status: response.status,
-        statusText: response.statusText,
-        headers: newHeaders
-      });
-
-      await cache.put(url, customResponse);
-      dataCacheStats.writes += 1;
-    } catch (error) {
-      dataCacheStats.failures += 1;
-    }
-  }
-
-  function createDataCacheStats() {
-    return { hits: 0, network: 0, writes: 0, failures: 0, disabled: false };
-  }
-
-  function dataCacheLabel() {
-    if (dataCacheStats.hits && !dataCacheStats.network) return "cache local";
-    if (dataCacheStats.hits && dataCacheStats.network) return "cache + rede";
-    if (dataCacheStats.disabled) return "sem cache";
-    return "dados carregados";
-  }
-
   function parseSidraRows(data) {
     if (!Array.isArray(data) || data.length === 0) return [];
     return data.slice(1);
@@ -6554,21 +6778,112 @@
   }
 
   function representativePoint(geometry) {
+    const polygons = geometry && geometry.type === "Polygon"
+      ? [geometry.coordinates]
+      : geometry && geometry.type === "MultiPolygon"
+        ? geometry.coordinates
+        : [];
+    if (polygons.length) {
+      const polygon = polygons.reduce((largest, candidate) => {
+        if (!largest) return candidate;
+        return Math.abs(ringSignedArea(candidate[0])) > Math.abs(ringSignedArea(largest[0])) ? candidate : largest;
+      }, null);
+      const outerRing = polygon && polygon[0];
+      if (outerRing && outerRing.length >= 3) {
+        const centroid = ringCentroid(outerRing);
+        if (centroid && pointInsidePolygon(centroid, polygon)) return centroid;
+
+        const bounds = coordinateBounds(outerRing);
+        if (bounds) {
+          const middle = [(bounds.minLng + bounds.maxLng) / 2, (bounds.minLat + bounds.maxLat) / 2];
+          if (pointInsidePolygon(middle, polygon)) return middle;
+
+          let best = null;
+          let bestDistance = Infinity;
+          const divisions = 32;
+          for (let x = 0; x < divisions; x += 1) {
+            for (let y = 0; y < divisions; y += 1) {
+              const candidate = [
+                bounds.minLng + ((x + 0.5) / divisions) * (bounds.maxLng - bounds.minLng),
+                bounds.minLat + ((y + 0.5) / divisions) * (bounds.maxLat - bounds.minLat)
+              ];
+              if (!pointInsidePolygon(candidate, polygon)) continue;
+              const distance = ((candidate[0] - middle[0]) ** 2) + ((candidate[1] - middle[1]) ** 2);
+              if (distance < bestDistance) {
+                best = candidate;
+                bestDistance = distance;
+              }
+            }
+          }
+          if (best) return best;
+        }
+        const firstValid = outerRing.find(([lng, lat]) => Number.isFinite(lng) && Number.isFinite(lat));
+        if (firstValid) return [firstValid[0], firstValid[1]];
+      }
+    }
+
     const coords = flattenCoordinates(geometry);
-    if (!coords.length) return null;
+    const bounds = coordinateBounds(coords);
+    return bounds ? [(bounds.minLng + bounds.maxLng) / 2, (bounds.minLat + bounds.maxLat) / 2] : null;
+  }
+
+  function coordinateBounds(coordinates) {
     let minLng = Infinity;
     let minLat = Infinity;
     let maxLng = -Infinity;
     let maxLat = -Infinity;
-    coords.forEach(([lng, lat]) => {
+    coordinates.forEach(([lng, lat]) => {
       if (!Number.isFinite(lng) || !Number.isFinite(lat)) return;
       minLng = Math.min(minLng, lng);
       minLat = Math.min(minLat, lat);
       maxLng = Math.max(maxLng, lng);
       maxLat = Math.max(maxLat, lat);
     });
-    if (!Number.isFinite(minLng)) return null;
-    return [(minLng + maxLng) / 2, (minLat + maxLat) / 2];
+    return Number.isFinite(minLng) ? { minLng, minLat, maxLng, maxLat } : null;
+  }
+
+  function ringSignedArea(ring) {
+    if (!Array.isArray(ring)) return 0;
+    let twiceArea = 0;
+    for (let index = 0; index < ring.length; index += 1) {
+      const current = ring[index];
+      const next = ring[(index + 1) % ring.length];
+      twiceArea += (current[0] * next[1]) - (next[0] * current[1]);
+    }
+    return twiceArea / 2;
+  }
+
+  function ringCentroid(ring) {
+    let crossSum = 0;
+    let lngSum = 0;
+    let latSum = 0;
+    for (let index = 0; index < ring.length; index += 1) {
+      const current = ring[index];
+      const next = ring[(index + 1) % ring.length];
+      const cross = (current[0] * next[1]) - (next[0] * current[1]);
+      crossSum += cross;
+      lngSum += (current[0] + next[0]) * cross;
+      latSum += (current[1] + next[1]) * cross;
+    }
+    if (Math.abs(crossSum) < 1e-12) return null;
+    return [lngSum / (3 * crossSum), latSum / (3 * crossSum)];
+  }
+
+  function pointInsidePolygon(point, polygon) {
+    if (!polygon || !polygon.length || !pointInsideRing(point, polygon[0])) return false;
+    return !polygon.slice(1).some((hole) => pointInsideRing(point, hole));
+  }
+
+  function pointInsideRing([lng, lat], ring) {
+    let inside = false;
+    for (let current = 0, previous = ring.length - 1; current < ring.length; previous = current, current += 1) {
+      const [currentLng, currentLat] = ring[current];
+      const [previousLng, previousLat] = ring[previous];
+      const crosses = (currentLat > lat) !== (previousLat > lat)
+        && lng < ((previousLng - currentLng) * (lat - currentLat)) / ((previousLat - currentLat) || Number.EPSILON) + currentLng;
+      if (crosses) inside = !inside;
+    }
+    return inside;
   }
 
   function flattenCoordinates(geometry) {
@@ -6879,16 +7194,16 @@
           { label: "Indicador ativo", value: healthMetricsForActiveView()[activeHealthSubMetric]?.label || "UHC" },
           { label: "Fonte", value: compactSourceLine(healthWorldSourceIds) }
         ] : []),
-        { label: "Arquivo local", value: activeAnalysis === "hdi" ? (activeSourceOptionId("hdi", "world") === "owid" ? "data/hdi_owid.json" : "data/hdi_global.json") : (activeAnalysis === "security" ? "data/security_global.json" : (activeAnalysis === "health" ? "data/health_global.json" : "data/world_data.geojson")) },
+        { label: "Arquivo local", value: activeAnalysis === "hdi" ? (activeSourceOptionId("hdi", "world") === "owid" ? "hdi_owid.parquet" : "hdi_global.parquet") : (activeAnalysis === "security" ? "security_global.parquet" : (activeAnalysis === "health" ? "health_global.parquet" : "world_data.parquet")) },
         { label: "Origem original", value: activeAnalysis === "hdi" ? upstreamSourceLine(sourceRecords(worldHdiSourceIds)[0]) : (activeAnalysis === "security" ? upstreamSourceLine(DATA_SOURCE_CATALOG.securityGlobalUnodc) : (activeAnalysis === "health" ? upstreamSourceLine(DATA_SOURCE_CATALOG.healthGlobalWho) : upstreamSourceLine(DATA_SOURCE_CATALOG.localWorldJson))) }
     ]);
     elements["general-note"].textContent = activeAnalysis === "hdi"
-      ? `IDH global carregado de JSON local auditável. Fonte/procedência: ${sourceDetailsLine(worldHdiSourceIds)}.`
+      ? `IDH global carregado de Parquet local auditável. Fonte/procedência: ${sourceDetailsLine(worldHdiSourceIds)}.`
       : (activeAnalysis === "security"
-        ? `Dados de segurança global carregados de JSON local. Fonte/procedência: ${sourceDetailsLine(["securityGlobalUnodc"])}.`
+        ? `Dados de segurança global carregados de Parquet local. Fonte/procedência: ${sourceDetailsLine(["securityGlobalUnodc"])}.`
         : (activeAnalysis === "health"
-          ? `Dados globais de saúde carregados de JSON local compilado. Fonte/procedência: ${sourceDetailsLine(healthWorldSourceIds)}.`
-          : `Dados globais carregados de base JSON local. Fonte/procedência: ${sourceDetailsLine(["localWorldJson"])}.`));
+          ? `Dados globais de saúde carregados de Parquet local compilado. Fonte/procedência: ${sourceDetailsLine(healthWorldSourceIds)}.`
+          : `Dados globais carregados de GeoParquet local. Fonte/procedência: ${sourceDetailsLine(["localWorldJson"])}.`));
   }
 
   async function enterWorldMode(options = {}) {
@@ -6900,10 +7215,9 @@
     selectedCityId = null;
     
     if (!map.getSource("world-fill-source")) {
-        showStatus("Carregando mapa-múndi", "Buscando dados globais...");
+        showStatus("Carregando mapa-múndi", "Lendo o Parquet global local...");
         try {
-            const data = await fetchJson(URLS.worldMesh);
-            worldFeatureCollection = data;
+            if (!worldFeatureCollection) throw new Error("Parquet global não carregado.");
             hydrateWorldHdi(worldFeatureCollection);
             hydrateWorldSecurity(worldFeatureCollection);
             hydrateWorldHealth(worldFeatureCollection);
@@ -6978,8 +7292,19 @@
                    const found = worldFeatureCollection.features.find(f => f.properties.ISO_A3 === props.ISO_A3);
                    if (found) fullFeature = found;
                }
-               selectCountry(props, fullFeature);
-               showCountryPopup(event.lngLat, fullFeature.properties || props);
+               scheduleCountryClick(event.lngLat, props, fullFeature);
+            });
+            map.on("dblclick", "world-fill", (event) => {
+               if (activeView !== "world" || !event.features.length) return;
+               if (event.preventDefault) event.preventDefault();
+               const props = event.features[0].properties;
+               if (String(props.ISO_A3 || "").toUpperCase() !== "BRA") return;
+               clearPendingCountryClick();
+               clearHoverPopup();
+               if (fixedPopup) fixedPopup.remove();
+               fixedPopup = null;
+               setActiveView("states");
+               enterStateAnalysisMode({ selectBrazil: true });
             });
             map.on("mousemove", "world-fill", (event) => {
                if (activeView !== "world") return;
@@ -6999,7 +7324,7 @@
     }
     
     syncAtlasLayersForActiveView();
-    if (!options.preserveCamera) map.flyTo({ center: [0, 20], zoom: 1.5, speed: 0.8, curve: 1.35, essential: true });
+    if (!options.preserveCamera) map.flyTo({ center: BR_CENTER, zoom: 1.5, speed: 0.8, curve: 1.35, essential: true });
     
     elements["hud-layer"].textContent = "Globo";
     elements["metric-state"].textContent = "Mundo";
@@ -7009,6 +7334,7 @@
 
     renderSelectedWorld();
     if (window.updateWorldLayerColor) window.updateWorldLayerColor();
+    applyBaseModeToAtlasLayers();
     updateHeatLegend();
     savePreferences();
   }
@@ -7080,7 +7406,7 @@
         ? `Dados de segurança global. Fonte/procedência: ${sourceDetailsLine(securityWorldSourceIds)}.`
         : (activeAnalysis === "health"
           ? `Dados globais de saúde. Fonte/procedência: ${sourceDetailsLine(healthWorldSourceIds)}.`
-          : `Dados globais carregados de base JSON local. Fonte/procedência: ${sourceDetailsLine(["localWorldJson"])}.`));
+          : `Dados globais carregados de GeoParquet local. Fonte/procedência: ${sourceDetailsLine(["localWorldJson"])}.`));
   }
 
   function showCountryHover(lngLat, props) {

@@ -23,6 +23,7 @@ IGNORED_DIRS = {
     ".ruff_cache",
     "__pycache__",
     "build",
+    ".builddeps",
     "dist",
     "env",
     "ENV",
@@ -33,6 +34,10 @@ IGNORED_DIRS = {
     "temp",
     "tmp",
     "tools",
+    "docs",
+    "schemas",
+    "scripts",
+    "tests",
     "venv",
     ".venv",
     "xp",
@@ -67,7 +72,14 @@ def reset_dist() -> None:
 
 def ignore_local_artifacts(directory: str, names: list[str]) -> list[str]:
     ignored: list[str] = []
+    directory_path = Path(directory).resolve()
     for name in names:
+        if directory_path == ROOT / "data" and name != "parquet":
+            ignored.append(name)
+            continue
+        if directory_path == ROOT / "data" / "parquet" and name != "site":
+            ignored.append(name)
+            continue
         if name in IGNORED_DIRS or name in IGNORED_FILES:
             ignored.append(name)
             continue
@@ -85,6 +97,8 @@ def minify_static_files(root: Path) -> None:
     for suffix_group in ((".css", ".js"), (".html",)):
         for path in sorted(root.rglob("*")):
             if not path.is_file():
+                continue
+            if "vendor" in path.relative_to(root).parts:
                 continue
 
             suffix = path.suffix.lower()
@@ -105,7 +119,20 @@ def minify_static_files(root: Path) -> None:
 
 
 # Assets locais que precisam furar o cache do navegador a cada deploy.
-VERSIONED_ASSETS = ("app.js", "style.css")
+VERSIONED_ASSETS = (
+    "app.js",
+    "atlas_core.js",
+    "disaggregation_models.js",
+    "fiscal_models.js",
+    "gdp_models.js",
+    "parquet_loader.js",
+    "point_in_polygon_pipeline.js",
+    "publishing_security_engine.js",
+    "public_resources_models.js",
+    "static_data_adapter.js",
+    "style.css",
+    "ui_transparency_models.js",
+)
 
 
 def content_hash(path: Path) -> str:

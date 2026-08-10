@@ -29,7 +29,7 @@ body {
   overflow: hidden;
 }
 
-button, input {
+button, input, select {
   font: inherit;
 }
 
@@ -79,19 +79,28 @@ button {
 }
 
 .maplibregl-ctrl-attrib {
-  background: rgba(11, 16, 20, 0.72) !important;
+  background: rgba(11, 16, 20, 0.84) !important;
   color: var(--muted) !important;
   font-size: 10px !important;
+  border-radius: 8px 0 0 0 !important;
+  backdrop-filter: blur(10px);
+}
+
+.maplibregl-ctrl-attrib a {
+  color: #c9d7d3 !important;
 }
 
 .maplibregl-popup-content {
-  background: var(--panel) !important;
-  border: 1px solid var(--line-strong) !important;
-  border-radius: 8px !important;
+  background: linear-gradient(145deg, rgba(24, 35, 45, 0.97), rgba(11, 19, 26, 0.97)) !important;
+  border: 1px solid rgba(143, 190, 183, 0.3) !important;
+  border-radius: 16px !important;
   color: var(--text) !important;
   padding: 0 !important;
-  box-shadow: var(--shadow) !important;
-  min-width: 220px;
+  box-shadow: 0 22px 64px rgba(0, 0, 0, 0.48), 0 0 0 1px rgba(255, 255, 255, 0.025) inset !important;
+  min-width: min(248px, calc(100vw - 28px));
+  max-width: min(340px, calc(100vw - 28px));
+  overflow: hidden;
+  backdrop-filter: blur(18px) saturate(130%);
 }
 
 .maplibregl-popup-tip {
@@ -100,9 +109,22 @@ button {
 }
 
 .maplibregl-popup-close-button {
+  top: 7px !important;
+  right: 7px !important;
+  width: 34px;
+  height: 34px;
+  padding: 0 !important;
+  border-radius: 10px !important;
   color: var(--muted) !important;
-  font-size: 18px !important;
-  padding: 6px 8px !important;
+  font-size: 20px !important;
+  line-height: 34px !important;
+}
+
+.maplibregl-popup-close-button:hover,
+.maplibregl-popup-close-button:focus-visible {
+  background: rgba(81, 209, 194, 0.14) !important;
+  color: var(--text) !important;
+  outline: none;
 }
 
 .hover-popup {
@@ -122,11 +144,12 @@ button {
   max-height: calc(100% - 128px);
   overflow: auto;
   border: 1px solid var(--line-strong);
-  border-radius: 8px;
-  background: var(--panel);
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(24, 35, 45, 0.97), rgba(11, 19, 26, 0.97));
   color: var(--text);
   box-shadow: var(--shadow);
   display: none;
+  backdrop-filter: blur(18px) saturate(130%);
 }
 
 .fixed-detail-card.visible {
@@ -165,11 +188,11 @@ button {
   width: min(320px, calc(100% - 40px));
   padding: 13px;
   border: 1px solid var(--line-strong);
-  border-radius: 8px;
-  background: rgba(17, 24, 32, 0.88);
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(24, 35, 45, 0.94), rgba(11, 19, 26, 0.94));
   color: var(--text);
   box-shadow: var(--shadow);
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(18px) saturate(130%);
   pointer-events: auto;
   display: none;
 }
@@ -253,6 +276,57 @@ button {
 
 .legend-labels span:last-child {
   text-align: right;
+}
+
+.categorical-legend {
+  display: grid;
+  gap: 5px;
+  max-height: min(330px, 42vh);
+  overflow-y: auto;
+  padding: 2px 6px 2px 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(81, 209, 194, 0.5) transparent;
+}
+
+.categorical-legend-count {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 4px 0 7px;
+  background: #141e27;
+  color: var(--quiet);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.categorical-legend-item {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  gap: 9px;
+  align-items: start;
+  min-height: 25px;
+  padding: 4px 6px;
+  border-radius: 7px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.categorical-legend-item:hover {
+  background: rgba(237, 243, 238, 0.06);
+  color: var(--text);
+}
+
+.categorical-legend-swatch {
+  width: 14px;
+  height: 14px;
+  margin-top: 1px;
+  border: 1px solid rgba(255, 255, 255, 0.48);
+  border-radius: 4px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.18) inset;
 }
 
 .legend-source {
@@ -716,6 +790,85 @@ h1 {
   gap: 8px;
 }
 
+.sector-indicator-controls {
+  display: grid;
+  gap: 7px;
+  padding: 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--panel-3);
+}
+
+.sector-indicator-controls[hidden] { display: none; }
+
+.sector-indicator-controls label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--quiet);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.sector-indicator-controls label svg {
+  width: 13px;
+  height: 13px;
+  color: var(--cyan);
+}
+
+.sector-indicator-controls p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.select-field,
+.legend-head select {
+  width: 100%;
+  min-height: 38px;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid rgba(143, 190, 183, 0.28);
+  border-radius: 10px;
+  background-color: rgba(7, 18, 27, 0.76);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--cyan) 50%),
+    linear-gradient(135deg, var(--cyan) 50%, transparent 50%);
+  background-position:
+    calc(100% - 16px) calc(50% - 2px),
+    calc(100% - 11px) calc(50% - 2px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  color: var(--text);
+  padding: 8px 34px 8px 11px;
+  outline: none;
+  cursor: pointer;
+  color-scheme: dark;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.035) inset;
+  transition: border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.select-field:hover,
+.legend-head select:hover {
+  border-color: rgba(81, 209, 194, 0.62);
+  background-color: rgba(17, 34, 43, 0.94);
+}
+
+.select-field:focus-visible,
+.legend-head select:focus-visible {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 3px rgba(81, 209, 194, 0.16);
+}
+
+.select-field option,
+.legend-head select option {
+  background: #111b24;
+  color: var(--text);
+}
+
 .segmented {
   display: grid;
   grid-template-columns: repeat(var(--cols), 1fr);
@@ -791,8 +944,9 @@ h1 {
   margin-top: 8px;
   display: none;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 12px;
   overflow: hidden;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.26);
 }
 
 .results.visible {
@@ -821,6 +975,13 @@ h1 {
 
 .result-btn:hover {
   background: var(--panel-3);
+}
+
+.result-btn:focus-visible {
+  position: relative;
+  z-index: 1;
+  outline: 2px solid var(--cyan);
+  outline-offset: -2px;
 }
 
 .result-name {
@@ -1066,18 +1227,12 @@ h1 {
 }
 
 .legend-head select {
-  background: rgba(255, 255, 255, 0.05);
   color: var(--gold);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
   font-size: 11px;
-  padding: 2px 4px;
-  cursor: pointer;
-  font-family: inherit;
-  font-weight: 600;
-  outline: none;
+  font-weight: 700;
   /* Sem trava, um rótulo longo empurra o seletor de ano para fora da legenda. */
-  max-width: 140px;
+  width: auto;
+  max-width: 168px;
   min-width: 0;
   text-overflow: ellipsis;
 }
@@ -1094,15 +1249,6 @@ h1 {
 .legend-head > span {
   min-width: 0;
 }
-.legend-head select:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: var(--gold);
-}
-.legend-head select option {
-  background: #1a242d;
-  color: #fff;
-}
-
 .year-stepper {
   display: flex;
   align-items: center;
@@ -1241,11 +1387,54 @@ h1 {
   }
 
   .fixed-detail-card {
-    top: 60px;
+    top: auto;
+    bottom: max(12px, env(safe-area-inset-bottom));
     left: 10px;
     width: calc(100% - 20px);
-    max-height: 62vh;
-    max-height: 62svh;
+    max-height: 58vh;
+    max-height: 58svh;
+    border-radius: 18px;
+  }
+
+  .categorical-legend {
+    max-height: 34svh;
+  }
+
+  .maplibregl-popup-content {
+    min-width: min(270px, calc(100vw - 24px));
+  }
+
+  .maplibregl-popup-close-button,
+  .fixed-detail-close,
+  .source-info-button {
+    min-width: 38px;
+    min-height: 38px;
+  }
+
+  .legend-head select {
+    flex: 1 1 132px;
+    max-width: 100%;
+    min-height: 42px;
+  }
+
+  .select-field {
+    min-height: 44px;
+  }
+
+  .maplibregl-ctrl-top-right {
+    top: 50px;
+  }
+
+  .maplibregl-ctrl-attrib {
+    max-width: calc(100vw - 16px) !important;
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .segmented button,
+  .result-btn,
+  .legend-toggle {
+    min-height: 46px;
   }
 }
 

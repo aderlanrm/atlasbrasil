@@ -4,19 +4,27 @@ Uses the same source as the front-end (app.js URLS.cityPopulation):
 table 4714 (Census 2022), variable 93 (Population), n6 = municipalities.
 """
 
-import gzip
-import json
-import urllib.request
+try:
+    import truststore
+
+    truststore.inject_into_ssl()
+except ImportError:
+    pass
+
+import requests
 
 
 SIDRA_URL = "https://apisidra.ibge.gov.br/values/t/4714/n6/all/v/93/p/2022"
 
 
 def _fetch_json(url):
-    raw = urllib.request.urlopen(url, timeout=120).read()
-    if raw[:2] == b"\x1f\x8b":
-        raw = gzip.decompress(raw)
-    return json.loads(raw.decode("utf-8"))
+    response = requests.get(
+        url,
+        timeout=120,
+        headers={"User-Agent": "AtlasBrasilETL/2.0 (+offline-parquet)"},
+    )
+    response.raise_for_status()
+    return response.json()
 
 
 def fetch_population_by_ibge():

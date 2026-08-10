@@ -141,7 +141,7 @@ Cuidados:
 
 - CNES mede cadastro e capacidade registrada, nao taxa de ocupacao real.
 - Profissionais no CNES podem ser vinculos/postos de trabalho, nao pessoas unicas; um profissional pode aparecer em mais de um estabelecimento.
-- Municipio do estabelecimento nao e necessariamente municipio de residencia da populacao atendida. Capitais e polos regionais podem parecer "superiores" por atenderem cidades vizinhas.
+- Município do estabelecimento não é necessariamente o município de residência da população atendida. Capitais e polos regionais podem parecer "superiores" por atenderem municípios vizinhos.
 - Para serie historica, use a competencia de dezembro para retrato anual ou media mensal para reduzir ruido.
 
 ### 2. SIH/SUS - internacoes hospitalares no SUS
@@ -357,7 +357,7 @@ Regra: use CNES como disponibilidade operacional no municipio e sinalize "vincul
 
 - `data/health_global.json`: base inicial global por ISO3.
 - `data/health_brazil.json`: base inicial para Brasil e UFs.
-- `data/health_brazil_cities.json`: base municipal por codigo IBGE de 7 digitos. Cobertura territorial completa para os 5.571 municipios. Cada cidade tem um campo `coverage`:
+- `data/health_brazil_cities.json`: base municipal por código IBGE de 7 dígitos. Cobertura territorial completa para os 5.571 municípios. Cada município tem um campo `coverage`:
   - `municipal`: todos os 8 indicadores (leitos, UTI, SUS, medicos, enfermeiros, mort. infantil, mort. materna, vacinacao) sao reais e provem do DATASUS.
   - `partial`: parte dos indicadores e real (campo `realFields` lista quais); o resto continua proxy UF.
   - `uf_proxy`: nenhum indicador real, todos vem da UF.
@@ -382,7 +382,7 @@ O orquestrador `scripts/build_health_brazil_cities.py` chama todos e mescla em `
 - **CNES competence atualizada**: estamos puxando 2024-01. Quando rodar de novo, conferir o `list_files('CNES')` para a competencia mais recente disponivel.
 - **SIM/SINASC 2023+**: a janela atual vai ate 2022 porque foi quando rodamos. Alguns arquivos pontuais estao indisponiveis (ex.: SP SIM 2021). O extrator tolera ausencia, mas o ideal e re-rodar quando o DATASUS publicar.
 - **Classificacao de UTI mais granular**: hoje `icuBedsPer100k` = soma de `TP_LEITO=3` (Complementar), que inclui UTI + UCI. Para distinguir UTI estrita, filtrar por `CODLEITO` no intervalo 74-83 (UTIs) e nao 84-90 (UCIs).
-- **App UI**: o card de cidade ainda diz "Dado municipal" para qualquer cidade com `proxy=false`. Quando `coverage="partial"`, deveria explicitar "Misto: alguns campos sao proxy UF" e listar `realFields`.
+- **App UI**: o card de município ainda diz "Dado municipal" para qualquer município com `proxy=false`. Quando `coverage="partial"`, deve explicitar "Misto: alguns campos são proxy UF" e listar `realFields`.
 - **Profissionais ANS/ANS suplementar**: ainda nao temos `privateCoverage` real por municipio. Continua como proxy UF.
 
 Para regenerar tudo: `python -m scripts.build_health_brazil_cities`. Para atualizar so a mortalidade (caso bug do `sum()` reapareca): `python -m scripts.patch_mortality`.

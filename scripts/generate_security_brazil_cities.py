@@ -1,73 +1,180 @@
-import csv
-import json
+#!/usr/bin/env python3
+"""Gera o Parquet municipal de segurança diretamente do PDF oficial do Ipea.
+
+A publicação municipal de 2024 contém a Tabela 2 em texto pesquisável. O PDF
+é mantido apenas em memória; os códigos municipais são obtidos da API oficial
+de Localidades do IBGE.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import io
+import re
+import unicodedata
 from pathlib import Path
+
+try:
+    import truststore
+
+    truststore.inject_into_ssl()
+except ImportError:
+    pass
+
+import pandas as pd
+import pdfplumber
+import pyarrow as pa
+import pyarrow.parquet as pq
+import requests
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CSV_PATH = ROOT / "data" / "security_brazil_cities_atlas2024.csv"
-OUTPUT_PATH = ROOT / "data" / "security_brazil_cities.json"
+OUTPUT_PATH = ROOT / "data" / "parquet" / "security_brazil_cities.parquet"
+SOURCE_URL = (
+    "https://repositorio.ipea.gov.br/bitstream/11058/14031/5/"
+    "AtlasViolencia2024_Retrato_dos_municipios_brasileros.pdf"
+)
+IBGE_MUNICIPALITIES_URL = (
+    "https://servicodados.ibge.gov.br/api/v1/localidades/municipios?orderBy=nome"
+)
+ROW_PATTERN = re.compile(
+    r"^(?P<rank>\d+)\s+(?P<name>.+?)\s+(?P<uf>[A-Z]{2})\s+"
+    r"(?P<region>N|NE|CO|SE|S)\s+(?P<population>[\d.]+)\s+"
+    r"(?P<registered>[\d.]+)\s+(?P<hidden>[\d.]+)\s+"
+    r"(?P<estimated>[\d.]+)\s+(?P<rate>\d+(?:,\d+)?)$"
+)
 
 
-def parse_int(value):
-    return int(str(value).replace(".", "").strip())
+def _normalize(value: str) -> str:
+    text = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode()
+    return re.sub(r"\s+", " ", text).strip().casefold()
 
 
-def parse_rate(value):
-    return float(str(value).replace(",", ".").strip())
+def _integer(value: str) -> int:
+    return int(value.replace(".", ""))
 
 
-def build():
-    cities = {}
-    with CSV_PATH.open(encoding="utf-8-sig", newline="") as f:
-        for row in csv.DictReader(f):
-            code = str(row["ibgeCode"]).strip()
-            cities[code] = {
-                "ibgeCode": code,
-                "name": row["name"],
-                "uf": row["uf"],
-                "region": row["region"],
-                "rank": parse_int(row["rank"]),
-                "population2022": parse_int(row["population2022"]),
-                "registeredHomicides": parse_int(row["registeredHomicides"]),
-                "hiddenHomicides": parse_int(row["hiddenHomicides"]),
-                "estimatedHomicides": parse_int(row["estimatedHomicides"]),
-                "homicideRate": parse_rate(row["homicideRate"]),
-                "year": parse_int(row["year"]),
-            }
-
-    return {
-        "metadata": {
-            "title": "Homicidios estimados por municipio com mais de 100 mil habitantes",
-            "source": "IPEA Atlas da Violencia 2024 - Retrato dos Municipios Brasileiros / FBSP / SIM-MS / IBGE Censo 2022",
-            "sourceUrl": "https://repositorio.ipea.gov.br/bitstream/11058/14031/5/AtlasViolencia2024_Retrato_dos_municipios_brasileros.pdf",
-            "provenance": "official_extracted_pdf",
-            "freshness": "Atlas da Violencia 2024, ano-base 2022",
-            "quality": "Oficial, extraido da Tabela 2 do PDF",
-            "municipalityCount": len(cities),
-            "coveredPopulationCriterion": "Municipios brasileiros com mais de 100 mil habitantes segundo o Censo 2022",
+def parse_table_rows(text: str) -> list[dict]:
+    rows = []
+    for line in text.splitlines():
+        match = ROW_PATTERN.fullmatch(line.strip())
+        if not match:
+            continue
+        values = match.groupdict()
+        rows.append({
+            "rank": int(values["rank"]),
+            "name": values["name"],
+            "uf": values["uf"],
+            "region": values["region"],
+            "population2022": _integer(values["population"]),
+            "registeredHomicides": _integer(values["registered"]),
+            "hiddenHomicides": _integer(values["hidden"]),
+            "estimatedHomicides": _integer(values["estimated"]),
+            "homicideRate": float(values["rate"].replace(",", ".")),
             "year": 2022,
-            "methodology": "Taxa de homicidios estimados por 100 mil habitantes. O numero de homicidios estimados no municipio de residencia soma homicidios registrados (CID-10 X85-Y09 e Y35-Y36) e homicidios ocultos estimados por Cerqueira e Lins (2024), conforme nota metodologica do Atlas.",
-            "limitations": [
-                "Cobertura restrita aos 319 municipios com mais de 100 mil habitantes em 2022.",
-                "Municipios fora da Tabela 2 usam proxy pela UF no app.",
-                "Indicador municipal cobre homicidios estimados; outros indicadores de seguranca na aba continuam estaduais.",
-                "Taxas de municipios pequenos nao foram incorporadas porque o proprio Atlas recomenda cautela para esse porte populacional.",
-            ],
-            "updatePolicy": "Atualizar data/security_brazil_cities_atlas2024.csv a partir da Tabela 2 da publicacao municipal mais recente do Atlas da Violencia e regenerar data/security_brazil_cities.json.",
-        },
-        "cities": cities,
-        "coverageNote": "Cobertura oficial da Tabela 2: 319 municipios com mais de 100 mil habitantes. Demais municipios usam proxy UF.",
-    }
+        })
+    return rows
 
 
-def main():
-    output = build()
-    OUTPUT_PATH.write_text(
-        json.dumps(output, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
+def _municipality_codes(session: requests.Session) -> dict[tuple[str, str], str]:
+    response = session.get(IBGE_MUNICIPALITIES_URL, timeout=180)
+    response.raise_for_status()
+    result = {}
+    for city in response.json():
+        immediate = city.get("regiao-imediata") or {}
+        intermediate = immediate.get("regiao-intermediaria") or {}
+        uf = (intermediate.get("UF") or {}).get("sigla")
+        if not uf:
+            micro = city.get("microrregiao") or {}
+            meso = micro.get("mesorregiao") or {}
+            uf = (meso.get("UF") or {}).get("sigla")
+        result[(uf, _normalize(city["nome"]))] = str(city["id"])
+    return result
+
+
+def build(source_url: str = SOURCE_URL) -> tuple[pd.DataFrame, str]:
+    session = requests.Session()
+    session.headers.update({"User-Agent": "AtlasBrasilETL/2.0 (+offline-parquet)"})
+    response = session.get(source_url, timeout=240)
+    response.raise_for_status()
+    content = response.content
+    digest = hashlib.sha256(content).hexdigest()
+
+    rows = []
+    with pdfplumber.open(io.BytesIO(content)) as document:
+        for page in document.pages:
+            page_text = page.extract_text() or ""
+            if "TABELA 2" in page_text and "homicídios estimados" in page_text:
+                rows.extend(parse_table_rows(page_text))
+    deduplicated = {row["rank"]: row for row in rows}
+    if len(deduplicated) != 319:
+        raise RuntimeError(
+            f"A Tabela 2 deveria conter 319 municípios; foram extraídos {len(deduplicated)}. "
+            "O PDF pode ter mudado de leiaute e o Parquet anterior foi preservado."
+        )
+
+    codes = _municipality_codes(session)
+    missing = []
+    for row in deduplicated.values():
+        row["ibge_code"] = codes.get((row["uf"], _normalize(row["name"])))
+        if not row["ibge_code"]:
+            missing.append(f"{row['name']}/{row['uf']}")
+    if missing:
+        raise RuntimeError("Municípios sem código IBGE: " + ", ".join(missing))
+
+    columns = [
+        "ibge_code", "name", "uf", "region", "rank", "population2022",
+        "registeredHomicides", "hiddenHomicides", "estimatedHomicides",
+        "homicideRate", "year",
+    ]
+    frame = pd.DataFrame(deduplicated.values())[columns].sort_values("rank")
+    return frame.reset_index(drop=True), digest
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--source-url", default=SOURCE_URL)
+    args = parser.parse_args()
+
+    try:
+        frame, digest = build(args.source_url)
+    except Exception as exc:
+        if OUTPUT_PATH.exists():
+            print(f"AVISO: Não foi possível baixar do IPEA ({exc}). Re-encoding arquivo local existente...")
+            frame = pd.read_parquet(OUTPUT_PATH)
+            digest = "cached_existing"
+        else:
+            raise
+
+    OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    temporary = OUTPUT_PATH.with_suffix(".parquet.tmp")
+
+    for col in frame.select_dtypes(include=["float64"]).columns:
+        frame[col] = frame[col].astype("float32")
+    for col in frame.select_dtypes(include=["int64"]).columns:
+        frame[col] = frame[col].astype("int32")
+
+    table = pa.Table.from_pandas(frame, preserve_index=False)
+    metadata = dict(table.schema.metadata or {})
+    metadata.update({
+        b"dataset": b"security_brazil_cities",
+        b"source_url": args.source_url.encode(),
+        b"source_sha256": digest.encode(),
+        b"schema_version": b"2",
+    })
+    table = table.replace_schema_metadata(metadata)
+    pq.write_table(
+        table,
+        temporary,
+        compression="zstd",
+        compression_level=19,
+        use_dictionary=True,
     )
-    print(f"wrote {len(output['cities'])} cities to {OUTPUT_PATH}")
+    temporary.replace(OUTPUT_PATH)
+    print(f"OK: {len(frame)} municípios -> {OUTPUT_PATH}")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

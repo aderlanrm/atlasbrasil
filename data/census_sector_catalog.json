@@ -1,0 +1,949 @@
+{
+  "schemaVersion": "2026-08-07",
+  "censusYear": 2022,
+  "geographicLevel": "setor_censitario",
+  "officialPage": "https://www.ibge.gov.br/estatisticas/sociais/trabalho/22827-censo-demografico-2022.html",
+  "dictionaryUrls": {
+    "aggregates": "https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios/dicionario_de_dados_agregados_por_setores_censitarios_20260520.xlsx",
+    "income": "https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios_Rendimento_do_Responsavel/dicionario_de_dados_renda_responsavel_20260508.xlsx",
+    "surroundings": "https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios_Caracteristicas_urbanisticas_do_entorno_dos_domicilios/dicionarios_de_dados_entorno.zip"
+  },
+  "geometryUrlTemplate": "https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios/malha_com_atributos/setores/gpkg/UF/{uf}/{uf}_setores_CD2022.gpkg",
+  "profiles": {
+    "basic": [
+      "basic"
+    ],
+    "map": [
+      "basic",
+      "households_3",
+      "literacy",
+      "race",
+      "demography",
+      "deaths",
+      "indigenous_people",
+      "quilombola_people",
+      "income",
+      "surroundings_households"
+    ],
+    "all": [
+      "basic",
+      "households_1",
+      "households_2",
+      "households_3",
+      "literacy",
+      "race",
+      "demography",
+      "deaths",
+      "kinship",
+      "indigenous_households",
+      "indigenous_people",
+      "quilombola_households",
+      "quilombola_people",
+      "income",
+      "surroundings_households",
+      "surroundings_people",
+      "surroundings_faces"
+    ]
+  },
+  "topics": {
+    "basic": {
+      "label": "Básico",
+      "url": "https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios/Agregados_por_Setor_csv/Agregados_por_setores_basico_BR_20260520.zip",
+      "theme": "Básico",
+      "preserveAllOfficialColumns": true
+    },
+    "households_1": {
+      "label": "Características dos domicílios — parte 1",
+      "url": "https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios/Agregados_por_Setor_csv/Agregados_por_setores_caracteristicas_domicilio1_BR.zip",
+      "theme": "Características do Domicílio - Parte 1",
+      "preserveAllOfficialColumns": true
+    },
+    "households_2": {
+      "label": "Características dos domicílios — parte 2",
+      "url": "https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios/Agregados_por_Setor_csv/Agregados_por_setores_caracteristicas_domicilio2_BR_20250417.zip",
+      "theme": "Características do Domicílio - Parte 2",
+      "preserveAllOfficialColumns": true
+    },
+    "households_3": {
+      "label": "Características dos domicílios — parte 3",
+      "url": "https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios/Agregados_por_Setor_csv/Agregados_por_setores_caracteristicas_domicilio3_BR_20250417.zip",
+      "theme": "Características do Domicílio - Parte 3",
+      "preserveAllOfficialColumns": true
+    },
+    "literacy": {
+      "label": "Alfabetização",
+      "url": "https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios/Agregados_por_Setor_csv/Agregados_por_setores_alfabetizacao_BR.zip",
+      "theme": "Alfabetização",
+      "preserveAllOfficialColumns": true
+    },
+    "race": {
+      "label": "Cor ou raça",
+      "url": "https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios/Agregados_por_Setor_csv/Agregados_por_setores_cor_ou_raca_BR.zip",
+      "theme": "Cor ou Raça",
+      "preserveAllOfficialColumns": true
+    },
+    "demography": {
+      "label": "Demografia, sexo e idade",
+      "url": "https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios/Agregados_por_Setor_csv/Agregados_por_setores_demografia_BR.zip",
+      "theme": "Demografia",
+      "preserveAllOfficialColumns": true
+    },
+    "deaths": {
+      "label": "Óbitos informados no domicílio",
+      "url": "https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios/Agregados_por_Setor_csv/Agregados_por_setores_obitos_BR.zip",
+      "theme": "Óbitos",
+      "preserveAllOfficialColumns": true
+    },
+    "kinship": {
+      "label": "Parentesco e composição domiciliar",
+      "url": "https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios/Agregados_por_Setor_csv/Agregados_por_setores_parentesco_BR.zip",
+      "theme": "Parentesco",
+      "preserveAllOfficialColumns": true
+    },
+    "indigenous_households": {
+      "label": "Domicílios indígenas",
+      "url": "https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios/Agregados_por_Setor_csv/Agregados_por_setores_domicilios_indigenas_BR.zip",
+      "theme": "Indígenas — domicílios",
+      "preserveAllOfficialColumns": true
+    },
+    "indigenous_people": {
+      "label": "Pessoas indígenas",
+      "url": "https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios/Agregados_por_Setor_csv/Agregados_por_setores_pessoas_indigenas_BR.zip",
+      "theme": "Indígenas — pessoas",
+      "preserveAllOfficialColumns": true
+    },
+    "quilombola_households": {
+      "label": "Domicílios quilombolas",
+      "url": "https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios/Agregados_por_Setor_csv/Agregados_por_setores_domicilios_quilombolas_BR.zip",
+      "theme": "Quilombolas — domicílios",
+      "preserveAllOfficialColumns": true
+    },
+    "quilombola_people": {
+      "label": "Pessoas quilombolas",
+      "url": "https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios/Agregados_por_Setor_csv/Agregados_por_setores_pessoas_quilombolas_BR.zip",
+      "theme": "Quilombolas — pessoas",
+      "preserveAllOfficialColumns": true
+    },
+    "income": {
+      "label": "Rendimento da pessoa responsável",
+      "url": "https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios_Rendimento_do_Responsavel/Agregados_por_setores_renda_responsavel_BR_20260508_csv.zip",
+      "theme": "Rendimento do responsável",
+      "preserveAllOfficialColumns": true
+    },
+    "surroundings_households": {
+      "label": "Entorno urbano — domicílios",
+      "url": "https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios_Caracteristicas_urbanisticas_do_entorno_dos_domicilios/Agregados_por_Setor_csv/Agregados_por_setores_entorno_domic%C3%ADlios_BR.zip",
+      "theme": "Características urbanísticas do entorno — domicílios",
+      "preserveAllOfficialColumns": true
+    },
+    "surroundings_people": {
+      "label": "Entorno urbano — moradores",
+      "url": "https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios_Caracteristicas_urbanisticas_do_entorno_dos_domicilios/Agregados_por_Setor_csv/Agregados_por_setores_entorno_moradores_BR.zip",
+      "theme": "Características urbanísticas do entorno — moradores",
+      "preserveAllOfficialColumns": true
+    },
+    "surroundings_faces": {
+      "label": "Entorno urbano — faces",
+      "url": "https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios_Caracteristicas_urbanisticas_do_entorno_dos_domicilios/Agregados_por_Setor_csv/Agregados_por_setores_entorno_faces_BR.zip",
+      "theme": "Características urbanísticas do entorno — faces",
+      "preserveAllOfficialColumns": true
+    }
+  },
+  "indicators": [
+    {
+      "id": "bairro",
+      "property": "bairro",
+      "label": "Bairro",
+      "unit": "categoria",
+      "kind": "categorical",
+      "topic": "basic",
+      "sourceCodes": [
+        "NM_BAIRRO"
+      ],
+      "aggregationMethod": "none",
+      "provenance": "official_observed",
+      "map": true
+    },
+    {
+      "id": "populacao",
+      "property": "pop",
+      "label": "População residente",
+      "unit": "habitantes",
+      "kind": "count",
+      "topic": "basic",
+      "sourceCodes": [
+        "V0001"
+      ],
+      "aggregationMethod": "sum",
+      "provenance": "official_observed",
+      "map": true
+    },
+    {
+      "id": "domicilios",
+      "property": "domicilios",
+      "label": "Total de domicílios",
+      "unit": "domicílios",
+      "kind": "count",
+      "topic": "basic",
+      "sourceCodes": [
+        "V0002"
+      ],
+      "aggregationMethod": "sum",
+      "provenance": "official_observed",
+      "map": true
+    },
+    {
+      "id": "domicilios_ocupados",
+      "property": "domicilios_ocupados",
+      "label": "Domicílios particulares ocupados",
+      "unit": "domicílios",
+      "kind": "count",
+      "topic": "basic",
+      "sourceCodes": [
+        "V0007"
+      ],
+      "aggregationMethod": "sum",
+      "provenance": "official_observed",
+      "map": true
+    },
+    {
+      "id": "media_moradores_domicilio",
+      "property": "media_moradores_domicilio",
+      "label": "Média de moradores por domicílio ocupado",
+      "unit": "moradores/domicílio",
+      "kind": "average",
+      "topic": "basic",
+      "sourceCodes": [
+        "V0005"
+      ],
+      "aggregationMethod": "weighted_average",
+      "denominator": "domicilios_ocupados",
+      "provenance": "official_observed",
+      "map": true
+    },
+    {
+      "id": "densidade_populacional",
+      "property": "densidade_populacional",
+      "label": "Densidade populacional",
+      "unit": "hab./km²",
+      "kind": "rate",
+      "derived": {
+        "numeratorProperty": "pop",
+        "denominatorProperty": "area_km2",
+        "scale": 1
+      },
+      "aggregationMethod": "weighted_average",
+      "denominator": "area_km2",
+      "provenance": "official_derived",
+      "map": true
+    },
+    {
+      "id": "percentual_mulheres",
+      "property": "percentual_mulheres",
+      "label": "Mulheres na população",
+      "unit": "%",
+      "kind": "rate",
+      "topic": "demography",
+      "numeratorCodes": [
+        "V01008"
+      ],
+      "denominatorCodes": [
+        "V01006"
+      ],
+      "scale": 100,
+      "aggregationMethod": "weighted_average",
+      "denominator": "populacao",
+      "provenance": "official_derived",
+      "map": true
+    },
+    {
+      "id": "percentual_criancas_0_14",
+      "property": "percentual_criancas_0_14",
+      "label": "Crianças e adolescentes de 0 a 14 anos",
+      "unit": "%",
+      "kind": "rate",
+      "topic": "demography",
+      "numeratorCodes": [
+        "V01031",
+        "V01032",
+        "V01033"
+      ],
+      "denominatorCodes": [
+        "V01006"
+      ],
+      "scale": 100,
+      "aggregationMethod": "weighted_average",
+      "denominator": "populacao",
+      "provenance": "official_derived",
+      "map": true
+    },
+    {
+      "id": "percentual_idosos_60_mais",
+      "property": "percentual_idosos_60_mais",
+      "label": "Pessoas com 60 anos ou mais",
+      "unit": "%",
+      "kind": "rate",
+      "topic": "demography",
+      "numeratorCodes": [
+        "V01040",
+        "V01041"
+      ],
+      "denominatorCodes": [
+        "V01006"
+      ],
+      "scale": 100,
+      "aggregationMethod": "weighted_average",
+      "denominator": "populacao",
+      "provenance": "official_derived",
+      "map": true
+    },
+    {
+      "id": "taxa_alfabetizacao_15_mais",
+      "property": "taxa_alfabetizacao_15_mais",
+      "label": "Alfabetização das pessoas de 15 anos ou mais",
+      "unit": "%",
+      "kind": "rate",
+      "topic": "literacy",
+      "numeratorCodes": [
+        "V00748",
+        "V00749",
+        "V00750",
+        "V00751",
+        "V00752",
+        "V00753",
+        "V00754",
+        "V00755",
+        "V00756",
+        "V00757",
+        "V00758",
+        "V00759",
+        "V00760"
+      ],
+      "denominatorCodes": [
+        "V00644",
+        "V00645",
+        "V00646",
+        "V00647",
+        "V00648",
+        "V00649",
+        "V00650",
+        "V00651",
+        "V00652",
+        "V00653",
+        "V00654",
+        "V00655",
+        "V00656"
+      ],
+      "scale": 100,
+      "aggregationMethod": "weighted_average",
+      "denominator": "populacao_15_mais",
+      "provenance": "official_derived",
+      "map": true
+    },
+    {
+      "id": "percentual_branca",
+      "property": "percentual_branca",
+      "label": "Pessoas brancas",
+      "unit": "%",
+      "kind": "rate",
+      "topic": "race",
+      "numeratorCodes": [
+        "V01317"
+      ],
+      "denominatorCodes": [
+        "V01317",
+        "V01318",
+        "V01319",
+        "V01320",
+        "V01321"
+      ],
+      "scale": 100,
+      "aggregationMethod": "weighted_average",
+      "denominator": "populacao_com_cor_raca",
+      "provenance": "official_derived",
+      "map": true
+    },
+    {
+      "id": "percentual_preta",
+      "property": "percentual_preta",
+      "label": "Pessoas pretas",
+      "unit": "%",
+      "kind": "rate",
+      "topic": "race",
+      "numeratorCodes": [
+        "V01318"
+      ],
+      "denominatorCodes": [
+        "V01317",
+        "V01318",
+        "V01319",
+        "V01320",
+        "V01321"
+      ],
+      "scale": 100,
+      "aggregationMethod": "weighted_average",
+      "denominator": "populacao_com_cor_raca",
+      "provenance": "official_derived",
+      "map": true
+    },
+    {
+      "id": "percentual_parda",
+      "property": "percentual_parda",
+      "label": "Pessoas pardas",
+      "unit": "%",
+      "kind": "rate",
+      "topic": "race",
+      "numeratorCodes": [
+        "V01320"
+      ],
+      "denominatorCodes": [
+        "V01317",
+        "V01318",
+        "V01319",
+        "V01320",
+        "V01321"
+      ],
+      "scale": 100,
+      "aggregationMethod": "weighted_average",
+      "denominator": "populacao_com_cor_raca",
+      "provenance": "official_derived",
+      "map": true
+    },
+    {
+      "id": "percentual_abastecimento_rede",
+      "property": "percentual_abastecimento_rede",
+      "label": "Moradores com abastecimento pela rede geral",
+      "unit": "%",
+      "kind": "rate",
+      "topic": "households_3",
+      "numeratorCodes": [
+        "V00508"
+      ],
+      "denominatorCodes": [
+        "V00508",
+        "V00509",
+        "V00510",
+        "V00511",
+        "V00512",
+        "V00513",
+        "V00514",
+        "V00515"
+      ],
+      "scale": 100,
+      "aggregationMethod": "weighted_average",
+      "denominator": "moradores_domicilios_permanentes",
+      "provenance": "official_derived",
+      "map": true
+    },
+    {
+      "id": "percentual_agua_encanada",
+      "property": "percentual_agua_encanada",
+      "label": "Moradores com água encanada dentro da habitação",
+      "unit": "%",
+      "kind": "rate",
+      "topic": "households_3",
+      "numeratorCodes": [
+        "V00540"
+      ],
+      "denominatorCodes": [
+        "V00540",
+        "V00541",
+        "V00542"
+      ],
+      "scale": 100,
+      "aggregationMethod": "weighted_average",
+      "denominator": "moradores_domicilios_permanentes",
+      "provenance": "official_derived",
+      "map": true
+    },
+    {
+      "id": "percentual_esgoto_rede",
+      "property": "percentual_esgoto_rede",
+      "label": "Moradores com esgoto em rede geral ou pluvial",
+      "unit": "%",
+      "kind": "rate",
+      "topic": "households_3",
+      "numeratorCodes": [
+        "V00580"
+      ],
+      "denominatorCodes": [
+        "V00580",
+        "V00581",
+        "V00582",
+        "V00583",
+        "V00584",
+        "V00585",
+        "V00586",
+        "V00587"
+      ],
+      "scale": 100,
+      "aggregationMethod": "weighted_average",
+      "denominator": "moradores_domicilios_permanentes",
+      "provenance": "official_derived",
+      "map": true
+    },
+    {
+      "id": "percentual_lixo_coletado",
+      "property": "percentual_lixo_coletado",
+      "label": "Moradores com lixo coletado",
+      "unit": "%",
+      "kind": "rate",
+      "topic": "households_3",
+      "numeratorCodes": [
+        "V00612",
+        "V00613"
+      ],
+      "denominatorCodes": [
+        "V00612",
+        "V00613",
+        "V00614",
+        "V00615",
+        "V00616",
+        "V00617"
+      ],
+      "scale": 100,
+      "aggregationMethod": "weighted_average",
+      "denominator": "moradores_domicilios_permanentes",
+      "provenance": "official_derived",
+      "map": true
+    },
+    {
+      "id": "renda_media_responsavel",
+      "property": "renda_media_responsavel",
+      "label": "Rendimento médio da pessoa responsável",
+      "unit": "R$/mês",
+      "kind": "currency",
+      "topic": "income",
+      "sourceCodes": [
+        "V06004"
+      ],
+      "aggregationMethod": "weighted_average",
+      "denominator": "responsaveis_com_rendimento",
+      "provenance": "official_observed",
+      "map": true
+    },
+    {
+      "id": "renda_mediana_responsavel",
+      "property": "renda_mediana_responsavel",
+      "label": "Rendimento mediano da pessoa responsável",
+      "unit": "R$/mês",
+      "kind": "currency",
+      "topic": "income",
+      "sourceCodes": [
+        "V06006"
+      ],
+      "aggregationMethod": "weighted_median",
+      "denominator": "responsaveis_com_rendimento",
+      "provenance": "official_observed",
+      "map": true
+    },
+    {
+      "id": "percentual_indigena",
+      "property": "percentual_indigena",
+      "label": "Pessoas indígenas",
+      "unit": "%",
+      "kind": "rate",
+      "topic": "indigenous_people",
+      "sourceCodes": [
+        "V01690"
+      ],
+      "derived": {
+        "numeratorCode": "V01690",
+        "denominatorProperty": "pop",
+        "scale": 100
+      },
+      "aggregationMethod": "weighted_average",
+      "denominator": "populacao",
+      "provenance": "official_derived",
+      "map": true
+    },
+    {
+      "id": "percentual_quilombola",
+      "property": "percentual_quilombola",
+      "label": "Pessoas quilombolas",
+      "unit": "%",
+      "kind": "rate",
+      "topic": "quilombola_people",
+      "sourceCodes": [
+        "V03196"
+      ],
+      "derived": {
+        "numeratorCode": "V03196",
+        "denominatorProperty": "pop",
+        "scale": 100
+      },
+      "aggregationMethod": "weighted_average",
+      "denominator": "populacao",
+      "provenance": "official_derived",
+      "map": true
+    },
+    {
+      "id": "obitos_por_mil_habitantes",
+      "property": "obitos_por_mil_habitantes",
+      "label": "Óbitos informados de jan/2019 a jul/2022",
+      "unit": "por mil hab.",
+      "kind": "rate",
+      "topic": "deaths",
+      "sourceCodes": [
+        "V01226",
+        "V01227"
+      ],
+      "derived": {
+        "numeratorCodes": [
+          "V01226",
+          "V01227"
+        ],
+        "denominatorProperty": "pop",
+        "scale": 1000
+      },
+      "aggregationMethod": "weighted_average",
+      "denominator": "populacao",
+      "provenance": "official_derived",
+      "map": true
+    },
+    {
+      "id": "percentual_via_pavimentada",
+      "property": "percentual_via_pavimentada",
+      "label": "Domicílios em face com via pavimentada",
+      "unit": "%",
+      "kind": "rate",
+      "topic": "surroundings_households",
+      "numeratorCodes": [
+        "V05006"
+      ],
+      "denominatorCodes": [
+        "V05000"
+      ],
+      "scale": 100,
+      "aggregationMethod": "weighted_average",
+      "denominator": "domicilios_entorno",
+      "provenance": "official_derived",
+      "map": true
+    },
+    {
+      "id": "percentual_iluminacao_publica",
+      "property": "percentual_iluminacao_publica",
+      "label": "Domicílios em face com iluminação pública",
+      "unit": "%",
+      "kind": "rate",
+      "topic": "surroundings_households",
+      "numeratorCodes": [
+        "V05012"
+      ],
+      "denominatorCodes": [
+        "V05000"
+      ],
+      "scale": 100,
+      "aggregationMethod": "weighted_average",
+      "denominator": "domicilios_entorno",
+      "provenance": "official_derived",
+      "map": true
+    },
+    {
+      "id": "percentual_calcada",
+      "property": "percentual_calcada",
+      "label": "Domicílios em face com calçada",
+      "unit": "%",
+      "kind": "rate",
+      "topic": "surroundings_households",
+      "numeratorCodes": [
+        "V05021"
+      ],
+      "denominatorCodes": [
+        "V05000"
+      ],
+      "scale": 100,
+      "aggregationMethod": "weighted_average",
+      "denominator": "domicilios_entorno",
+      "provenance": "official_derived",
+      "map": true
+    },
+    {
+      "id": "percentual_rampa_cadeirante",
+      "property": "percentual_rampa_cadeirante",
+      "label": "Domicílios em face com rampa para cadeirante",
+      "unit": "%",
+      "kind": "rate",
+      "topic": "surroundings_households",
+      "numeratorCodes": [
+        "V05027"
+      ],
+      "denominatorCodes": [
+        "V05000"
+      ],
+      "scale": 100,
+      "aggregationMethod": "weighted_average",
+      "denominator": "domicilios_entorno",
+      "provenance": "official_derived",
+      "map": true
+    },
+    {
+      "id": "percentual_arborizacao",
+      "property": "percentual_arborizacao",
+      "label": "Domicílios em face com arborização",
+      "unit": "%",
+      "kind": "rate",
+      "topic": "surroundings_households",
+      "numeratorCodes": [
+        "V05031",
+        "V05032",
+        "V05033"
+      ],
+      "denominatorCodes": [
+        "V05000"
+      ],
+      "scale": 100,
+      "aggregationMethod": "weighted_average",
+      "denominator": "domicilios_entorno",
+      "provenance": "official_derived",
+      "map": true
+    },
+    {
+      "id": "pib_est_populacao",
+      "property": "pib_est_populacao",
+      "label": "PIB municipal alocado pela população",
+      "unit": "R$ estimados",
+      "kind": "currency",
+      "model": "PopulationGDPModel",
+      "aggregationMethod": "sum",
+      "allowedDisaggregationWeights": [
+        "populacao"
+      ],
+      "provenance": "estimated_proportional",
+      "map": true
+    },
+    {
+      "id": "pib_est_domicilios",
+      "property": "pib_est_domicilios",
+      "label": "PIB municipal alocado por domicílios",
+      "unit": "R$ estimados",
+      "kind": "currency",
+      "model": "HouseholdsModel",
+      "aggregationMethod": "sum",
+      "allowedDisaggregationWeights": [
+        "domicilios"
+      ],
+      "provenance": "estimated_proportional",
+      "map": true
+    },
+    {
+      "id": "pib_est_renda",
+      "property": "pib_est_renda",
+      "label": "PIB municipal alocado pela renda residencial",
+      "unit": "R$ estimados",
+      "kind": "currency",
+      "model": "ResidentialGDPModel",
+      "aggregationMethod": "sum",
+      "allowedDisaggregationWeights": [
+        "renda_domiciliar"
+      ],
+      "provenance": "estimated_model",
+      "map": true
+    },
+    {
+      "id": "leitos_por_mil_proxy",
+      "property": "bedsPer1000",
+      "label": "Leitos por mil habitantes",
+      "unit": "por mil hab.",
+      "kind": "rate",
+      "sourceDataset": "health_brazil_cities",
+      "sourceLevelProperty": "bedsPer1000_source_level",
+      "aggregationMethod": "weighted_average",
+      "denominator": "populacao",
+      "provenance": "estimated_parent_proxy",
+      "map": true
+    },
+    {
+      "id": "leitos_sus_por_mil_proxy",
+      "property": "susBedsPer1000",
+      "label": "Leitos SUS por mil habitantes",
+      "unit": "por mil hab.",
+      "kind": "rate",
+      "sourceDataset": "health_brazil_cities",
+      "sourceLevelProperty": "susBedsPer1000_source_level",
+      "aggregationMethod": "weighted_average",
+      "denominator": "populacao",
+      "provenance": "estimated_parent_proxy",
+      "map": true
+    },
+    {
+      "id": "leitos_uti_por_cem_mil_proxy",
+      "property": "icuBedsPer100k",
+      "label": "Leitos de UTI por cem mil habitantes",
+      "unit": "por 100 mil hab.",
+      "kind": "rate",
+      "sourceDataset": "health_brazil_cities",
+      "sourceLevelProperty": "icuBedsPer100k_source_level",
+      "aggregationMethod": "weighted_average",
+      "denominator": "populacao",
+      "provenance": "estimated_parent_proxy",
+      "map": true
+    },
+    {
+      "id": "medicos_por_mil_proxy",
+      "property": "doctorsPer1000",
+      "label": "Médicos por mil habitantes",
+      "unit": "por mil hab.",
+      "kind": "rate",
+      "sourceDataset": "health_brazil_cities",
+      "sourceLevelProperty": "doctorsPer1000_source_level",
+      "aggregationMethod": "weighted_average",
+      "denominator": "populacao",
+      "provenance": "estimated_parent_proxy",
+      "map": true
+    },
+    {
+      "id": "enfermeiros_por_mil_proxy",
+      "property": "nursesPer1000",
+      "label": "Enfermeiros por mil habitantes",
+      "unit": "por mil hab.",
+      "kind": "rate",
+      "sourceDataset": "health_brazil_cities",
+      "sourceLevelProperty": "nursesPer1000_source_level",
+      "aggregationMethod": "weighted_average",
+      "denominator": "populacao",
+      "provenance": "estimated_parent_proxy",
+      "map": true
+    },
+    {
+      "id": "mortalidade_infantil_proxy",
+      "property": "infantMortality",
+      "label": "Mortalidade infantil",
+      "unit": "por mil nascidos vivos",
+      "kind": "rate",
+      "sourceDataset": "health_brazil_cities",
+      "sourceLevelProperty": "infantMortality_source_level",
+      "aggregationMethod": "weighted_average",
+      "denominator": "populacao",
+      "provenance": "estimated_parent_proxy",
+      "map": true
+    },
+    {
+      "id": "mortalidade_materna_proxy",
+      "property": "maternalMortality",
+      "label": "Mortalidade materna",
+      "unit": "por 100 mil nascidos vivos",
+      "kind": "rate",
+      "sourceDataset": "health_brazil_cities",
+      "sourceLevelProperty": "maternalMortality_source_level",
+      "aggregationMethod": "weighted_average",
+      "denominator": "populacao",
+      "provenance": "estimated_parent_proxy",
+      "map": true
+    },
+    {
+      "id": "cobertura_vacinal_proxy",
+      "property": "vaccinationCoverage",
+      "label": "Cobertura vacinal",
+      "unit": "%",
+      "kind": "rate",
+      "sourceDataset": "health_brazil_cities",
+      "sourceLevelProperty": "vaccinationCoverage_source_level",
+      "aggregationMethod": "weighted_average",
+      "denominator": "populacao",
+      "provenance": "estimated_parent_proxy",
+      "map": true
+    },
+    {
+      "id": "homicidios_est_populacao",
+      "property": "homicidios_est_populacao",
+      "label": "Homicídios municipais estimados alocados pela população",
+      "unit": "ocorrências estimadas",
+      "kind": "count",
+      "sourceDataset": "security_brazil_cities",
+      "aggregationMethod": "sum",
+      "allowedDisaggregationWeights": [
+        "populacao"
+      ],
+      "provenance": "estimated_proportional",
+      "map": true
+    },
+    {
+      "id": "taxa_homicidios_proxy",
+      "property": "homicideRate",
+      "label": "Taxa municipal estimada de homicídios",
+      "unit": "por 100 mil hab.",
+      "kind": "rate",
+      "sourceDataset": "security_brazil_cities",
+      "sourceLevelProperty": "homicide_source_level",
+      "aggregationMethod": "weighted_average",
+      "denominator": "populacao",
+      "provenance": "estimated_parent_proxy",
+      "map": true
+    },
+    {
+      "id": "mvi_est_populacao",
+      "property": "mvi_est_populacao",
+      "label": "Mortes violentas estaduais alocadas pela população",
+      "unit": "ocorrências estimadas",
+      "kind": "count",
+      "sourceDataset": "security_brazil",
+      "aggregationMethod": "sum",
+      "allowedDisaggregationWeights": [
+        "populacao"
+      ],
+      "provenance": "estimated_proportional",
+      "map": true
+    },
+    {
+      "id": "taxa_mvi_proxy_uf",
+      "property": "mviRate",
+      "label": "Taxa estadual de mortes violentas intencionais",
+      "unit": "por 100 mil hab.",
+      "kind": "rate",
+      "sourceDataset": "security_brazil",
+      "aggregationMethod": "weighted_average",
+      "denominator": "populacao",
+      "provenance": "estimated_parent_proxy",
+      "map": true
+    },
+    {
+      "id": "taxa_furto_roubo_veiculos_proxy_uf",
+      "property": "vehicleTheftRate",
+      "label": "Taxa estadual de roubo e furto de veículos",
+      "unit": "por 100 mil hab.",
+      "kind": "rate",
+      "sourceDataset": "security_brazil",
+      "aggregationMethod": "weighted_average",
+      "denominator": "populacao",
+      "provenance": "estimated_parent_proxy",
+      "map": true
+    },
+    {
+      "id": "taxa_feminicidio_proxy_uf",
+      "property": "femicideRate",
+      "label": "Taxa estadual de feminicídio",
+      "unit": "por 100 mil mulheres",
+      "kind": "rate",
+      "sourceDataset": "security_brazil",
+      "aggregationMethod": "weighted_average",
+      "denominator": "populacao",
+      "provenance": "estimated_parent_proxy",
+      "map": true
+    },
+    {
+      "id": "taxa_violencia_domestica_proxy_uf",
+      "property": "domesticViolenceRate",
+      "label": "Taxa estadual de violência doméstica",
+      "unit": "por 100 mil mulheres",
+      "kind": "rate",
+      "sourceDataset": "security_brazil",
+      "aggregationMethod": "weighted_average",
+      "denominator": "populacao",
+      "provenance": "estimated_parent_proxy",
+      "map": true
+    },
+    {
+      "id": "idhm_proxy_uf",
+      "property": "idhm_proxy_uf",
+      "label": "IDHM da UF aplicado como proxy",
+      "unit": "índice",
+      "kind": "index",
+      "sourceDataset": "idhm_brazil",
+      "aggregationMethod": "weighted_average",
+      "denominator": "populacao",
+      "provenance": "estimated_parent_proxy",
+      "map": true
+    }
+  ]
+}

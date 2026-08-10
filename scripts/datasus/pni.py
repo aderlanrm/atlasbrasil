@@ -1,6 +1,6 @@
 """Cobertura vacinal municipal a partir do PNI legado.
 
-LIMITATION: o catalogo pysus expoe PNI somente ate 2019. A partir de 2020 a
+LIMITATION: o FTP legado do DATASUS expoe CPNI somente ate 2019. A partir de 2020 a
 cobertura passou a ser registrada no SI-PNI nominal (e-SUS) e nao esta no
 mesmo formato. Para dados recentes, o caminho oficial e:
   - Painel SI-PNI: https://si-pni.saude.gov.br/
@@ -23,9 +23,8 @@ Indicador produzido:
 
 import pandas as pd
 
-from pysus import pni
-
 from . import UFS
+from .source import PNI_DIRECTORY, DatasusFTPSource, pni_filename
 
 
 LEGACY_LAST_YEAR = 2019
@@ -49,13 +48,21 @@ def _parse_cobert(value) -> float:
 def fetch_pni_coverage(year: int = LEGACY_LAST_YEAR, ufs=None) -> pd.DataFrame:
     target_ufs = ufs or UFS
     frames = []
-    for uf in target_ufs:
-        df = pni(state=uf, year=year, group="CPNI")
-        if df is None or df.empty:
-            continue
-        df = df[["MUNIC", "IMUNO", "QT_DOSE", "POP", "COBERT"]].copy()
-        df["COBERT_NUM"] = df["COBERT"].map(_parse_cobert)
-        frames.append(df)
+    columns = ["MUNIC", "IMUNO", "QT_DOSE", "POP", "COBERT"]
+    with DatasusFTPSource() as source:
+        for uf in target_ufs:
+            try:
+                df = source.read_table(
+                    PNI_DIRECTORY,
+                    pni_filename(uf, year),
+                    columns,
+                )
+            except FileNotFoundError:
+                continue
+            if df.empty:
+                continue
+            df["COBERT_NUM"] = df["COBERT"].map(_parse_cobert)
+            frames.append(df)
     if not frames:
         return pd.DataFrame()
     return pd.concat(frames, ignore_index=True)
